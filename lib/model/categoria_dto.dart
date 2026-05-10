@@ -3,7 +3,7 @@ class CategoriaDto {
   String? error;
   int? statusCode;
   int? id;
-  String? nome;
+  String nome;
   String? descricao;
   bool? ativo;
   
@@ -13,18 +13,17 @@ class CategoriaDto {
       this.error,
       this.statusCode,
       this.id,
-      this.nome,
+      required this.nome,
       this.descricao,
       this.ativo});
 
-  CategoriaDto.fromJson(Map<String, dynamic> json) {
-    print("serializacao");
-    print(json);
+  CategoriaDto.fromJson(Map<String, dynamic> json) 
+    : nome = json['nome'] ?? '' { 
+    
     message = json['message'];
     error = json['error'];
     statusCode = json['statusCode'];
     id = json['id'];
-    nome = json['nome'];
     descricao = json['descricao'];
     ativo = json['ativo'];
   }
