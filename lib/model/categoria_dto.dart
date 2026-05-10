@@ -28,17 +28,15 @@ class CategoriaDto {
     ativo = json['ativo'];
   }
 
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    data['message'] = message;
-    data['error'] = error;  
-    data['statusCode'] = statusCode;
-    data['id'] = id;
-    data['nome'] = nome;
+ Map<String, dynamic> toJson() {
+  final Map<String, dynamic> data = <String, dynamic>{};
+  data['nome'] = nome;
+  if (descricao != null) {
     data['descricao'] = descricao;
-
-    data['ativo'] = ativo;
-
-    return data;  
   }
+  if (ativo != null) {
+    data['ativo'] = ativo;
+  }
+  return data;  
+}
 }
