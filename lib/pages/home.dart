@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/pages/categoria.dart';
+import 'package:my_app_teste/pages/categoria_lista_page.dart';
 import 'package:my_app_teste/pages/dashboard.dart';
 import 'package:my_app_teste/pages/produto.dart';
 
@@ -16,7 +16,7 @@ class _HomeState extends State<Home> {
 
   List<Widget> _pages = [
     DashboardPage(),
-    CategoriaPage(),
+    CategoriaListaPage(),
     ProdutoPage(),
   ];
 
@@ -49,12 +49,14 @@ class _HomeState extends State<Home> {
                 setState(() {
                   _selectedIndex = 0;
                 });
+                Navigator.pop(context);
               },
             ),
             ListTile(
               leading: Icon(Icons.person),
               title: Text('Usuario'),
               onTap: () {
+                Navigator.pop(context);
                 // Navigator.pop(context);
               },
             ),
@@ -66,6 +68,7 @@ class _HomeState extends State<Home> {
                 setState(() {
                   _selectedIndex = 1;
                 });
+                Navigator.pop(context);
               },
             ),
             ListTile(
@@ -75,6 +78,7 @@ class _HomeState extends State<Home> {
                 setState(() {
                   _selectedIndex = 2;
                 });
+                Navigator.pop(context);
               },
             ),
           ],
