@@ -11,10 +11,9 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-
   int _selectedIndex = 0;
 
-  List<Widget> _pages = [
+  final List<Widget> _pages = const [
     DashboardPage(),
     CategoriaPage(),
     ProdutoPage(),
@@ -22,68 +21,59 @@ class _HomeState extends State<Home> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Home"),
-      ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: Colors.blue,
-              ),
-              child: Text(
-                'Menu',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                ),
-              ),
-            ),
-            ListTile(
-              leading: Icon(Icons.home),
-              title: Text('Home'),
-              onTap: () {
-                setState(() {
-                  _selectedIndex = 0;
-                });
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.person),
-              title: Text('Usuario'),
-              onTap: () {
-                // Navigator.pop(context);
-              },
-            ),
+    final showShell = _selectedIndex != 2;
 
-            ListTile(
-              leading: Icon(Icons.category),
-              title: Text('Categoria'),
-              onTap: () {
-                setState(() {
-                  _selectedIndex = 1;
-                });
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.shopping_cart),
-              title: Text('Produto'),
-              onTap: () {
-                setState(() {
-                  _selectedIndex = 2;
-                });
-              },
-            ),
-          ],
-        ),
-      ),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
-      )
+    return Scaffold(
+      appBar: showShell ? AppBar(title: const Text('Home')) : null,
+      drawer: showShell
+          ? Drawer(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  const DrawerHeader(
+                    decoration: BoxDecoration(color: Colors.blue),
+                    child: Text(
+                      'Menu',
+                      style: TextStyle(color: Colors.white, fontSize: 24),
+                    ),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.home),
+                    title: const Text('Home'),
+                    onTap: () {
+                      setState(() {
+                        _selectedIndex = 0;
+                      });
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.person),
+                    title: const Text('Usuario'),
+                    onTap: () {},
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.category),
+                    title: const Text('Categoria'),
+                    onTap: () {
+                      setState(() {
+                        _selectedIndex = 1;
+                      });
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.shopping_cart),
+                    title: const Text('Produto'),
+                    onTap: () {
+                      setState(() {
+                        _selectedIndex = 2;
+                      });
+                    },
+                  ),
+                ],
+              ),
+            )
+          : null,
+      body: IndexedStack(index: _selectedIndex, children: _pages),
     );
   }
 }

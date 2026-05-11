@@ -7,6 +7,6 @@ class ProdutoPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ProdutosPage();
+    return const ProdutosPage();
   }
 }
