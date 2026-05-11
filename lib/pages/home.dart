@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/pages/categoria_lista_page.dart';
+import 'package:my_app_teste/pages/categorias/categoria_lista_page.dart';
 import 'package:my_app_teste/pages/dashboard.dart';
 import 'package:my_app_teste/pages/produto.dart';
 
