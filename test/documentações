@@ -1,0 +1,1 @@
+//Durante os testes na API, foi identificado um erro ao tentar inativar as categorias, bem como uma falha no botão de reativação. O problema foi devidamente corrigido e o sistema encontra-se operando normalmente. Todos os botões estão funcionais, realizando as operações de salvamento e alteração no banco de dados com sucesso.
