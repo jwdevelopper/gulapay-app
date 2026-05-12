@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:my_app_teste/modules/categoria/page/categoria_page.dart';
+import 'package:my_app_teste/modules/cliente/page/cliente_page.dart';
 import 'package:my_app_teste/modules/dashboard/page/dashboard_page.dart';
 import 'package:my_app_teste/modules/produto/page/produto_page.dart';
 
@@ -18,6 +19,7 @@ class _HomeState extends State<Home> {
     DashboardPage(),
     CategoriaPage(),
     ProdutoPage(),
+    ClientePage(),
   ];
 
   @override
@@ -77,6 +79,15 @@ class _HomeState extends State<Home> {
                 });
               },
             ),
+            ListTile(
+            leading: Icon(Icons.supervised_user_circle),
+              title: Text('cliente'),
+              onTap: () {
+                setState(() {
+                  _selectedIndex = 3;
+                });
+              },
+            ),  
           ],
         ),
       ),

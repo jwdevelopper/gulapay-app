@@ -1,5 +1,5 @@
 class ResponseLogin {
-  String? token;
+  String? accessToken;
   String? tokenType;
   String? expiresIn;
   String? message;
@@ -7,10 +7,10 @@ class ResponseLogin {
   int? statusCode;
   String? detail;
 
-  ResponseLogin({this.token, this.tokenType, this.expiresIn, this.message, this.error, this.statusCode, this.detail});
+  ResponseLogin({this.accessToken, this.tokenType, this.expiresIn, this.message, this.error, this.statusCode, this.detail});
 
   ResponseLogin.fromJson(Map<String, dynamic> json) {
-    token = json['token'];
+    accessToken = json['accessToken'];
     tokenType = json['tokenType'];
     expiresIn = json['expiresIn'];
     message = json['message'];
@@ -21,7 +21,7 @@ class ResponseLogin {
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['token'] = this.token;
+    data['accessToken'] = this.accessToken;
     data['tokenType'] = this.tokenType;
     data['expiresIn'] = this.expiresIn;
     data['message'] = this.message;

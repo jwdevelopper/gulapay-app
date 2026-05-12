@@ -16,8 +16,8 @@ class LoginService {
       final loginResponse = ResponseLogin.fromJson(response.data);
 
       // Salva o token automaticamente após login bem-sucedido
-      if (loginResponse.token != null && loginResponse.token!.isNotEmpty) {
-        await ApiClient.salvarToken(loginResponse.token!);
+      if (loginResponse.accessToken != null && loginResponse.accessToken!.isNotEmpty) {
+        await ApiClient.salvarToken(loginResponse.accessToken!);
       }
 
       return loginResponse;
