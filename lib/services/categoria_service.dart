@@ -52,21 +52,31 @@ class CategoriaService {
     }
   }
 
-  /// Alterna o status ativo/inativo da categoria. Backend faz o toggle.
-  Future<CategoriaDto> alternarStatus(int id) async {
+  /// Inativa a categoria (soft delete). A categoria fica com ativo=false
+  /// mas continua no banco, podendo ser reativada depois.
+  /// Usa o endpoint DELETE /categorias/{id} do backend.
+  Future<CategoriaDto> inativarCategoria(int id) async {
     try {
-      final response = await dio.patch('${ConstantsApi.urlCategorias}/$id/status');
-      return CategoriaDto.fromJson(response.data);
+      await dio.delete('${ConstantsApi.urlCategorias}/$id');
+      return CategoriaDto(nome: "Sucesso", message: "Categoria inativada com sucesso");
     } on DioException catch (e) {
       return _tratarErroDio(e);
     }
   }
 
-  /// Exclui a categoria permanentemente. Falha (422) se houver produtos vinculados.
-  Future<CategoriaDto> excluirCategoria(int id) async {
+  /// Reativa uma categoria inativa. Faz PUT mantendo nome/descricao e setando ativo=true.
+  Future<CategoriaDto> ativarCategoria(CategoriaDto categoria) async {
     try {
-      await dio.delete('${ConstantsApi.urlCategorias}/$id');
-      return CategoriaDto(nome: "Sucesso", message: "Categoria excluída com sucesso");
+      final body = CategoriaDto(
+        nome: categoria.nome,
+        descricao: categoria.descricao,
+        ativo: true,
+      );
+      final response = await dio.put(
+        '${ConstantsApi.urlCategorias}/${categoria.id}',
+        data: body.toJson(),
+      );
+      return CategoriaDto.fromJson(response.data);
     } on DioException catch (e) {
       return _tratarErroDio(e);
     }

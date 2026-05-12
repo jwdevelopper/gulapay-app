@@ -456,11 +456,11 @@ class _CategoriaListaPageState extends State<CategoriaListaPage> {
           case 'editar':
             _navegarParaEdicao(categoria);
             break;
-          case 'status':
-            _alternarStatus(categoria);
+          case 'ativar':
+            _ativarCategoria(categoria);
             break;
           case 'excluir':
-            _confirmarExclusao(categoria);
+            _confirmarInativacao(categoria);
             break;
         }
       },
@@ -475,31 +475,31 @@ class _CategoriaListaPageState extends State<CategoriaListaPage> {
             ],
           ),
         ),
-        PopupMenuItem(
-          value: 'status',
-          child: Row(
-            children: [
-              Icon(
-                ativo ? Icons.pause_circle_outline : Icons.play_circle_outline,
-                size: 18,
-                color: _corTextoEscuro,
-              ),
-              const SizedBox(width: 10),
-              Text(ativo ? 'Desativar' : 'Ativar'),
-            ],
+        if (ativo) ...[
+          const PopupMenuDivider(),
+          const PopupMenuItem(
+            value: 'excluir',
+            child: Row(
+              children: [
+                Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                SizedBox(width: 10),
+                Text('Excluir', style: TextStyle(color: Colors.red)),
+              ],
+            ),
           ),
-        ),
-        const PopupMenuDivider(),
-        const PopupMenuItem(
-          value: 'excluir',
-          child: Row(
-            children: [
-              Icon(Icons.delete_outline, size: 18, color: Colors.red),
-              SizedBox(width: 10),
-              Text('Excluir', style: TextStyle(color: Colors.red)),
-            ],
+        ] else ...[
+          const PopupMenuDivider(),
+          PopupMenuItem(
+            value: 'ativar',
+            child: Row(
+              children: [
+                Icon(Icons.play_circle_outline, size: 18, color: Colors.green.shade700),
+                const SizedBox(width: 10),
+                Text('Ativar', style: TextStyle(color: Colors.green.shade700)),
+              ],
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -522,26 +522,21 @@ class _CategoriaListaPageState extends State<CategoriaListaPage> {
     if (recarregar == true) _carregarCategorias();
   }
 
-  Future<void> _alternarStatus(CategoriaDto categoria) async {
-    final bool ativandoAgora = !(categoria.ativo ?? true);
-    final resultado = await _categoriaService.alternarStatus(categoria.id!);
+  Future<void> _ativarCategoria(CategoriaDto categoria) async {
+    final resultado = await _categoriaService.ativarCategoria(categoria);
 
     if (!mounted) return;
 
     if (resultado.nome == 'Erro') {
-      _mostrarSnack(resultado.message ?? 'Não foi possível alterar o status.', erro: true);
+      _mostrarSnack(resultado.message ?? 'Não foi possível ativar a categoria.', erro: true);
       return;
     }
 
-    _mostrarSnack(
-      ativandoAgora
-          ? 'Categoria "${categoria.nome}" ativada.'
-          : 'Categoria "${categoria.nome}" desativada.',
-    );
+    _mostrarSnack('Categoria "${categoria.nome}" ativada.');
     _carregarCategorias();
   }
 
-  Future<void> _confirmarExclusao(CategoriaDto categoria) async {
+  Future<void> _confirmarInativacao(CategoriaDto categoria) async {
     final confirmado = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -550,12 +545,12 @@ class _CategoriaListaPageState extends State<CategoriaListaPage> {
           children: [
             Icon(Icons.warning_amber_rounded, color: Colors.red.shade400),
             const SizedBox(width: 10),
-            const Text('Excluir categoria?'),
+            const Expanded(child: Text('Excluir categoria?')),
           ],
         ),
         content: Text(
-          'Tem certeza que deseja excluir "${categoria.nome}"? '
-          'Essa ação não pode ser desfeita.',
+          'Tem certeza que deseja excluir "${categoria.nome}"?\n\n'
+          'A categoria ficará como inativa e poderá ser reativada depois pelo filtro "Inativas".',
         ),
         actions: [
           TextButton(
@@ -577,45 +572,21 @@ class _CategoriaListaPageState extends State<CategoriaListaPage> {
     );
 
     if (confirmado != true) return;
-    await _executarExclusao(categoria);
+    await _executarInativacao(categoria);
   }
 
-  Future<void> _executarExclusao(CategoriaDto categoria) async {
-    final resultado = await _categoriaService.excluirCategoria(categoria.id!);
+  Future<void> _executarInativacao(CategoriaDto categoria) async {
+    final resultado = await _categoriaService.inativarCategoria(categoria.id!);
 
     if (!mounted) return;
 
     if (resultado.nome == 'Erro') {
-      _mostrarDialogErroExclusao(resultado.message ?? 'Não foi possível excluir.');
+      _mostrarSnack(resultado.message ?? 'Não foi possível excluir.', erro: true);
       return;
     }
 
-    _mostrarSnack('Categoria "${categoria.nome}" excluída.');
+    _mostrarSnack('Categoria "${categoria.nome}" excluída (inativada).');
     _carregarCategorias();
-  }
-
-  void _mostrarDialogErroExclusao(String mensagem) {
-    showDialog<void>(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.block_rounded, color: Colors.red.shade400),
-            const SizedBox(width: 10),
-            const Expanded(child: Text('Exclusão bloqueada')),
-          ],
-        ),
-        content: Text(mensagem),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(foregroundColor: _corLaranja),
-            child: const Text('Entendi'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _mostrarSnack(String mensagem, {bool erro = false}) {
