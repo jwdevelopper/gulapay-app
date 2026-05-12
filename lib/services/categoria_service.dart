@@ -52,9 +52,6 @@ class CategoriaService {
     }
   }
 
-  /// Inativa a categoria (soft delete). A categoria fica com ativo=false
-  /// mas continua no banco, podendo ser reativada depois.
-  /// Usa o endpoint DELETE /categorias/{id} do backend.
   Future<CategoriaDto> inativarCategoria(int id) async {
     try {
       await dio.delete('${ConstantsApi.urlCategorias}/$id');
@@ -64,7 +61,6 @@ class CategoriaService {
     }
   }
 
-  /// Reativa uma categoria inativa. Faz PUT mantendo nome/descricao e setando ativo=true.
   Future<CategoriaDto> ativarCategoria(CategoriaDto categoria) async {
     try {
       final body = CategoriaDto(
@@ -93,7 +89,6 @@ class CategoriaService {
     if (e.response != null) {
       if (e.response!.data != null && e.response!.data.toString().trim().isNotEmpty) {
         if (e.response!.data is Map<String, dynamic>) {
-          // Backend usa ProblemDetail (RFC 7807): campo "detail" tem a mensagem
           mensagemErro = e.response!.data['detail'] ??
               e.response!.data['message'] ??
               e.response!.data['error'] ??

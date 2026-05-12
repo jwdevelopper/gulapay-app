@@ -26,7 +26,6 @@ class ApiClient {
       InterceptorsWrapper(
         onRequest: (options, handler) async {
           try {
-            // don't attach token to login/register endpoints
             if (!options.path.contains(ConstantsApi.urlLogin) &&
                 !options.path.contains(ConstantsApi.urlRegistrarUsuario)) {
               final token = await getToken();
