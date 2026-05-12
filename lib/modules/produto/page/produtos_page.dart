@@ -150,6 +150,17 @@ class _ProdutosPageState extends State<ProdutosPage> {
       )
       .label;
 
+  bool get _hasActiveFilter {
+    if (_selectedCategoriaId != null) return true;
+    if (_search.trim().isNotEmpty) return true;
+    if (_filterPriceMin != null) return true;
+    if (_filterPriceMax != null) return true;
+    if (_filterDescricao.trim().isNotEmpty) return true;
+    if (_filterTipoProduto != null && _filterTipoProduto!.isNotEmpty) return true;
+    if (_filterSetorProducao != null && _filterSetorProducao!.isNotEmpty) return true;
+    return false;
+  }
+
   Future<void> _loadCategories() async {
     try {
       final lista = await CategoriaService().listar(apenasAtivos: true);
@@ -887,7 +898,7 @@ class _ProdutosPageState extends State<ProdutosPage> {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: const [
-                                    Text('Continuar'),
+                                    Text('Filtrar'),
                                     SizedBox(width: 8),
                                     Icon(Icons.chevron_right_rounded, size: 18),
                                   ],
@@ -976,11 +987,15 @@ class _ProdutosPageState extends State<ProdutosPage> {
 
   List<Produto> get _filtered {
     var list = List<Produto>.from(_produtos);
+
+    // Categoria
     if (_selectedCategoriaId != null) {
       list = list
           .where((produto) => produto.categoriaId == _selectedCategoriaId)
           .toList();
     }
+
+    // Search (plain search bar)
     if (_search.trim().isNotEmpty) {
       final query = _search.toLowerCase().trim();
       list = list.where((produto) {
@@ -992,6 +1007,28 @@ class _ProdutosPageState extends State<ProdutosPage> {
             categoriaNome.contains(query);
       }).toList();
     }
+
+    // Additional filters from filter sheet
+    if (_filterPriceMin != null) {
+      list = list.where((p) => (p.preco ?? 0) >= _filterPriceMin!).toList();
+    }
+    if (_filterPriceMax != null) {
+      list = list.where((p) => (p.preco ?? 0) <= _filterPriceMax!).toList();
+    }
+    if (_filterDescricao.trim().isNotEmpty) {
+      final q = _filterDescricao.toLowerCase().trim();
+      list = list.where((p) => (p.descricao ?? '').toLowerCase().contains(q)).toList();
+    }
+    if (_filterTipoProduto != null && _filterTipoProduto!.isNotEmpty) {
+      final ft = _filterTipoProduto!.toUpperCase();
+      list = list.where((p) => (p.tipoProduto ?? '').toUpperCase().contains(ft)).toList();
+    }
+    if (_filterSetorProducao != null && _filterSetorProducao!.isNotEmpty) {
+      final fs = _filterSetorProducao!.toUpperCase();
+      list = list.where((p) => (p.setorProducao ?? '').toUpperCase().contains(fs)).toList();
+    }
+
+    // Sorting
     switch (_sort) {
       case 'price_asc':
         list.sort((a, b) => (a.preco ?? 0).compareTo(b.preco ?? 0));
@@ -1013,6 +1050,7 @@ class _ProdutosPageState extends State<ProdutosPage> {
       default:
         break;
     }
+
     return list;
   }
 
@@ -1104,12 +1142,18 @@ class _ProdutosPageState extends State<ProdutosPage> {
       _selectedCategoriaId = null;
       _search = '';
       _searchController.clear();
+      _filterPriceMin = null;
+      _filterPriceMax = null;
+      _filterDescricao = '';
+      _filterTipoProduto = null;
+      _filterSetorProducao = null;
     });
     _load();
   }
 
   Widget _buildTopHeader() {
     final hasCategoryFilter = _selectedCategoriaId != null;
+    final hasAnyFilter = _hasActiveFilter;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
       child: Row(
@@ -1146,8 +1190,8 @@ class _ProdutosPageState extends State<ProdutosPage> {
             ),
           ),
           _HeaderIconButton(
-            icon: hasCategoryFilter ? Icons.close_rounded : Icons.filter_alt_outlined,
-            onTap: hasCategoryFilter ? _clearSearchAndFilter : _openFilterSheet,
+            icon: hasAnyFilter ? Icons.close_rounded : Icons.filter_alt_outlined,
+            onTap: hasAnyFilter ? _clearSearchAndFilter : _openFilterSheet,
           ),
         ],
       ),
@@ -1844,6 +1888,62 @@ class _ProductTag extends StatelessWidget {
           fontSize: 10,
           fontWeight: FontWeight.w800,
           letterSpacing: 0.1,
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _ActionTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+        decoration: BoxDecoration(
+          color: _WarmPalette.surfaceAlt,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _WarmPalette.border),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: _WarmPalette.inputFill,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: _WarmPalette.primary, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: _WarmPalette.text,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: _WarmPalette.textMuted,
+            ),
+          ],
         ),
       ),
     );
