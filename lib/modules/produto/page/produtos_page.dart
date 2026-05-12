@@ -1388,7 +1388,7 @@ class _ProdutosPageState extends State<ProdutosPage> {
 
     return _ProductCard(
       onTap: () => _openEdit(produto),
-      onLongPress: () => _openCardActions(produto),
+      onLongPress: null,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1466,10 +1466,64 @@ class _ProdutosPageState extends State<ProdutosPage> {
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              const SizedBox(height: 14),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: _WarmPalette.textMuted,
+              const SizedBox(height: 10),
+              PopupMenuButton<String>(
+                tooltip: 'Ações do produto',
+                padding: EdgeInsets.zero,
+                offset: const Offset(0, 8),
+                color: _WarmPalette.surface,
+                surfaceTintColor: Colors.transparent,
+                elevation: 10,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(color: _WarmPalette.borderSoft),
+                ),
+                constraints: const BoxConstraints(minWidth: 176),
+                onSelected: (value) {
+                  switch (value) {
+                    case 'edit':
+                      _openEdit(produto);
+                      break;
+                    case 'delete':
+                      _delete(produto);
+                      break;
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem<String>(
+                    value: 'edit',
+                    child: Row(
+                      children: const [
+                        Icon(
+                          Icons.edit_rounded,
+                          size: 18,
+                          color: _WarmPalette.text,
+                        ),
+                        SizedBox(width: 12),
+                        Text('Editar produto'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'delete',
+                    child: Row(
+                      children: const [
+                        Icon(
+                          Icons.delete_outline_rounded,
+                          size: 18,
+                          color: _WarmPalette.primaryPressed,
+                        ),
+                        SizedBox(width: 12),
+                        Text('Excluir produto'),
+                      ],
+                    ),
+                  ),
+                ],
+                icon: const Icon(
+                  Icons.more_horiz_rounded,
+                  color: _WarmPalette.textMuted,
+                  size: 22,
+                ),
               ),
             ],
           ),
@@ -1725,7 +1779,7 @@ class _CategoryChip extends StatelessWidget {
 class _ProductCard extends StatelessWidget {
   final Widget child;
   final VoidCallback onTap;
-  final VoidCallback onLongPress;
+  final VoidCallback? onLongPress;
 
   const _ProductCard({
     required this.child,
@@ -1796,61 +1850,3 @@ class _ProductTag extends StatelessWidget {
   }
 }
 
-class _ActionTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _ActionTile({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: _WarmPalette.surfaceAlt,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: _WarmPalette.borderSoft),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: _WarmPalette.inputFill,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(icon, color: _WarmPalette.primaryPressed, size: 19),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    color: _WarmPalette.text,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: _WarmPalette.textMuted,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
