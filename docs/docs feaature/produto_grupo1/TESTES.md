@@ -1,4 +1,4 @@
-# Testes do modulo Produto
+# Testes do módulo Produto
 
 Este documento descreve os testes unitarios do modulo Produto, incluindo o objetivo de cada teste e a metodologia aplicada.
 
