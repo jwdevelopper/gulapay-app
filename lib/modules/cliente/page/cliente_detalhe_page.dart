@@ -1,6 +1,7 @@
 // lib/modules/cliente/page/cliente_detalhes_page.dart
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:my_app_teste/modules/cliente/service/cliente_service.dart';
 import '../dto/cliente_response.dart';
 import 'cliente_form_page.dart';
 // import '../service/cliente_service.dart'; // Descomente após criar o método inativarCliente
@@ -24,8 +25,8 @@ class ClienteDetalhesPage extends StatelessWidget {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444), elevation: 0),
             onPressed: () async {
-              // TODO: Chame seu service aqui
-              // await inativarCliente(cliente.id);
+        
+              await inativarCliente(cliente.id as int);
               Navigator.pop(ctx); // Fecha dialog
               Navigator.pop(context, true); // Volta para lista indicando atualização
             },
