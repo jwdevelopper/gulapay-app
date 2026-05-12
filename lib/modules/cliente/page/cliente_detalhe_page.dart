@@ -16,21 +16,31 @@ class ClienteDetalhesPage extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text("Inativar Cliente"),
-        content: const Text("Deseja inativar este cliente? Ele não aparecerá mais nas buscas ativas, mas o histórico de pedidos será preservado."),
+        content: const Text(
+          "Deseja inativar este cliente? Ele não aparecerá mais nas buscas ativas, mas o histórico de pedidos será preservado.",
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text("Cancelar", style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444), elevation: 0),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              elevation: 0,
+            ),
             onPressed: () async {
-        
               await inativarCliente(cliente.id as int);
               Navigator.pop(ctx); // Fecha dialog
-              Navigator.pop(context, true); // Volta para lista indicando atualização
+              Navigator.pop(
+                context,
+                true,
+              ); // Volta para lista indicando atualização
             },
-            child: const Text("Inativar", style: TextStyle(color: Colors.white)),
+            child: const Text(
+              "Inativar",
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -42,7 +52,10 @@ class ClienteDetalhesPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Detalhes do Cliente', style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'Detalhes do Cliente',
+          style: TextStyle(color: Colors.white),
+        ),
         backgroundColor: Colors.blueAccent,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
@@ -51,7 +64,9 @@ class ClienteDetalhesPage extends StatelessWidget {
             onPressed: () async {
               final result = await Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => ClienteFormPage(cliente: cliente)),
+                MaterialPageRoute(
+                  builder: (context) => ClienteFormPage(cliente: cliente),
+                ),
               );
               if (result == true) Navigator.pop(context, true);
             },
@@ -69,14 +84,14 @@ class ClienteDetalhesPage extends StatelessWidget {
             const SizedBox(height: 32),
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFFEF4444),
-                  side: const BorderSide(color: Color(0xFFEF4444)),
-                  padding: const EdgeInsets.symmetric(vertical: 16)
+                foregroundColor: const Color(0xFFEF4444),
+                side: const BorderSide(color: Color(0xFFEF4444)),
+                padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               icon: const Icon(Icons.block),
               label: const Text('Inativar Cliente'),
               onPressed: () => _confirmarInativacao(context),
-            )
+            ),
           ],
         ),
       ),
@@ -97,11 +112,45 @@ class ClienteDetalhesPage extends StatelessWidget {
             const CircleAvatar(
               radius: 40,
               backgroundColor: Colors.blueAccent,
-              child: FaIcon(FontAwesomeIcons.userLarge, size: 36, color: Colors.white),
+              child: FaIcon(
+                FontAwesomeIcons.userLarge,
+                size: 36,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(height: 16),
-            Text(cliente.nome!, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+            Text(
+              cliente.nome!,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1E293B),
+              ),
+            ),
             const SizedBox(height: 8),
+            Text(
+              cliente.email ?? 'E-mail não informado',
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            const SizedBox(height: 8),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  cliente.endereco?.cidade ?? 'Cidade não informada',
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+                const Text(
+                  ' - ',
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+                Text(
+                  cliente.endereco?.uf ?? '',
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -118,9 +167,22 @@ class ClienteDetalhesPage extends StatelessWidget {
       child: Column(
         children: [
           ListTile(
-            leading: const FaIcon(FontAwesomeIcons.whatsapp, color: Colors.green),
-            title: const Text('WhatsApp', style: TextStyle(color: Colors.grey, fontSize: 12)),
-            subtitle: Text(cliente.telefone ?? 'Não informado', style: const TextStyle(color: Color(0xFF1E293B), fontSize: 16, fontWeight: FontWeight.w600)),
+            leading: const FaIcon(
+              FontAwesomeIcons.whatsapp,
+              color: Colors.green,
+            ),
+            title: const Text(
+              'WhatsApp',
+              style: TextStyle(color: Colors.grey, fontSize: 12),
+            ),
+            subtitle: Text(
+              cliente.telefone ?? 'Não informado',
+              style: const TextStyle(
+                color: Color(0xFF1E293B),
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             trailing: IconButton(
               icon: const Icon(Icons.open_in_new, color: Colors.blueAccent),
               onPressed: () {
