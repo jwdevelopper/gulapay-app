@@ -19,12 +19,15 @@ class _WarmPalette {
   static const surfaceAlt = Color(0xFFFFFDF9);
   static const primary = Color(0xFFF07330);
   static const primaryPressed = Color(0xFFE85F1E);
+  static const primarySoft = Color(0xFFF8C39C);
   static const text = Color(0xFF3D261A);
   static const textMuted = Color(0xFFA06E4E);
   static const border = Color(0xFFE8D8C2);
   static const borderSoft = Color(0xFFF0E3D0);
   static const inputFill = Color(0xFFFFF4E8);
   static const warningBg = Color(0xFFFCEEDC);
+  static const warningBorder = Color(0xFFE9C48D);
+  static const error = Color(0xFFD96A4A);
   static const shadow = Color(0x1A9C5A1E);
 }
 
@@ -97,6 +100,12 @@ class _ProdutosPageState extends State<ProdutosPage> {
   List<Produto> _produtos = [];
   List<Categoria> _categorias = [];
   int? _selectedCategoriaId;
+  // filtros adicionais
+  double? _filterPriceMin;
+  double? _filterPriceMax;
+  String _filterDescricao = '';
+  String? _filterTipoProduto;
+  String? _filterSetorProducao;
   bool _loading = true;
   String _search = '';
   String _sort = 'featured';
@@ -143,7 +152,7 @@ class _ProdutosPageState extends State<ProdutosPage> {
 
   Future<void> _loadCategories() async {
     try {
-      final lista = await CategoriaService().listar(apenasAtivos: false);
+      final lista = await CategoriaService().listar(apenasAtivos: true);
       if (!mounted) return;
       setState(() {
         _categorias = lista;
@@ -159,7 +168,7 @@ class _ProdutosPageState extends State<ProdutosPage> {
     }
     try {
       final lista = await _service.listar(
-        apenasAtivos: false,
+        apenasAtivos: true,
         categoriaId: categoriaId ?? _selectedCategoriaId,
       );
       if (!mounted) return;
@@ -388,6 +397,512 @@ class _ProdutosPageState extends State<ProdutosPage> {
               ),
             ),
           ),
+        );
+      },
+    );
+  }
+
+  Future<void> _openFilterSheet() async {
+    final minController = TextEditingController(text: _filterPriceMin?.toString() ?? '');
+    final maxController = TextEditingController(text: _filterPriceMax?.toString() ?? '');
+    final descricaoController = TextEditingController(text: _filterDescricao);
+    String? selectedCategoria = _selectedCategoriaId?.toString();
+    String? selectedSector = _filterSetorProducao;
+    String? selectedTipo = _filterTipoProduto;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return FractionallySizedBox(
+          heightFactor: 0.78,
+          child: StatefulBuilder(builder: (context, setModalState) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: _WarmPalette.surface,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: _WarmPalette.borderSoft,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Filtrar produtos',
+                              style: TextStyle(
+                                color: _WarmPalette.text,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(sheetContext),
+                            icon: const Icon(Icons.close_rounded),
+                            color: _WarmPalette.text,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: ListView(
+                          padding: const EdgeInsets.only(bottom: 20),
+                          children: [
+                            const SizedBox(height: 8),
+                            const Text('Categoria', style: TextStyle(fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 8),
+                            // selector que abre a lista completa de categorias (escala para muitas categorias)
+                            InkWell(
+                              onTap: () async {
+                                final picked = await showModalBottomSheet<String?>(
+                                  context: sheetContext,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (ctx) {
+                                    return FractionallySizedBox(
+                                      heightFactor: 0.72,
+                                      child: Container(
+                                        decoration: const BoxDecoration(
+                                          color: _WarmPalette.surface,
+                                          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                                        ),
+                                        child: SafeArea(
+                                          top: false,
+                                          child: Padding(
+                                            padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Center(
+                                                  child: Container(
+                                                    width: 40,
+                                                    height: 4,
+                                                    decoration: BoxDecoration(
+                                                      color: _WarmPalette.borderSoft,
+                                                      borderRadius: BorderRadius.circular(999),
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 18),
+                                                Row(
+                                                  children: [
+                                                    const Expanded(
+                                                      child: Text('Escolher categoria', style: TextStyle(color: _WarmPalette.text, fontSize: 18, fontWeight: FontWeight.w700)),
+                                                    ),
+                                                    IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close_rounded), color: _WarmPalette.text),
+                                                  ],
+                                                ),
+                                                const SizedBox(height: 8),
+                                                Expanded(
+                                                  child: _categorias.isEmpty
+                                                      ? Center(
+                                                          child: Column(
+                                                            mainAxisSize: MainAxisSize.min,
+                                                            children: const [
+                                                              Icon(Icons.inbox_outlined, size: 42, color: _WarmPalette.textMuted),
+                                                              SizedBox(height: 12),
+                                                              Text('Sem categorias', style: TextStyle(color: _WarmPalette.text, fontSize: 16, fontWeight: FontWeight.w700)),
+                                                            ],
+                                                          ),
+                                                        )
+                                                      : ListView.separated(
+                                                          itemCount: _categorias.length + 1,
+                                                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                                                          itemBuilder: (context, index) {
+                                                            if (index == 0) {
+                                                              final sel = selectedCategoria == null;
+                                                              return InkWell(
+                                                                onTap: () => Navigator.pop(ctx, null),
+                                                                borderRadius: BorderRadius.circular(18),
+                                                                child: Container(
+                                                                  padding: const EdgeInsets.all(14),
+                                                                  decoration: BoxDecoration(
+                                                                    color: sel ? _WarmPalette.warningBg : _WarmPalette.surfaceAlt,
+                                                                    borderRadius: BorderRadius.circular(18),
+                                                                    border: Border.all(color: sel ? _WarmPalette.primary : _WarmPalette.border),
+                                                                  ),
+                                                                  child: Row(
+                                                                    children: [
+                                                                      Container(width: 40, height: 40, decoration: BoxDecoration(color: sel ? _WarmPalette.primary : _WarmPalette.inputFill, borderRadius: BorderRadius.circular(14)), child: Icon(Icons.grid_view_rounded, color: sel ? Colors.white : _WarmPalette.primary)),
+                                                                      const SizedBox(width: 14),
+                                                                      const Expanded(child: Text('Todas', style: TextStyle(color: _WarmPalette.text, fontSize: 15, fontWeight: FontWeight.w700))),
+                                                                      if (sel) const Icon(Icons.check_rounded, color: _WarmPalette.primary),
+                                                                    ],
+                                                                  ),
+                                                                ),
+                                                              );
+                                                            }
+                                                            final c = _categorias[index - 1];
+                                                            final sel = selectedCategoria != null && int.tryParse(selectedCategoria ?? '') == c.id;
+                                                            return InkWell(
+                                                              onTap: () => Navigator.pop(ctx, c.id?.toString()),
+                                                              borderRadius: BorderRadius.circular(18),
+                                                              child: Container(
+                                                                padding: const EdgeInsets.all(14),
+                                                                decoration: BoxDecoration(
+                                                                  color: sel ? _WarmPalette.warningBg : _WarmPalette.surfaceAlt,
+                                                                  borderRadius: BorderRadius.circular(18),
+                                                                  border: Border.all(color: sel ? _WarmPalette.primary : _WarmPalette.border),
+                                                                ),
+                                                                child: Row(
+                                                                  children: [
+                                                                    Container(width: 40, height: 40, decoration: BoxDecoration(color: sel ? _WarmPalette.primary : _WarmPalette.inputFill, borderRadius: BorderRadius.circular(14)), child: Icon(_iconForCategoryName(c.nome), color: sel ? Colors.white : _WarmPalette.primary)),
+                                                                    const SizedBox(width: 14),
+                                                                    Expanded(child: Text(c.nome, style: const TextStyle(color: _WarmPalette.text, fontSize: 15, fontWeight: FontWeight.w700))),
+                                                                    if (sel) const Icon(Icons.check_rounded, color: _WarmPalette.primary) else const SizedBox(width: 18),
+                                                                  ],
+                                                                ),
+                                                              ),
+                                                            );
+                                                          },
+                                                        ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                );
+                                if (picked != null || selectedCategoria != picked) setModalState(() => selectedCategoria = picked);
+                              },
+                              borderRadius: BorderRadius.circular(16),
+                              child: Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: _WarmPalette.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: _WarmPalette.border),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 42,
+                                      height: 42,
+                                      decoration: BoxDecoration(
+                                        color: selectedCategoria != null ? _WarmPalette.primary : _WarmPalette.inputFill,
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: Icon(
+                                        _iconForCategoryName(selectedCategoria != null && int.tryParse(selectedCategoria ?? '') != null ? _categoriaNome(int.tryParse(selectedCategoria!)) : 'Todas'),
+                                        color: selectedCategoria != null ? Colors.white : _WarmPalette.primary,
+                                        size: 20,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text('Categoria', style: TextStyle(color: _WarmPalette.text, fontSize: 13, fontWeight: FontWeight.w700)),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            selectedCategoria != null && int.tryParse(selectedCategoria ?? '') != null ? _categoriaNome(int.tryParse(selectedCategoria!)) : 'Todas',
+                                            style: TextStyle(color: selectedCategoria != null ? _WarmPalette.text : _WarmPalette.textMuted, fontSize: 14, fontWeight: FontWeight.w600),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const Icon(Icons.chevron_right_rounded, color: _WarmPalette.textMuted),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            const Text('Preço (R\$)', style: TextStyle(fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: _WarmPalette.surfaceAlt,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(
+                                        color: _WarmPalette.border,
+                                      ),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Color(0x0F9C5A1E),
+                                          blurRadius: 12,
+                                          offset: Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: TextField(
+                                      controller: minController,
+                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                      style: const TextStyle(color: _WarmPalette.text),
+                                      decoration: const InputDecoration(
+                                        hintText: 'Min',
+                                        hintStyle: TextStyle(color: _WarmPalette.textMuted),
+                                        border: InputBorder.none,
+                                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: _WarmPalette.surfaceAlt,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(
+                                        color: _WarmPalette.border,
+                                      ),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Color(0x0F9C5A1E),
+                                          blurRadius: 12,
+                                          offset: Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: TextField(
+                                      controller: maxController,
+                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                      style: const TextStyle(color: _WarmPalette.text),
+                                      decoration: const InputDecoration(
+                                        hintText: 'Max',
+                                        hintStyle: TextStyle(color: _WarmPalette.textMuted),
+                                        border: InputBorder.none,
+                                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            const Text('Descrição', style: TextStyle(fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 8),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: _WarmPalette.surfaceAlt,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: _WarmPalette.border,
+                                ),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x0F9C5A1E),
+                                    blurRadius: 12,
+                                    offset: Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: TextField(
+                                controller: descricaoController,
+                                maxLines: 2,
+                                style: const TextStyle(color: _WarmPalette.text),
+                                decoration: const InputDecoration(
+                                  hintText: 'Termo presente na descrição',
+                                  hintStyle: TextStyle(color: _WarmPalette.textMuted),
+                                  border: InputBorder.none,
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            const Text('Tipo do produto', style: TextStyle(fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 8),
+                            GridView.count(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 10,
+                              mainAxisSpacing: 10,
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              childAspectRatio: 1.25,
+                              children: ['UNITARIO', 'COMPOSTO', 'COMBO'].map((t) {
+                                final selected = selectedTipo == t;
+                                return InkWell(
+                                  onTap: () => setModalState(() => selectedTipo = selected ? null : t),
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: selected ? _WarmPalette.warningBg : _WarmPalette.surfaceAlt,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: selected ? _WarmPalette.primary : _WarmPalette.border),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Container(
+                                              width: 34,
+                                              height: 34,
+                                              decoration: BoxDecoration(
+                                                color: selected ? _WarmPalette.primary : _WarmPalette.inputFill,
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: Icon(
+                                                t == 'UNITARIO' ? Icons.inventory_2_rounded : (t == 'COMPOSTO' ? Icons.layers_rounded : Icons.local_offer_rounded),
+                                                color: selected ? Colors.white : _WarmPalette.primary,
+                                                size: 18,
+                                              ),
+                                            ),
+                                            const Spacer(),
+                                            if (selected)
+                                              const Icon(
+                                                Icons.check_circle_rounded,
+                                                color: _WarmPalette.primary,
+                                                size: 18,
+                                              ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 14),
+                                        Text(
+                                          t == 'UNITARIO' ? 'Unitário' : (t == 'COMPOSTO' ? 'Composto' : 'Combo'),
+                                          style: const TextStyle(color: _WarmPalette.text, fontSize: 15, fontWeight: FontWeight.w700),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 14),
+                            const Text('Setor de produção', style: TextStyle(fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 8),
+                            Column(
+                              children: ['COZINHA', 'BAR', 'BALCAO', 'CAIXA'].map((s) {
+                                final selected = selectedSector == s;
+                                return InkWell(
+                                  onTap: () => setModalState(() => selectedSector = selected ? null : s),
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Container(
+                                    margin: const EdgeInsets.only(bottom: 10),
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: selected ? _WarmPalette.warningBg : _WarmPalette.surfaceAlt,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: selected ? _WarmPalette.primary : _WarmPalette.border),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 40,
+                                          height: 40,
+                                          decoration: BoxDecoration(
+                                            color: selected ? _WarmPalette.primary : _WarmPalette.inputFill,
+                                            borderRadius: BorderRadius.circular(14),
+                                          ),
+                                          child: Icon(
+                                            s == 'COZINHA' ? Icons.dining_rounded : (s == 'BAR' ? Icons.wine_bar_rounded : (s == 'BALCAO' ? Icons.storefront_rounded : Icons.point_of_sale_rounded)),
+                                            color: selected ? Colors.white : _WarmPalette.primary,
+                                            size: 20,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                s == 'COZINHA' ? 'Cozinha' : (s == 'BAR' ? 'Bar' : (s == 'BALCAO' ? 'Balcão' : 'Caixa')),
+                                                style: const TextStyle(color: _WarmPalette.text, fontSize: 15, fontWeight: FontWeight.w700),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        if (selected)
+                                          const Icon(Icons.check_circle_rounded, color: _WarmPalette.primary, size: 18)
+                                        else
+                                          const Icon(Icons.radio_button_unchecked_rounded, color: _WarmPalette.border),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => Navigator.pop(sheetContext),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: _WarmPalette.text,
+                                  backgroundColor: _WarmPalette.surfaceAlt,
+                                  side: const BorderSide(color: _WarmPalette.border),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                ),
+                                child: const Text('Cancelar'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _filterPriceMin = double.tryParse(minController.text.replaceAll(',', '.'));
+                                    _filterPriceMax = double.tryParse(maxController.text.replaceAll(',', '.'));
+                                    _filterDescricao = descricaoController.text.trim();
+                                    _filterTipoProduto = selectedTipo;
+                                    _filterSetorProducao = selectedSector;
+                                    _selectedCategoriaId = selectedCategoria != null && int.tryParse(selectedCategoria ?? '') != null ? int.parse(selectedCategoria!) : null;
+                                  });
+                                  Navigator.pop(sheetContext);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _WarmPalette.primary,
+                                  foregroundColor: Colors.white,
+                                  disabledBackgroundColor: _WarmPalette.primarySoft.withOpacity(0.55),
+                                  disabledForegroundColor: Colors.white.withOpacity(0.8),
+                                  elevation: 4,
+                                  shadowColor: _WarmPalette.primaryPressed.withOpacity(0.35),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: const [
+                                    Text('Continuar'),
+                                    SizedBox(width: 8),
+                                    Icon(Icons.chevron_right_rounded, size: 18),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
         );
       },
     );
@@ -632,7 +1147,7 @@ class _ProdutosPageState extends State<ProdutosPage> {
           ),
           _HeaderIconButton(
             icon: hasCategoryFilter ? Icons.close_rounded : Icons.filter_alt_outlined,
-            onTap: hasCategoryFilter ? _clearSearchAndFilter : _openSortSheet,
+            onTap: hasCategoryFilter ? _clearSearchAndFilter : _openFilterSheet,
           ),
         ],
       ),
