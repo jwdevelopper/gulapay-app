@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'produtos_page.dart';
 
 class ProdutoPage extends StatelessWidget {
-  const ProdutoPage({super.key});
+  final VoidCallback? onOpenDrawer;
+
+  const ProdutoPage({super.key, this.onOpenDrawer});
 
   @override
   Widget build(BuildContext context) {
-    return const ProdutosPage();
+    return ProdutosPage(onOpenDrawer: onOpenDrawer);
   }
 }

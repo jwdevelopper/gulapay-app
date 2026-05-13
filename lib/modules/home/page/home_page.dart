@@ -11,68 +11,72 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = const [
-    DashboardPage(),
-    CategoriaPage(),
-    ProdutoPage(),
+  List<Widget> get _pages => [
+    const DashboardPage(),
+    const CategoriaPage(),
+    ProdutoPage(onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer()),
   ];
+
+  String get _title {
+    switch (_selectedIndex) {
+      case 1:
+        return 'Categoria';
+      default:
+        return 'Home';
+    }
+  }
+
+  void _selectIndex(int index) {
+    Navigator.of(context).pop();
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final showShell = _selectedIndex != 2;
 
     return Scaffold(
-      appBar: showShell ? AppBar(title: const Text('Home')) : null,
-      drawer: showShell
-          ? Drawer(
-              child: ListView(
-                padding: EdgeInsets.zero,
-                children: [
-                  const DrawerHeader(
-                    decoration: BoxDecoration(color: Colors.blue),
-                    child: Text(
-                      'Menu',
-                      style: TextStyle(color: Colors.white, fontSize: 24),
-                    ),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.home),
-                    title: const Text('Home'),
-                    onTap: () {
-                      setState(() {
-                        _selectedIndex = 0;
-                      });
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.person),
-                    title: const Text('Usuario'),
-                    onTap: () {},
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.category),
-                    title: const Text('Categoria'),
-                    onTap: () {
-                      setState(() {
-                        _selectedIndex = 1;
-                      });
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.shopping_cart),
-                    title: const Text('Produto'),
-                    onTap: () {
-                      setState(() {
-                        _selectedIndex = 2;
-                      });
-                    },
-                  ),
-                ],
+      key: _scaffoldKey,
+      appBar: showShell ? AppBar(title: Text(_title)) : null,
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(color: Colors.blue),
+              child: Text(
+                'Menu',
+                style: TextStyle(color: Colors.white, fontSize: 24),
               ),
-            )
-          : null,
+            ),
+            ListTile(
+              leading: const Icon(Icons.home),
+              title: const Text('Home'),
+              onTap: () => _selectIndex(0),
+            ),
+            ListTile(
+              leading: const Icon(Icons.person),
+              title: const Text('Usuario'),
+              onTap: () => Navigator.of(context).pop(),
+            ),
+            ListTile(
+              leading: const Icon(Icons.category),
+              title: const Text('Categoria'),
+              onTap: () => _selectIndex(1),
+            ),
+            ListTile(
+              leading: const Icon(Icons.shopping_cart),
+              title: const Text('Produto'),
+              onTap: () => _selectIndex(2),
+            ),
+          ],
+        ),
+      ),
       body: IndexedStack(index: _selectedIndex, children: _pages),
     );
   }
