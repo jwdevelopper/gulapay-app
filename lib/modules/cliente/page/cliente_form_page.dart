@@ -7,7 +7,8 @@ import '../dto/cliente_create_request.dart';
 import '../dto/cliente_update_request.dart';
 
 class ClienteFormPage extends StatefulWidget {
-  final ClienteResponse? cliente; // Se for nulo, é cadastro. Se existir, é edição.
+  final ClienteResponse?
+  cliente; // Se for nulo, é cadastro. Se existir, é edição.
 
   const ClienteFormPage({super.key, this.cliente});
 
@@ -45,7 +46,8 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
         _cepController.text = widget.cliente!.endereco!.cep ?? '';
         _logradouroController.text = widget.cliente!.endereco!.logradouro ?? '';
         _numeroController.text = widget.cliente!.endereco!.numero ?? '';
-        _complementoController.text = widget.cliente!.endereco!.complemento ?? '';
+        _complementoController.text =
+            widget.cliente!.endereco!.complemento ?? '';
         _bairroController.text = widget.cliente!.endereco!.bairro ?? '';
         _cidadeController.text = widget.cliente!.endereco!.cidade ?? '';
         _ufController.text = widget.cliente!.endereco!.uf ?? '';
@@ -108,7 +110,13 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(isEdicao ? 'Cliente atualizado com sucesso!' : 'Cliente cadastrado!')),
+          SnackBar(
+            content: Text(
+              isEdicao
+                  ? 'Cliente atualizado com sucesso!'
+                  : 'Cliente cadastrado!',
+            ),
+          ),
         );
         Navigator.pop(context, true); // Retorna true para atualizar a lista
       }
@@ -130,11 +138,14 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor:Color(0xFFFFF8F0),
       appBar: AppBar(
-        title: Text(isEdicao ? 'Editar Cliente' : 'Novo Cliente', style: const TextStyle(color: Colors.white)),
-        backgroundColor: Colors.blueAccent,
-        iconTheme: const IconThemeData(color: Colors.white),
+        title: Text(
+          isEdicao ? 'Editar Cliente' : 'Novo Cliente',
+          style: const TextStyle(color: Color(0xFF1E293B)),
+        ),
+        backgroundColor: Color(0xFFEC8550),
+        iconTheme: const IconThemeData(color: Color(0xFF1E293B)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -144,23 +155,40 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _buildSectionTitle('Dados de Identificação'),
-              _buildTextField('Nome Completo', _nomeController, isRequired: true),
+              _buildTextField(
+                'Nome Completo',
+                _nomeController,
+                isRequired: true,
+              ),
               const SizedBox(height: 24),
               _buildSectionTitle('Contato'),
               _buildTextField("E-mail", _emailController),
-              _buildTextField('Telefone (WhatsApp)', _telefoneController, isRequired: true),
+              const SizedBox(height: 16),
+              _buildTextField(
+                'Telefone (WhatsApp)',
+                _telefoneController,
+                isRequired: true,
+              ),
               const SizedBox(height: 32),
 
               _buildSectionTitle('Endereço'),
               _buildTextField('CEP', _cepController),
               const SizedBox(height: 16),
-              _buildTextField('Logradouro (Rua/Avenida)', _logradouroController),
+              _buildTextField(
+                'Logradouro (Rua/Avenida)',
+                _logradouroController,
+              ),
               const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(child: _buildTextField('Número', _numeroController)),
                   const SizedBox(width: 16),
-                  Expanded(child: _buildTextField('Complemento', _complementoController)),
+                  Expanded(
+                    child: _buildTextField(
+                      'Complemento',
+                      _complementoController,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -168,9 +196,15 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Expanded(flex: 2, child: _buildTextField('Cidade', _cidadeController)),
+                  Expanded(
+                    flex: 2,
+                    child: _buildTextField('Cidade', _cidadeController),
+                  ),
                   const SizedBox(width: 16),
-                  Expanded(flex: 1, child: _buildTextField('UF', _ufController)),
+                  Expanded(
+                    flex: 1,
+                    child: _buildTextField('UF', _ufController),
+                  ),
                 ],
               ),
               const SizedBox(height: 32),
@@ -179,15 +213,23 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
                 height: 50,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
+                    backgroundColor: Color(0xFFEC8550),
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                   onPressed: _isLoading ? null : _salvar,
                   child: _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : Text(isEdicao ? 'Salvar Alterações' : 'Cadastrar Cliente',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                      : Text(
+                          isEdicao ? 'Salvar Alterações' : 'Cadastrar Cliente',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
               ),
             ],
@@ -200,24 +242,44 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF1E293B),
+        ),
+      ),
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, {bool isRequired = false}) {
+  Widget _buildTextField(
+    String label,
+    TextEditingController controller, {
+    bool isRequired = false,
+  }) {
     return TextFormField(
       controller: controller,
       decoration: InputDecoration(
         labelText: label,
         filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+        fillColor:Color(0xFFFFFFFF),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+        ),
       ),
-      validator: isRequired ? (value) {
-        if (value == null || value.isEmpty) return 'Este campo é obrigatório';
-        return null;
-      } : null,
+      validator: isRequired
+          ? (value) {
+              if (value == null || value.isEmpty)
+                return 'Este campo é obrigatório';
+              return null;
+            }
+          : null,
     );
   }
 }

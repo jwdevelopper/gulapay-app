@@ -50,13 +50,13 @@ class ClienteDetalhesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Color(0xFFFFF8F0),
       appBar: AppBar(
         title: const Text(
           'Detalhes do Cliente',
           style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: Color(0xFFEC8550),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
@@ -111,7 +111,7 @@ class ClienteDetalhesPage extends StatelessWidget {
           children: [
             const CircleAvatar(
               radius: 40,
-              backgroundColor: Colors.blueAccent,
+              backgroundColor: const Color.fromARGB(255, 189, 110, 24),
               child: FaIcon(
                 FontAwesomeIcons.userLarge,
                 size: 36,

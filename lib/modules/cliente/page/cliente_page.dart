@@ -57,7 +57,7 @@ class _ClientePageState extends State<ClientePage> {
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text('Clientes', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: Color(0xFFEC8550),
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -66,7 +66,7 @@ class _ClientePageState extends State<ClientePage> {
           _buildSearchBar(),
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: Colors.blueAccent))
+                ? const Center(child: CircularProgressIndicator(color: Color(0xFFEC8550)))
                 : _clientesFiltrados.isEmpty
                 ? _buildEmptyState()
                 : _buildLista(),
@@ -74,7 +74,7 @@ class _ClientePageState extends State<ClientePage> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: Color(0xFFEC8550),
         elevation: 2,
         onPressed: () async {
           final result = await Navigator.push(
@@ -90,7 +90,7 @@ class _ClientePageState extends State<ClientePage> {
 
   Widget _buildSearchBar() {
     return Container(
-      color: Colors.blueAccent,
+      color: Color(0xFFEC8550),
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Container(
         decoration: BoxDecoration(
@@ -147,8 +147,8 @@ class _ClientePageState extends State<ClientePage> {
           child: ListTile(
             contentPadding: const EdgeInsets.all(16),
             leading: CircleAvatar(
-              backgroundColor: isAtivo ? Colors.blueAccent.withOpacity(0.1) : Colors.grey[200],
-              child: FaIcon(FontAwesomeIcons.user, color: isAtivo ? Colors.blueAccent : Colors.grey),
+              backgroundColor: isAtivo ? const Color.fromARGB(255, 189, 110, 24).withOpacity(0.1) : Colors.grey[200],
+              child: FaIcon(FontAwesomeIcons.user, color: isAtivo ? const Color.fromARGB(255, 189, 110, 24) : Colors.grey),
             ),
             title: Text(cliente.nome!,
                 style: TextStyle(
