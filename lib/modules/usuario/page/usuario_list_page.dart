@@ -310,7 +310,10 @@ class _UsuarioListaPaginaState extends State<UsuarioListaPagina> {
                   radius: 22,
                   backgroundColor: AppTema.fundoDica,
                   child: Text(
-                    (u.nome ?? '?').characters.first.toUpperCase(),
+                    ((u.nome?.trim().isNotEmpty ?? false)
+                            ? u.nome!.trim().characters.first
+                            : '?')
+                        .toUpperCase(),
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: AppTema.primaria,
