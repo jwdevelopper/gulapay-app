@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:my_app_teste/modules/categoria/page/categoria_page.dart';
 import 'package:my_app_teste/modules/dashboard/page/dashboard_page.dart';
+import 'package:my_app_teste/modules/entregador/page/entregador_page.dart';
 import 'package:my_app_teste/modules/produto/page/produto_page.dart';
 
 class Home extends StatefulWidget {
@@ -56,6 +57,16 @@ class _HomeState extends State<Home> {
               title: Text('Usuario'),
               onTap: () {
                 // Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.delivery_dining),
+              title: Text('Entregador'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const EntregadorPage()),
+                );
               },
             ),
 
