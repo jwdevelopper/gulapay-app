@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/auth_session.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/modules/categoria/page/categoria_page.dart';
 import 'package:my_app_teste/modules/dashboard/page/dashboard_page.dart';
 import 'package:my_app_teste/modules/produto/page/produto_page.dart';
+import 'package:my_app_teste/modules/usuario/page/usuario_list_page.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -11,73 +14,107 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  int _selectedIndex = 0;
+  static const _indiceInicio = 0;
+  static const _indiceCategoria = 1;
+  static const _indiceProduto = 2;
+  static const _indiceUsuarios = 3;
 
-  List<Widget> get _pages => [
-    const DashboardPage(),
-    const CategoriaPage(),
-    ProdutoPage(onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer()),
+  int _indiceSelecionado = _indiceInicio;
+  bool _ehAdministrador = false;
+
+  final List<Widget> _paginas = const [
+    DashboardPage(),
+    CategoriaPage(),
+    ProdutoPage(),
+    UsuarioListaPagina(),
   ];
 
-  String get _title {
-    switch (_selectedIndex) {
-      case 1:
-        return 'Categoria';
-      default:
-        return 'Home';
-    }
+  static const _titulos = ['Início', 'Categoria', 'Produto', 'Usuários'];
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarPerfil();
   }
 
-  void _selectIndex(int index) {
-    Navigator.of(context).pop();
-    setState(() {
-      _selectedIndex = index;
-    });
+  Future<void> _carregarPerfil() async {
+    final admin = await SessaoAutenticacao.ehAdministrador();
+    if (!mounted) return;
+    setState(() => _ehAdministrador = admin);
+  }
+
+  void _selecionar(int indice) {
+    Navigator.pop(context);
+    setState(() => _indiceSelecionado = indice);
   }
 
   @override
   Widget build(BuildContext context) {
-    final showShell = _selectedIndex != 2;
 
     return Scaffold(
-      key: _scaffoldKey,
-      appBar: showShell ? AppBar(title: Text(_title)) : null,
+      backgroundColor: AppTema.fundo,
+      appBar: AppBar(
+        title: Text(
+          _titulos[_indiceSelecionado],
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppTema.textoEscuro,
+          ),
+        ),
+        backgroundColor: AppTema.fundo,
+        foregroundColor: AppTema.textoEscuro,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppTema.primariaEscura),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: AppTema.bordaCampo),
+        ),
+      ),
+      onDrawerChanged: (aberto) {
+        if (aberto) _carregarPerfil();
+      },
       drawer: Drawer(
+        backgroundColor: AppTema.fundo,
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
             const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.blue),
-              child: Text(
-                'Menu',
-                style: TextStyle(color: Colors.white, fontSize: 24),
-              ),
+              decoration: BoxDecoration(color: AppTema.primaria),
+              child: Text('Menu',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold)),
             ),
             ListTile(
               leading: const Icon(Icons.home),
-              title: const Text('Home'),
-              onTap: () => _selectIndex(0),
+              title: const Text('Início'),
+              selected: _indiceSelecionado == _indiceInicio,
+              onTap: () => _selecionar(_indiceInicio),
             ),
-            ListTile(
-              leading: const Icon(Icons.person),
-              title: const Text('Usuario'),
-              onTap: () => Navigator.of(context).pop(),
-            ),
+            if (_ehAdministrador)
+              ListTile(
+                leading: const Icon(Icons.people),
+                title: const Text('Usuários'),
+                selected: _indiceSelecionado == _indiceUsuarios,
+                onTap: () => _selecionar(_indiceUsuarios),
+              ),
             ListTile(
               leading: const Icon(Icons.category),
               title: const Text('Categoria'),
-              onTap: () => _selectIndex(1),
+              selected: _indiceSelecionado == _indiceCategoria,
+              onTap: () => _selecionar(_indiceCategoria),
             ),
             ListTile(
               leading: const Icon(Icons.shopping_cart),
               title: const Text('Produto'),
-              onTap: () => _selectIndex(2),
+              selected: _indiceSelecionado == _indiceProduto,
+              onTap: () => _selecionar(_indiceProduto),
             ),
           ],
         ),
       ),
-      body: IndexedStack(index: _selectedIndex, children: _pages),
+      body: IndexedStack(index: _indiceSelecionado, children: _paginas),
     );
   }
 }

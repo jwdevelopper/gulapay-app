@@ -26,11 +26,9 @@ class ResponseLogin {
   });
 
   ResponseLogin.fromJson(Map<String, dynamic> json) {
-    // API returns `accessToken` instead of `token`
     token = json['accessToken'] ?? json['token'];
     tokenType = json['tokenType'];
-    // API uses `expiresInMinutes`
-    expiresIn = (json['expiresInMinutes'] ?? json['expiresIn'])?.toString();
+    expiresIn = json['expiresInMinutes']?.toString() ?? json['expiresIn'];
     message = json['message'];
     error = json['error'];
     statusCode = json['statusCode'];

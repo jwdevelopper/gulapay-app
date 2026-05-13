@@ -4,4 +4,5 @@ final class ConstantsApi {
   static const porta = "";
   static const urlRegistrarUsuario = "/auth/register";
   static const urlLogin = "/auth/login";
+  static const urlUsuarios = "/usuarios";
 }
