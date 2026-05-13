@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/auth_session.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/modules/categoria/page/categoria_page.dart';
 import 'package:my_app_teste/modules/dashboard/page/dashboard_page.dart';
 import 'package:my_app_teste/modules/produto/page/produto_page.dart';
+import 'package:my_app_teste/modules/usuario/page/usuario_list_page.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -11,79 +14,106 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+  static const _indiceInicio = 0;
+  static const _indiceCategoria = 1;
+  static const _indiceProduto = 2;
+  static const _indiceUsuarios = 3;
 
-  int _selectedIndex = 0;
+  int _indiceSelecionado = _indiceInicio;
+  bool _ehAdministrador = false;
 
-  List<Widget> _pages = [
+  final List<Widget> _paginas = const [
     DashboardPage(),
     CategoriaPage(),
     ProdutoPage(),
+    UsuarioListaPagina(),
   ];
+
+  static const _titulos = ['Início', 'Categoria', 'Produto', 'Usuários'];
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarPerfil();
+  }
+
+  Future<void> _carregarPerfil() async {
+    final admin = await SessaoAutenticacao.ehAdministrador();
+    if (!mounted) return;
+    setState(() => _ehAdministrador = admin);
+  }
+
+  void _selecionar(int indice) {
+    Navigator.pop(context);
+    setState(() => _indiceSelecionado = indice);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTema.fundo,
       appBar: AppBar(
-        title: Text("Home"),
+        title: Text(
+          _titulos[_indiceSelecionado],
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppTema.textoEscuro,
+          ),
+        ),
+        backgroundColor: AppTema.fundo,
+        foregroundColor: AppTema.textoEscuro,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppTema.primariaEscura),
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: AppTema.bordaCampo),
+        ),
       ),
+      onDrawerChanged: (aberto) {
+        if (aberto) _carregarPerfil();
+      },
       drawer: Drawer(
+        backgroundColor: AppTema.fundo,
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: Colors.blue,
+            const DrawerHeader(
+              decoration: BoxDecoration(color: AppTema.primaria),
+              child: Text('Menu',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.home),
+              title: const Text('Início'),
+              selected: _indiceSelecionado == _indiceInicio,
+              onTap: () => _selecionar(_indiceInicio),
+            ),
+            if (_ehAdministrador)
+              ListTile(
+                leading: const Icon(Icons.people),
+                title: const Text('Usuários'),
+                selected: _indiceSelecionado == _indiceUsuarios,
+                onTap: () => _selecionar(_indiceUsuarios),
               ),
-              child: Text(
-                'Menu',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                ),
-              ),
+            ListTile(
+              leading: const Icon(Icons.category),
+              title: const Text('Categoria'),
+              selected: _indiceSelecionado == _indiceCategoria,
+              onTap: () => _selecionar(_indiceCategoria),
             ),
             ListTile(
-              leading: Icon(Icons.home),
-              title: Text('Home'),
-              onTap: () {
-                setState(() {
-                  _selectedIndex = 0;
-                });
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.person),
-              title: Text('Usuario'),
-              onTap: () {
-                // Navigator.pop(context);
-              },
-            ),
-
-            ListTile(
-              leading: Icon(Icons.category),
-              title: Text('Categoria'),
-              onTap: () {
-                setState(() {
-                  _selectedIndex = 1;
-                });
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.shopping_cart),
-              title: Text('Produto'),
-              onTap: () {
-                setState(() {
-                  _selectedIndex = 2;
-                });
-              },
+              leading: const Icon(Icons.shopping_cart),
+              title: const Text('Produto'),
+              selected: _indiceSelecionado == _indiceProduto,
+              onTap: () => _selecionar(_indiceProduto),
             ),
           ],
         ),
       ),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
-      )
+      body: IndexedStack(index: _indiceSelecionado, children: _paginas),
     );
   }
 }
