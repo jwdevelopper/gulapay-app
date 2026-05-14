@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/theme/app_colors.dart';
 import 'package:my_app_teste/features/categoria/model/categoria_dto.dart';
 import 'package:my_app_teste/features/categoria/service/categoria_service.dart';
@@ -59,37 +60,36 @@ class _CategoriaFormPageState extends State<CategoriaFormPage> {
         ativo: widget.categoria?.ativo,
       );
 
-      final CategoriaDto resultado;
       if (_modoEdicao) {
-        resultado = await _categoriaService.atualizarCategoria(
+        await _categoriaService.atualizarCategoria(
           widget.categoria!.id!,
           categoriaRequest,
         );
       } else {
-        resultado = await _categoriaService.criarCategoria(categoriaRequest);
+        await _categoriaService.criarCategoria(categoriaRequest);
       }
 
       if (!mounted) return;
 
-      if (resultado.nome == 'Erro') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _modoEdicao
+                ? 'Categoria atualizada com sucesso!'
+                : 'Categoria cadastrada com sucesso!',
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.pop(context, true);
+    } on ApiError catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(resultado.message ?? 'Erro ao salvar categoria'),
+            content: Text(e.message),
             backgroundColor: Colors.red,
           ),
         );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              _modoEdicao
-                  ? 'Categoria atualizada com sucesso!'
-                  : 'Categoria cadastrada com sucesso!',
-            ),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {

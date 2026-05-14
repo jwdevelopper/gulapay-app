@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/theme/app_colors.dart';
 import 'package:my_app_teste/features/categoria/model/categoria_dto.dart';
 import 'package:my_app_teste/features/categoria/page/categoria_form_page.dart';
@@ -98,8 +99,9 @@ class _CategoriaListaPageState extends State<CategoriaListaPage> {
 
   int? _contagemValida(AsyncSnapshot<List<CategoriaDto>> snapshot) {
     if (snapshot.connectionState != ConnectionState.done) return null;
+    if (snapshot.hasError) return null;
     final lista = snapshot.data ?? [];
-    if (lista.isEmpty || lista.first.nome == 'Erro') return null;
+    if (lista.isEmpty) return null;
     return lista.length;
   }
 
@@ -199,21 +201,17 @@ class _CategoriaListaPageState extends State<CategoriaListaPage> {
         }
 
         if (snapshot.hasError) {
+          final erro = snapshot.error;
+          final mensagem = erro is ApiError
+              ? erro.message
+              : 'Não foi possível carregar as categorias.';
           return _buildEstadoVazio(
-            mensagem: 'Não foi possível carregar as categorias.',
+            mensagem: mensagem,
             mostrarBotao: false,
           );
         }
 
         final categorias = snapshot.data ?? [];
-
-        if (categorias.isNotEmpty && categorias.first.nome == 'Erro') {
-          return _buildEstadoVazio(
-            mensagem: categorias.first.message ?? 'Erro desconhecido.',
-            mostrarBotao: false,
-          );
-        }
-
         final filtradas = _aplicarFiltros(categorias);
 
         if (filtradas.isEmpty) {
@@ -520,17 +518,15 @@ class _CategoriaListaPageState extends State<CategoriaListaPage> {
   }
 
   Future<void> _ativarCategoria(CategoriaDto categoria) async {
-    final resultado = await _categoriaService.ativarCategoria(categoria);
-
-    if (!mounted) return;
-
-    if (resultado.nome == 'Erro') {
-      _mostrarSnack(resultado.message ?? 'Não foi possível ativar a categoria.', erro: true);
-      return;
+    try {
+      await _categoriaService.ativarCategoria(categoria);
+      if (!mounted) return;
+      _mostrarSnack('Categoria "${categoria.nome}" ativada.');
+      _carregarCategorias();
+    } on ApiError catch (e) {
+      if (!mounted) return;
+      _mostrarSnack(e.message, erro: true);
     }
-
-    _mostrarSnack('Categoria "${categoria.nome}" ativada.');
-    _carregarCategorias();
   }
 
   Future<void> _confirmarInativacao(CategoriaDto categoria) async {
@@ -573,17 +569,15 @@ class _CategoriaListaPageState extends State<CategoriaListaPage> {
   }
 
   Future<void> _executarInativacao(CategoriaDto categoria) async {
-    final resultado = await _categoriaService.inativarCategoria(categoria.id!);
-
-    if (!mounted) return;
-
-    if (resultado.nome == 'Erro') {
-      _mostrarSnack(resultado.message ?? 'Não foi possível excluir.', erro: true);
-      return;
+    try {
+      await _categoriaService.inativarCategoria(categoria.id!);
+      if (!mounted) return;
+      _mostrarSnack('Categoria "${categoria.nome}" excluída (inativada).');
+      _carregarCategorias();
+    } on ApiError catch (e) {
+      if (!mounted) return;
+      _mostrarSnack(e.message, erro: true);
     }
-
-    _mostrarSnack('Categoria "${categoria.nome}" excluída (inativada).');
-    _carregarCategorias();
   }
 
   void _mostrarSnack(String mensagem, {bool erro = false}) {

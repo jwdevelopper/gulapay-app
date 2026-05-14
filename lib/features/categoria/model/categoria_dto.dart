@@ -1,18 +1,12 @@
 /// DTO de categoria usado tanto para receber dados da API
 /// quanto para enviar criar/atualizar.
 class CategoriaDto {
-  String? message;
-  String? error;
-  int? statusCode;
   int? id;
   String nome;
   String? descricao;
   bool? ativo;
 
   CategoriaDto({
-    this.message,
-    this.error,
-    this.statusCode,
     this.id,
     required this.nome,
     this.descricao,
@@ -20,9 +14,6 @@ class CategoriaDto {
   });
 
   CategoriaDto.fromJson(Map<String, dynamic> json) : nome = json['nome'] ?? '' {
-    message = json['message'];
-    error = json['error'];
-    statusCode = json['statusCode'];
     id = json['id'];
     descricao = json['descricao'];
     ativo = json['ativo'];
