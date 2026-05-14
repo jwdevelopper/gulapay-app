@@ -1,5 +1,5 @@
- class ClienteEndereco {
- String? logradouro;
+class ClienteEndereco {
+  String? logradouro;
   String? numero;
   String? complemento;
   String? bairro;

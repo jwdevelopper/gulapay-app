@@ -1,10 +1,9 @@
-// lib/modules/cliente/page/cliente_detalhes_page.dart
+// lib/modules/cliente/page/cliente_detalhe_page.dart
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/modules/cliente/service/cliente_service.dart';
 import '../dto/cliente_response.dart';
 import 'cliente_form_page.dart';
-// import '../service/cliente_service.dart'; // Descomente após criar o método inativarCliente
 
 class ClienteDetalhesPage extends StatelessWidget {
   final ClienteResponse cliente;
@@ -30,12 +29,23 @@ class ClienteDetalhesPage extends StatelessWidget {
               elevation: 0,
             ),
             onPressed: () async {
-              await inativarCliente(cliente.id as int);
-              Navigator.pop(ctx); // Fecha dialog
-              Navigator.pop(
-                context,
-                true,
-              ); // Volta para lista indicando atualização
+              try {
+                await inativarCliente(cliente.id as int);
+                if (!ctx.mounted) return;
+                Navigator.pop(ctx);
+                if (!context.mounted) return;
+                Navigator.pop(context, true);
+              } catch (e) {
+                if (!ctx.mounted) return;
+                Navigator.pop(ctx);
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Erro ao inativar cliente: ${e.toString()}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
             child: const Text(
               "Inativar",
@@ -120,7 +130,7 @@ class ClienteDetalhesPage extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              cliente.nome!,
+              cliente.nome ?? 'Sem nome',
               style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -182,12 +192,6 @@ class ClienteDetalhesPage extends StatelessWidget {
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
-            ),
-            trailing: IconButton(
-              icon: const Icon(Icons.open_in_new, color: Colors.blueAccent),
-              onPressed: () {
-                // Lógica para abrir url launcher
-              },
             ),
           ),
         ],

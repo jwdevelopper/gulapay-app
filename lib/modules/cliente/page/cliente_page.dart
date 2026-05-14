@@ -25,16 +25,24 @@ class _ClientePageState extends State<ClientePage> {
     _carregarClientes();
   }
 
+  @override
+  void dispose() {
+    _buscaController.dispose();
+    super.dispose();
+  }
+
   Future<void> _carregarClientes() async {
     setState(() => _isLoading = true);
     try {
       final clientes = await listarClientes();
+      if (!mounted) return;
       setState(() {
         _clientes = clientes;
         _clientesFiltrados = clientes;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Erro ao carregar clientes.')),
@@ -43,48 +51,49 @@ class _ClientePageState extends State<ClientePage> {
   }
 
   void _filtrar(String query) {
+    final queryLower = query.toLowerCase();
     setState(() {
       _clientesFiltrados = _clientes
-          .where((c) => c.nome!.toLowerCase().contains(query.toLowerCase()) ||
-          (c.telefone != null && c.telefone!.contains(query)))
+          .where((c) =>
+              (c.nome ?? '').toLowerCase().contains(queryLower) ||
+              (c.telefone != null && c.telefone!.contains(query)))
           .toList();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: const Text('Clientes', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-        backgroundColor: Color(0xFFEC8550),
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: Column(
-        children: [
-          _buildSearchBar(),
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: Color(0xFFEC8550)))
-                : _clientesFiltrados.isEmpty
-                ? _buildEmptyState()
-                : _buildLista(),
+    return Stack(
+      children: [
+        Column(
+          children: [
+            _buildSearchBar(),
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator(color: Color(0xFFEC8550)))
+                  : _clientesFiltrados.isEmpty
+                  ? _buildEmptyState()
+                  : _buildLista(),
+            ),
+          ],
+        ),
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: FloatingActionButton(
+            backgroundColor: const Color(0xFFEC8550),
+            elevation: 2,
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ClienteFormPage()),
+              );
+              if (result == true) _carregarClientes();
+            },
+            child: const Icon(Icons.add, color: Colors.white),
           ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Color(0xFFEC8550),
-        elevation: 2,
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ClienteFormPage()),
-          );
-          if (result == true) _carregarClientes();
-        },
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
+        ),
+      ],
     );
   }
 
@@ -150,7 +159,7 @@ class _ClientePageState extends State<ClientePage> {
               backgroundColor: isAtivo ? const Color.fromARGB(255, 189, 110, 24).withOpacity(0.1) : Colors.grey[200],
               child: FaIcon(FontAwesomeIcons.user, color: isAtivo ? const Color.fromARGB(255, 189, 110, 24) : Colors.grey),
             ),
-            title: Text(cliente.nome!,
+            title: Text(cliente.nome ?? 'Sem nome',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: isAtivo ? const Color(0xFF1E293B) : Colors.grey,

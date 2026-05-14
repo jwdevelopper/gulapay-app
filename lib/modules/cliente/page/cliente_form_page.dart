@@ -28,6 +28,7 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
   final _bairroController = TextEditingController();
   final _cidadeController = TextEditingController();
   final _ufController = TextEditingController();
+  final _buscaController = TextEditingController();
 
   bool _isLoading = false;
 
@@ -37,7 +38,7 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
   void initState() {
     super.initState();
     if (isEdicao) {
-      _nomeController.text = widget.cliente!.nome!;
+      _nomeController.text = widget.cliente!.nome ?? '';
       _telefoneController.text = widget.cliente!.telefone ?? '';
 
       _emailController.text = widget.cliente!.email ?? '';
@@ -67,6 +68,7 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
     _bairroController.dispose();
     _cidadeController.dispose();
     _ufController.dispose();
+    _buscaController.dispose();
     super.dispose();
   }
 
@@ -86,8 +88,6 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
         uf: _ufController.text,
       );
 
-      debugPrint('JSON enviado: ${endereco.toJson()}');
-
       if (isEdicao) {
         final dto = ClienteUpdateRequest(
           nome: _nomeController.text,
@@ -104,7 +104,6 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
           email: _emailController.text,
           endereco: endereco,
         );
-        debugPrint('JSON enviado: ${dto.toJson()}');
         await criarCliente(dto);
       }
 
@@ -121,12 +120,11 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
         Navigator.pop(context, true); // Retorna true para atualizar a lista
       }
     } catch (e) {
-      // ISSO VAI IMPRIMIR O ERRO REAL NO CONSOLE (DEBUG)
       debugPrint('Erro ao salvar cliente: $e');
-
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro: ${e.toString()}'), // Mostra o erro real na tela
+          content: Text('Erro: ${e.toString()}'),
           backgroundColor: Colors.red,
         ),
       );
