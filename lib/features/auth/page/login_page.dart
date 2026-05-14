@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/features/auth/service/login_service.dart';
-import 'package:my_app_teste/features/home/page/home_page.dart';
+import 'package:my_app_teste/modules/home/page/home_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -78,7 +78,7 @@ class _LoginPageState extends State<LoginPage>
       );
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const HomePage()),
+        MaterialPageRoute(builder: (context) => const Home()),
       );
     } on ApiError catch (e) {
       if (!context.mounted) return;

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:my_app_teste/core/auth_session.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
-import 'package:my_app_teste/modules/categoria/page/categoria_page.dart';
-import 'package:my_app_teste/modules/dashboard/page/dashboard_page.dart';
-import 'package:my_app_teste/modules/produto/page/produto_page.dart';
+import 'package:my_app_teste/features/categoria/page/categoria_lista_page.dart';
+import 'package:my_app_teste/features/dashboard/page/dashboard_page.dart';
+import 'package:my_app_teste/features/produto/page/produto_list_page.dart';
 import 'package:my_app_teste/modules/usuario/page/usuario_list_page.dart';
 
 class Home extends StatefulWidget {
@@ -24,8 +24,8 @@ class _HomeState extends State<Home> {
 
   final List<Widget> _paginas = const [
     DashboardPage(),
-    CategoriaPage(),
-    ProdutoPage(),
+    CategoriaListaPage(),
+    ProdutoListPage(),
     UsuarioListaPagina(),
   ];
 
