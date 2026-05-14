@@ -1,6 +1,9 @@
 // lib/modules/cliente/page/cliente_detalhe_page.dart
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:my_app_teste/core/api_error.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
+import 'package:my_app_teste/core/widgets/app_tag.dart';
 import 'package:my_app_teste/modules/cliente/service/cliente_service.dart';
 import '../dto/cliente_response.dart';
 import 'cliente_form_page.dart';
@@ -14,19 +17,36 @@ class ClienteDetalhesPage extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Inativar Cliente"),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Row(
+          children: [
+            FaIcon(FontAwesomeIcons.triangleExclamation,
+                color: AppTema.primaria, size: 20),
+            SizedBox(width: 10),
+            Text('Inativar cliente',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, color: AppTema.textoEscuro)),
+          ],
+        ),
         content: const Text(
-          "Deseja inativar este cliente? Ele não aparecerá mais nas buscas ativas, mas o histórico de pedidos será preservado.",
+          'Deseja inativar este cliente? Ele não aparecerá mais nas buscas ativas, '
+          'mas o histórico de pedidos será preservado.',
+          style: TextStyle(color: AppTema.textoEscuro),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text("Cancelar", style: TextStyle(color: Colors.grey)),
+            style:
+                TextButton.styleFrom(foregroundColor: AppTema.textoSecundario),
+            child: const Text('Cancelar'),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEF4444),
-              elevation: 0,
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
             ),
             onPressed: () async {
               try {
@@ -34,23 +54,94 @@ class ClienteDetalhesPage extends StatelessWidget {
                 if (!ctx.mounted) return;
                 Navigator.pop(ctx);
                 if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                        'Cliente "${cliente.nome ?? ''}" inativado com sucesso.'),
+                    backgroundColor: const Color(0xFF2E8B57),
+                  ),
+                );
                 Navigator.pop(context, true);
-              } catch (e) {
+              } on ApiError catch (e) {
                 if (!ctx.mounted) return;
                 Navigator.pop(ctx);
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Erro ao inativar cliente: ${e.toString()}'),
+                    content: Text('Erro ao inativar: ${e.message}'),
                     backgroundColor: Colors.red,
                   ),
                 );
               }
             },
-            child: const Text(
-              "Inativar",
-              style: TextStyle(color: Colors.white),
+            child: const Text('Inativar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmarReativacao(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Row(
+          children: [
+            FaIcon(FontAwesomeIcons.userCheck,
+                color: AppTema.primaria, size: 20),
+            SizedBox(width: 10),
+            Text('Ativar cliente',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, color: AppTema.textoEscuro)),
+          ],
+        ),
+        content: Text(
+          'Deseja reativar "${cliente.nome ?? 'este cliente'}"?',
+          style: const TextStyle(color: AppTema.textoEscuro),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            style:
+                TextButton.styleFrom(foregroundColor: AppTema.textoSecundario),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2E8B57),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
             ),
+            onPressed: () async {
+              try {
+                await reativarCliente(cliente.id as int, cliente);
+                if (!ctx.mounted) return;
+                Navigator.pop(ctx);
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                        'Cliente "${cliente.nome ?? ''}" reativado com sucesso.'),
+                    backgroundColor: const Color(0xFF2E8B57),
+                  ),
+                );
+                Navigator.pop(context, true);
+              } on ApiError catch (e) {
+                if (!ctx.mounted) return;
+                Navigator.pop(ctx);
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Erro ao reativar: ${e.message}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            child: const Text('Ativar'),
           ),
         ],
       ),
@@ -59,26 +150,47 @@ class ClienteDetalhesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isAtivo = cliente.ativo ?? true;
+
     return Scaffold(
-      backgroundColor: Color(0xFFFFF8F0),
+      backgroundColor: AppTema.fundo,
       appBar: AppBar(
-        title: const Text(
-          'Detalhes do Cliente',
-          style: TextStyle(color: Colors.white),
+        backgroundColor: AppTema.fundo,
+        foregroundColor: AppTema.textoEscuro,
+        elevation: 0,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Detalhes do cliente',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppTema.textoEscuro,
+              ),
+            ),
+            Text(
+              isAtivo ? 'Cadastro · Ativo' : 'Cadastro · Inativo',
+              style:
+                  const TextStyle(fontSize: 12, color: AppTema.textoSecundario),
+            ),
+          ],
         ),
-        backgroundColor: Color(0xFFEC8550),
-        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit),
+            icon: const FaIcon(FontAwesomeIcons.penToSquare,
+                size: 18, color: AppTema.primariaEscura),
             onPressed: () async {
-              final result = await Navigator.push(
+              final result = await Navigator.push<bool>(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => ClienteFormPage(cliente: cliente),
+                  builder: (_) => ClienteFormPage(cliente: cliente),
                 ),
               );
-              if (result == true) Navigator.pop(context, true);
+              if (result == true && context.mounted) {
+                Navigator.pop(context, true);
+              }
             },
           ),
         ],
@@ -88,110 +200,213 @@ class ClienteDetalhesPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildCardPerfil(),
-            const SizedBox(height: 16),
+            _buildCardPerfil(isAtivo),
+            const SizedBox(height: 12),
             _buildCardContato(),
-            const SizedBox(height: 32),
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFEF4444),
-                side: const BorderSide(color: Color(0xFFEF4444)),
-                padding: const EdgeInsets.symmetric(vertical: 16),
+            if (cliente.endereco != null) ...[
+              const SizedBox(height: 12),
+              _buildCardEndereco(),
+            ],
+            const SizedBox(height: 24),
+            if (isAtivo)
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red.shade600,
+                  side: BorderSide(color: Colors.red.shade600),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: const FaIcon(FontAwesomeIcons.userSlash, size: 16),
+                label: const Text('Inativar cliente',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
+                onPressed: () => _confirmarInativacao(context),
+              )
+            else
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF2E8B57),
+                  side: const BorderSide(color: Color(0xFF2E8B57)),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: const FaIcon(FontAwesomeIcons.userCheck, size: 16),
+                label: const Text('Ativar cliente',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
+                onPressed: () => _confirmarReativacao(context),
               ),
-              icon: const Icon(Icons.block),
-              label: const Text('Inativar Cliente'),
-              onPressed: () => _confirmarInativacao(context),
-            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildCardPerfil() {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
+  Widget _buildCardPerfil(bool isAtivo) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppTema.bordaCampo),
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFE2E8F0)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            const CircleAvatar(
-              radius: 40,
-              backgroundColor: const Color.fromARGB(255, 189, 110, 24),
-              child: FaIcon(
-                FontAwesomeIcons.userLarge,
-                size: 36,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              cliente.nome ?? 'Sem nome',
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 30,
+            backgroundColor: AppTema.fundoDica,
+            child: Text(
+              ((cliente.nome?.trim().isNotEmpty ?? false)
+                      ? cliente.nome!.trim().characters.first
+                      : '?')
+                  .toUpperCase(),
               style: const TextStyle(
-                fontSize: 22,
+                fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF1E293B),
+                color: AppTema.primaria,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              cliente.email ?? 'E-mail não informado',
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-            const SizedBox(height: 8),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  cliente.endereco?.cidade ?? 'Cidade não informada',
-                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  cliente.nome ?? 'Sem nome',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppTema.textoEscuro,
+                  ),
                 ),
-                const Text(
-                  ' - ',
-                  style: TextStyle(fontSize: 14, color: Colors.grey),
-                ),
+                const SizedBox(height: 4),
                 Text(
-                  cliente.endereco?.uf ?? '',
-                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  cliente.email ?? 'E-mail não informado',
+                  style: const TextStyle(
+                      fontSize: 13, color: AppTema.textoSecundario),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    if (!isAtivo)
+                      AppTag(
+                        'Inativo',
+                        fundo: Colors.red.shade100,
+                        cor: Colors.red.shade800,
+                      )
+                    else
+                      AppTag(
+                        'Ativo',
+                        fundo: Colors.green.shade100,
+                        cor: Colors.green.shade800,
+                      ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildCardContato() {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppTema.bordaCampo),
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFE2E8F0)),
       ),
       child: Column(
         children: [
-          ListTile(
-            leading: const FaIcon(
-              FontAwesomeIcons.whatsapp,
-              color: Colors.green,
+          _buildLinha(
+            icone: const FaIcon(FontAwesomeIcons.whatsapp, size: 16, color: Colors.green),
+            rotulo: 'WhatsApp',
+            valor: cliente.telefone ?? 'Não informado',
+          ),
+          if (cliente.email != null && cliente.email!.isNotEmpty) ...[
+            Divider(height: 1, color: AppTema.bordaCampo),
+            _buildLinha(
+              icone: const FaIcon(FontAwesomeIcons.envelope, size: 16, color: AppTema.primariaEscura),
+              rotulo: 'E-mail',
+              valor: cliente.email!,
             ),
-            title: const Text(
-              'WhatsApp',
-              style: TextStyle(color: Colors.grey, fontSize: 12),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCardEndereco() {
+    final e = cliente.endereco!;
+    final linhas = [
+      if ((e.logradouro ?? '').isNotEmpty)
+        '${e.logradouro}${(e.numero ?? '').isNotEmpty ? ', ${e.numero}' : ''}',
+      if ((e.complemento ?? '').isNotEmpty) e.complemento!,
+      if ((e.bairro ?? '').isNotEmpty) e.bairro!,
+      if ((e.cidade ?? '').isNotEmpty)
+        '${e.cidade}${(e.uf ?? '').isNotEmpty ? ' - ${e.uf}' : ''}',
+      if ((e.cep ?? '').isNotEmpty) 'CEP ${e.cep}',
+    ];
+
+    if (linhas.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppTema.bordaCampo),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const FaIcon(FontAwesomeIcons.locationDot,
+              size: 16, color: AppTema.primariaEscura),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Endereço',
+                    style: TextStyle(
+                        fontSize: 12, color: AppTema.textoSecundario)),
+                const SizedBox(height: 4),
+                ...linhas.map((l) => Text(l,
+                    style: const TextStyle(color: AppTema.textoEscuro))),
+              ],
             ),
-            subtitle: Text(
-              cliente.telefone ?? 'Não informado',
-              style: const TextStyle(
-                color: Color(0xFF1E293B),
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLinha({
+    required Widget icone,
+    required String rotulo,
+    required String valor,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          icone,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(rotulo,
+                    style: const TextStyle(
+                        fontSize: 11, color: AppTema.textoSecundario)),
+                const SizedBox(height: 2),
+                Text(valor,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppTema.textoEscuro)),
+              ],
             ),
           ),
         ],

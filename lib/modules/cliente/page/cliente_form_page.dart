@@ -1,283 +1,335 @@
 // lib/modules/cliente/page/cliente_form_page.dart
 import 'package:flutter/material.dart';
-import '../dto/cliente_endereco.dart';
-import '../service/cliente_service.dart';
-import '../dto/cliente_response.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:my_app_teste/core/api_error.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
+import 'package:my_app_teste/core/widgets/app_barra_acoes.dart';
+import 'package:my_app_teste/core/widgets/app_campo_texto.dart';
+import 'package:my_app_teste/core/widgets/app_dica.dart';
+import 'package:my_app_teste/core/widgets/app_rotulo.dart';
 import '../dto/cliente_create_request.dart';
+import '../dto/cliente_endereco.dart';
+import '../dto/cliente_response.dart';
 import '../dto/cliente_update_request.dart';
+import '../service/cliente_service.dart';
 
 class ClienteFormPage extends StatefulWidget {
-  final ClienteResponse?
-  cliente; // Se for nulo, é cadastro. Se existir, é edição.
+  final ClienteResponse? cliente;
 
   const ClienteFormPage({super.key, this.cliente});
+
+  bool get ehEdicao => cliente != null;
 
   @override
   State<ClienteFormPage> createState() => _ClienteFormPageState();
 }
 
 class _ClienteFormPageState extends State<ClienteFormPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _nomeController = TextEditingController();
-  final _telefoneController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _cepController = TextEditingController();
-  final _logradouroController = TextEditingController();
-  final _numeroController = TextEditingController();
-  final _complementoController = TextEditingController();
-  final _bairroController = TextEditingController();
-  final _cidadeController = TextEditingController();
-  final _ufController = TextEditingController();
-  final _buscaController = TextEditingController();
+  final _chaveFormulario = GlobalKey<FormState>();
 
-  bool _isLoading = false;
+  final _controleNome = TextEditingController();
+  final _controleTelefone = TextEditingController();
+  final _controleEmail = TextEditingController();
+  final _controleCep = TextEditingController();
+  final _controleLogradouro = TextEditingController();
+  final _controleNumero = TextEditingController();
+  final _controleComplemento = TextEditingController();
+  final _controleBairro = TextEditingController();
+  final _controleCidade = TextEditingController();
+  final _controleUf = TextEditingController();
 
-  bool get isEdicao => widget.cliente != null;
+  bool _carregando = false;
 
   @override
   void initState() {
     super.initState();
-    if (isEdicao) {
-      _nomeController.text = widget.cliente!.nome ?? '';
-      _telefoneController.text = widget.cliente!.telefone ?? '';
-
-      _emailController.text = widget.cliente!.email ?? '';
-
-      if (widget.cliente!.endereco != null) {
-        _cepController.text = widget.cliente!.endereco!.cep ?? '';
-        _logradouroController.text = widget.cliente!.endereco!.logradouro ?? '';
-        _numeroController.text = widget.cliente!.endereco!.numero ?? '';
-        _complementoController.text =
-            widget.cliente!.endereco!.complemento ?? '';
-        _bairroController.text = widget.cliente!.endereco!.bairro ?? '';
-        _cidadeController.text = widget.cliente!.endereco!.cidade ?? '';
-        _ufController.text = widget.cliente!.endereco!.uf ?? '';
+    final c = widget.cliente;
+    if (c != null) {
+      _controleNome.text = c.nome ?? '';
+      _controleTelefone.text = c.telefone ?? '';
+      _controleEmail.text = c.email ?? '';
+      if (c.endereco != null) {
+        _controleCep.text = c.endereco!.cep ?? '';
+        _controleLogradouro.text = c.endereco!.logradouro ?? '';
+        _controleNumero.text = c.endereco!.numero ?? '';
+        _controleComplemento.text = c.endereco!.complemento ?? '';
+        _controleBairro.text = c.endereco!.bairro ?? '';
+        _controleCidade.text = c.endereco!.cidade ?? '';
+        _controleUf.text = c.endereco!.uf ?? '';
       }
     }
   }
 
   @override
   void dispose() {
-    _nomeController.dispose();
-    _telefoneController.dispose();
-    _emailController.dispose();
-    _cepController.dispose();
-    _logradouroController.dispose();
-    _numeroController.dispose();
-    _complementoController.dispose();
-    _bairroController.dispose();
-    _cidadeController.dispose();
-    _ufController.dispose();
-    _buscaController.dispose();
+    _controleNome.dispose();
+    _controleTelefone.dispose();
+    _controleEmail.dispose();
+    _controleCep.dispose();
+    _controleLogradouro.dispose();
+    _controleNumero.dispose();
+    _controleComplemento.dispose();
+    _controleBairro.dispose();
+    _controleCidade.dispose();
+    _controleUf.dispose();
     super.dispose();
   }
 
   Future<void> _salvar() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_chaveFormulario.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    final endereco = ClienteEndereco(
+      cep: _controleCep.text.trim(),
+      logradouro: _controleLogradouro.text.trim(),
+      numero: _controleNumero.text.trim(),
+      complemento: _controleComplemento.text.trim(),
+      bairro: _controleBairro.text.trim(),
+      cidade: _controleCidade.text.trim(),
+      uf: _controleUf.text.trim(),
+    );
 
+    setState(() => _carregando = true);
     try {
-      final endereco = ClienteEndereco(
-        cep: _cepController.text,
-        logradouro: _logradouroController.text,
-        numero: _numeroController.text,
-        complemento: _complementoController.text,
-        bairro: _bairroController.text,
-        cidade: _cidadeController.text,
-        uf: _ufController.text,
-      );
-
-      if (isEdicao) {
+      if (widget.ehEdicao) {
         final dto = ClienteUpdateRequest(
-          nome: _nomeController.text,
-          telefone: _telefoneController.text,
-          email: _emailController.text,
+          nome: _controleNome.text.trim(),
+          telefone: _controleTelefone.text.trim(),
+          email: _controleEmail.text.trim(),
           endereco: endereco,
           ativo: widget.cliente!.ativo ?? true,
         );
         await editarCliente(widget.cliente!.id as int, dto);
       } else {
         final dto = ClienteCreateRequest(
-          nome: _nomeController.text,
-          telefone: _telefoneController.text,
-          email: _emailController.text,
+          nome: _controleNome.text.trim(),
+          telefone: _controleTelefone.text.trim(),
+          email: _controleEmail.text.trim(),
           endereco: endereco,
         );
         await criarCliente(dto);
       }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              isEdicao
-                  ? 'Cliente atualizado com sucesso!'
-                  : 'Cliente cadastrado!',
-            ),
-          ),
-        );
-        Navigator.pop(context, true); // Retorna true para atualizar a lista
-      }
-    } catch (e) {
-      debugPrint('Erro ao salvar cliente: $e');
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } on ApiError catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro: ${e.toString()}'),
+          content: Text('Erro: ${e.message}'),
           backgroundColor: Colors.red,
         ),
       );
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _carregando = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:Color(0xFFFFF8F0),
+      backgroundColor: AppTema.fundo,
       appBar: AppBar(
-        title: Text(
-          isEdicao ? 'Editar Cliente' : 'Novo Cliente',
-          style: const TextStyle(color: Color(0xFF1E293B)),
+        backgroundColor: AppTema.fundo,
+        foregroundColor: AppTema.textoEscuro,
+        elevation: 0,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              widget.ehEdicao ? 'Editar cliente' : 'Novo cliente',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppTema.textoEscuro,
+              ),
+            ),
+            Text(
+              widget.ehEdicao ? 'Cadastro · Edição' : 'Cadastro · Novo',
+              style: const TextStyle(
+                  fontSize: 12, color: AppTema.textoSecundario),
+            ),
+          ],
         ),
-        backgroundColor: Color(0xFFEC8550),
-        iconTheme: const IconThemeData(color: Color(0xFF1E293B)),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildSectionTitle('Dados de Identificação'),
-              _buildTextField(
-                'Nome Completo',
-                _nomeController,
-                isRequired: true,
-              ),
-              const SizedBox(height: 24),
-              _buildSectionTitle('Contato'),
-              _buildTextField("E-mail", _emailController),
-              const SizedBox(height: 16),
-              _buildTextField(
-                'Telefone (WhatsApp)',
-                _telefoneController,
-                isRequired: true,
-              ),
-              const SizedBox(height: 32),
-
-              _buildSectionTitle('Endereço'),
-              _buildTextField('CEP', _cepController),
-              const SizedBox(height: 16),
-              _buildTextField(
-                'Logradouro (Rua/Avenida)',
-                _logradouroController,
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(child: _buildTextField('Número', _numeroController)),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildTextField(
-                      'Complemento',
-                      _complementoController,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _buildTextField('Bairro', _bairroController),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: _buildTextField('Cidade', _cidadeController),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 1,
-                    child: _buildTextField('UF', _ufController),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
-
-              SizedBox(
-                height: 50,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFFEC8550),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  onPressed: _isLoading ? null : _salvar,
-                  child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : Text(
-                          isEdicao ? 'Salvar Alterações' : 'Cadastrar Cliente',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                child: Form(
+                  key: _chaveFormulario,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const AppRotulo('Nome completo *'),
+                      const SizedBox(height: 6),
+                      AppCampoTexto(
+                        controle: _controleNome,
+                        dica: 'Ex.: João da Silva',
+                        tamanhoMax: 120,
+                        validador: (v) {
+                          final t = v?.trim() ?? '';
+                          if (t.isEmpty) return 'Informe o nome';
+                          if (t.length < 3) return 'Mínimo de 3 caracteres';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      const AppRotulo('Telefone (WhatsApp) *'),
+                      const SizedBox(height: 6),
+                      AppCampoTexto(
+                        controle: _controleTelefone,
+                        dica: 'Ex.: 11999990000',
+                        tipoTeclado: TextInputType.phone,
+                        tamanhoMax: 20,
+                        validador: (v) {
+                          if (v == null || v.trim().isEmpty) {
+                            return 'Informe o telefone';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      const AppRotulo('E-mail *'),
+                      const SizedBox(height: 6),
+                      AppCampoTexto(
+                        controle: _controleEmail,
+                        dica: 'Ex.: joao@email.com',
+                        tipoTeclado: TextInputType.emailAddress,
+                        tamanhoMax: 150,
+                      ),
+                      const SizedBox(height: 20),
+                      const Divider(color: AppTema.bordaCampo),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: const [
+                          FaIcon(FontAwesomeIcons.locationDot,
+                              size: 14, color: AppTema.primariaEscura),
+                          SizedBox(width: 8),
+                          Text('Endereço',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTema.textoEscuro)),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      const AppRotulo('CEP *'),
+                      const SizedBox(height: 6),
+                      AppCampoTexto(
+                        controle: _controleCep,
+                        dica: 'Ex.: 01310-100',
+                        tipoTeclado: TextInputType.number,
+                        tamanhoMax: 9,
+                      ),
+                      const SizedBox(height: 14),
+                      const AppRotulo('Logradouro *'),
+                      const SizedBox(height: 6),
+                      AppCampoTexto(
+                        controle: _controleLogradouro,
+                        dica: 'Ex.: Av. Paulista',
+                        tamanhoMax: 150,
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const AppRotulo('Número *'),
+                                const SizedBox(height: 6),
+                                AppCampoTexto(
+                                  controle: _controleNumero,
+                                  dica: 'Ex.: 1578',
+                                  tamanhoMax: 10,
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 3,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const AppRotulo('Complemento', opcional: true),
+                                const SizedBox(height: 6),
+                                AppCampoTexto(
+                                  controle: _controleComplemento,
+                                  dica: 'Ex.: Apto 42',
+                                  tamanhoMax: 60,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      const AppRotulo('Bairro *'),
+                      const SizedBox(height: 6),
+                      AppCampoTexto(
+                        controle: _controleBairro,
+                        dica: 'Ex.: Bela Vista',
+                        tamanhoMax: 80,
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const AppRotulo('Cidade *'),
+                                const SizedBox(height: 6),
+                                AppCampoTexto(
+                                  controle: _controleCidade,
+                                  dica: 'Ex.: São Paulo',
+                                  tamanhoMax: 80,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 1,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const AppRotulo('UF *'),
+                                const SizedBox(height: 6),
+                                AppCampoTexto(
+                                  controle: _controleUf,
+                                  dica: 'SP',
+                                  tamanhoMax: 2,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      const AppDica(
+                        'Os campos são obrigatórios e devem ser peenchidos para salver o cliente. '
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ],
-          ),
+            ),
+            AppBarraAcoes(
+              textoConfirmar: widget.ehEdicao ? 'Atualizar' : 'Salvar',
+              iconeConfirmar:
+                  const FaIcon(FontAwesomeIcons.chevronRight, size: 14),
+              carregando: _carregando,
+              aoCancelar: () => Navigator.pop(context),
+              aoConfirmar: _salvar,
+            ),
+          ],
         ),
       ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF1E293B),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField(
-    String label,
-    TextEditingController controller, {
-    bool isRequired = false,
-  }) {
-    return TextFormField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        filled: true,
-        fillColor:Color(0xFFFFFFFF),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-        ),
-      ),
-      validator: isRequired
-          ? (value) {
-              if (value == null || value.isEmpty)
-                return 'Este campo é obrigatório';
-              return null;
-            }
-          : null,
     );
   }
 }
