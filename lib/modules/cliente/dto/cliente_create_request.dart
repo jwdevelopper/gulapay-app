@@ -13,19 +13,10 @@ class ClienteCreateRequest {
     this.endereco,
   });
 
-  ClienteCreateRequest.fromJson(Map<String, dynamic> json) {
-    nome = json['nome'];
-    telefone = json['telefone'];
-    email = json['email'];
-    endereco = json['endereco'] != null ? ClienteEndereco.fromJson(json['endereco']) : null;
-  }
-
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['nome'] = this.nome;
-    data['telefone'] = this.telefone;
-    data['email'] = this.email;
-    data['endereco'] = this.endereco?.toJson();
-    return data;
-  }
+  Map<String, dynamic> toJson() => {
+        'nome': nome,
+        'telefone': telefone,
+        'email': email,
+        'endereco': endereco?.toJson(),
+      };
 }

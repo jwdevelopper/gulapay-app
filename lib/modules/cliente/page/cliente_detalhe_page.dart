@@ -50,7 +50,7 @@ class ClienteDetalhesPage extends StatelessWidget {
             ),
             onPressed: () async {
               try {
-                await inativarCliente(cliente.id as int);
+                await inativarCliente(cliente.id!);
                 if (!ctx.mounted) return;
                 Navigator.pop(ctx);
                 if (!context.mounted) return;
@@ -117,7 +117,7 @@ class ClienteDetalhesPage extends StatelessWidget {
             ),
             onPressed: () async {
               try {
-                await reativarCliente(cliente.id as int, cliente);
+                await reativarCliente(cliente.id!, cliente);
                 if (!ctx.mounted) return;
                 Navigator.pop(ctx);
                 if (!context.mounted) return;

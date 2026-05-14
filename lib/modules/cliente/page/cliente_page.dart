@@ -177,7 +177,6 @@ class _ClientePageState extends State<ClientePage> {
           backgroundColor: const Color(0xFF2E8B57),
         ),
       );
-      await _carregar();
       return true;
     } on ApiError catch (e) {
       if (!mounted) return false;
@@ -202,7 +201,6 @@ class _ClientePageState extends State<ClientePage> {
           backgroundColor: const Color(0xFF2E8B57),
         ),
       );
-      await _carregar();
       return true;
     } on ApiError catch (e) {
       if (!mounted) return false;
@@ -303,7 +301,7 @@ class _ClientePageState extends State<ClientePage> {
   Widget _construirCartao(ClienteResponse c) {
     final isAtivo = c.ativo ?? true;
     return Dismissible(
-      key: ValueKey('cliente_${c.id}'),
+      key: ValueKey('cliente_${c.id ?? c.telefone ?? c.nome}'),
       direction: isAtivo ? DismissDirection.endToStart : DismissDirection.none,
       background: Container(
         alignment: Alignment.centerRight,
@@ -330,6 +328,7 @@ class _ClientePageState extends State<ClientePage> {
         if (!confirmou) return false;
         return _inativar(c);
       },
+      onDismissed: (_) => _carregar(),
       child: Material(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -412,10 +411,16 @@ class _ClientePageState extends State<ClientePage> {
                       await _abrirFormulario(cliente: c);
                     } else if (opcao == 'inativar') {
                       final confirmou = await _confirmarInativacao(c);
-                      if (confirmou) await _inativar(c);
+                      if (confirmou) {
+                        await _inativar(c);
+                        if (mounted) _carregar();
+                      }
                     } else if (opcao == 'ativar') {
                       final confirmou = await _confirmarReativacao(c);
-                      if (confirmou) await _reativar(c);
+                      if (confirmou) {
+                        await _reativar(c);
+                        if (mounted) _carregar();
+                      }
                     }
                   },
                   itemBuilder: (_) => [

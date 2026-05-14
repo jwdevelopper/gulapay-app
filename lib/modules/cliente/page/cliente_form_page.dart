@@ -98,7 +98,7 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
           endereco: endereco,
           ativo: widget.cliente!.ativo ?? true,
         );
-        await editarCliente(widget.cliente!.id as int, dto);
+        await editarCliente(widget.cliente!.id!, dto);
       } else {
         final dto = ClienteCreateRequest(
           nome: _controleNome.text.trim(),
@@ -312,7 +312,7 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
                       ),
                       const SizedBox(height: 18),
                       const AppDica(
-                        'Os campos são obrigatórios e devem ser peenchidos para salver o cliente. '
+                        'Os campos obrigatórios (*) devem ser preenchidos para salvar o cliente.',
                       ),
                     ],
                   ),
