@@ -4,7 +4,6 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/modules/cliente/service/cliente_service.dart';
 import '../dto/cliente_response.dart';
 import 'cliente_form_page.dart';
-// import '../service/cliente_service.dart'; // Descomente após criar o método inativarCliente
 
 class ClienteDetalhesPage extends StatelessWidget {
   final ClienteResponse cliente;

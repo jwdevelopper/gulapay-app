@@ -6,7 +6,7 @@ import '../dto/cliente_response.dart';
 import '../dto/cliente_create_request.dart';
 import '../dto/cliente_update_request.dart';
 
-// Buscar cliente por ID
+// Listar clientes
 
 final _dio = ApiClient.dio;
 
