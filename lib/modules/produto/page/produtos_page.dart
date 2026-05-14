@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/modules/categoria/dto/categoria.dart';
 import 'package:my_app_teste/modules/categoria/service/categoria_service.dart';
 import 'package:my_app_teste/modules/produto/dto/produto.dart';
@@ -12,6 +14,8 @@ import 'package:my_app_teste/shared/bottom_bar/bottom_bar.dart';
 import 'produto_form_page.dart';
 
 class ProdutosPage extends StatefulWidget {
+  /// Mantido por compatibilidade com chamadas existentes (ex: [ProdutoPage]),
+  /// mas não usado mais — a AppBar da Home já fornece o botão de drawer.
   final VoidCallback? onOpenDrawer;
 
   const ProdutosPage({super.key, this.onOpenDrawer});
@@ -131,25 +135,15 @@ class _ProdutosPageState extends State<ProdutosPage> {
     return list;
   }
 
-  String get _screenTitle => _selectedCategoria?.nome.isNotEmpty == true
-      ? _selectedCategoria!.nome
-      : 'Produtos';
-
-  String get _screenSubtitle {
-    if (_loading) return 'Carregando produtos...';
-    if (_selectedCategoria != null) {
-      return '${_filtered.length} itens • filtro ativo';
-    }
-    if (_produtos.isEmpty) return 'Comece a cadastrar';
-    return '${_produtos.length} itens • ${_categorias.length} categorias';
-  }
-
   String get _sortLabel => produtoSortOptions
       .firstWhere(
         (option) => option.value == _sort,
         orElse: () => produtoSortOptions.first,
       )
       .label;
+
+  bool get _hasActiveFilter =>
+      _filters.hasActiveFilter || _search.trim().isNotEmpty;
 
   Future<void> _loadCategories() async {
     try {
@@ -215,47 +209,104 @@ class _ProdutosPageState extends State<ProdutosPage> {
     }
   }
 
-  Future<void> _delete(Produto produto) async {
-    if (produto.id == null) return;
-    final confirm = await showDialog<bool>(
+  /// Padrão da [UsuarioListaPagina]: AlertDialog estilizado com FaIcon de
+  /// aviso, botões "Cancelar" e "Excluir" (vermelho).
+  Future<bool> _confirmarExclusao(Produto produto) async {
+    final ok = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: ProdutosPalette.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          title: const Text('Excluir produto'),
-          content: const Text('Deseja excluir este produto?'),
-          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Cancelar'),
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Row(
+          children: [
+            FaIcon(
+              FontAwesomeIcons.triangleExclamation,
+              color: ProdutosPalette.primary,
+              size: 20,
             ),
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('Excluir'),
+            SizedBox(width: 10),
+            Text(
+              'Excluir produto',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: ProdutosPalette.text,
+              ),
             ),
           ],
-        );
-      },
+        ),
+        content: Text(
+          'Deseja realmente excluir "${produto.nome}"? Esta ação não pode ser desfeita.',
+          style: const TextStyle(color: ProdutosPalette.text),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            style: TextButton.styleFrom(
+              foregroundColor: ProdutosPalette.textMuted,
+            ),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
     );
-    if (confirm != true) return;
+    return ok ?? false;
+  }
 
+  /// Executa o delete na API e remove o item do estado local. Devolve [true]
+  /// quando o card pode sair da lista (o [Dismissible] usa esse retorno para
+  /// concluir a animação).
+  Future<bool> _excluir(Produto produto) async {
+    if (produto.id == null) return false;
     try {
       await _service.excluirProduto(produto.id!);
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Produto excluido')));
-      await _load();
+      if (!mounted) return false;
+      setState(() => _produtos.removeWhere((x) => x.id == produto.id));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Produto "${produto.nome}" excluído.'),
+          backgroundColor: const Color(0xFF2E8B57),
+        ),
+      );
+      return true;
+    } on ApiError catch (e) {
+      if (!mounted) return false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao excluir: ${e.message}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return false;
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao excluir: $e')));
+      if (!mounted) return false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao excluir: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return false;
     }
+  }
+
+  /// Função única usada pelo swipe (Dismissible) e pelo PopupMenu do card:
+  /// mostra a confirmação e, se aprovada, executa a exclusão. Devolve [true]
+  /// se o card pode ser removido visualmente (após sucesso da API).
+  Future<bool> _confirmarEExcluir(Produto produto) async {
+    final confirmou = await _confirmarExclusao(produto);
+    if (!confirmou) return false;
+    return await _excluir(produto);
   }
 
   Future<void> _openSortSheet() async {
@@ -413,7 +464,7 @@ class _ProdutosPageState extends State<ProdutosPage> {
       priceText: _priceText(produto.preco),
       onTap: () => _openEdit(produto),
       onEdit: () => _openEdit(produto),
-      onDelete: () => _delete(produto),
+      onConfirmDelete: () => _confirmarEExcluir(produto),
     );
   }
 
@@ -499,46 +550,41 @@ class _ProdutosPageState extends State<ProdutosPage> {
         inactiveColor: ProdutosPalette.textMuted,
         activeIndicatorColor: ProdutosPalette.warningBg,
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            ProdutoPageHeader(
-              title: _screenTitle,
-              subtitle: _screenSubtitle,
-              hasCategoryFilter: _filters.categoriaId != null,
-              hasActiveFilter: _filters.hasActiveFilter || _search.isNotEmpty,
-              onBackTap: _clearCategoryFilter,
-              onMenuTap: widget.onOpenDrawer,
-              onFilterTap: _openFilterSheet,
-              onClearFiltersTap: _clearSearchAndFilter,
+      // Sem SafeArea aqui — a Home já fornece a AppBar e o padding superior.
+      // Sem ProdutoPageHeader — o título "Produto" vem da AppBar da Home,
+      // eliminando a duplicação de topbar.
+      body: Column(
+        children: [
+          const SizedBox(height: 12),
+          ProdutoSearchField(
+            controller: _searchController,
+            search: _search,
+            onChanged: (value) => setState(() => _search = value),
+            onClear: () {
+              _searchController.clear();
+              setState(() => _search = '');
+            },
+          ),
+          const SizedBox(height: 10),
+          _buildCategoryChips(),
+          ProdutoResultsHeader(
+            resultCount: _filtered.isEmpty && _produtos.isNotEmpty
+                ? 0
+                : _filtered.length,
+            sortLabel: _sortLabel,
+            onSortTap: _openSortSheet,
+            onFilterTap: _openFilterSheet,
+            onClearFiltersTap: _clearSearchAndFilter,
+            hasActiveFilter: _hasActiveFilter,
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              color: ProdutosPalette.primary,
+              onRefresh: _reload,
+              child: _buildList(),
             ),
-            ProdutoSearchField(
-              controller: _searchController,
-              search: _search,
-              onChanged: (value) => setState(() => _search = value),
-              onClear: () {
-                _searchController.clear();
-                setState(() => _search = '');
-              },
-            ),
-            const SizedBox(height: 10),
-            _buildCategoryChips(),
-            ProdutoResultsHeader(
-              resultCount: _filtered.isEmpty && _produtos.isNotEmpty
-                  ? 0
-                  : _filtered.length,
-              sortLabel: _sortLabel,
-              onSortTap: _openSortSheet,
-            ),
-            Expanded(
-              child: RefreshIndicator(
-                color: ProdutosPalette.primary,
-                onRefresh: _reload,
-                child: _buildList(),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
