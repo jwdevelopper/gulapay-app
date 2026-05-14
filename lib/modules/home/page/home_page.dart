@@ -19,6 +19,7 @@ class _HomeState extends State<Home> {
   static const _indiceCategoria = 1;
   static const _indiceProduto = 2;
   static const _indiceUsuarios = 3;
+  static const _indiceCliente = 4;
 
   int _indiceSelecionado = _indiceInicio;
   bool _ehAdministrador = false;
@@ -28,9 +29,10 @@ class _HomeState extends State<Home> {
     CategoriaPage(),
     ProdutoPage(),
     UsuarioListaPagina(),
+    ClientePage(),
   ];
 
-  static const _titulos = ['Início', 'Categoria', 'Produto', 'Usuários'];
+  static const _titulos = ['Início', 'Categoria', 'Produto', 'Usuários', 'Clientes'];
 
   @override
   void initState() {
@@ -112,13 +114,10 @@ class _HomeState extends State<Home> {
               onTap: () => _selecionar(_indiceProduto),
             ),
             ListTile(
-            leading: Icon(Icons.supervised_user_circle),
-              title: Text('cliente'),
-              onTap: () {
-                setState(() {
-                  _indiceSelecionado = 3;
-                });
-              },
+            leading: const Icon(Icons.supervised_user_circle),
+              title: Text('Cliente'),
+              selected: _indiceSelecionado == _indiceCliente,
+              onTap: () => _selecionar(_indiceCliente),
             ),  
           ],
         ),
