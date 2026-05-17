@@ -22,16 +22,18 @@ class LoteResponse {
     this.ativo
   });
 
-  LoteResponse.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    insumoId = json['insumoId'];
-    insumoNome = json['insumoNome'];
-    codigo = json['codigo'];
-    validade = json['validade'];
-    quantidadeInicial = json['quantidadeInicial'];
-    quantidadeRestante = json['quantidadeRestante'];
-    custoUnitario = json['custoUnitario'];
-    ativo = json['ativo'];
+  factory LoteResponse.fromJson(Map<String, dynamic> json) {
+    return LoteResponse(
+      id: json['id'],
+      insumoId: json['insumoId'],
+      insumoNome: json['insumoNome'],
+      codigo: json['codigo'],
+      validade: json['validade'],
+      quantidadeInicial: json['quantidadeInicial'],
+      quantidadeRestante: json['quantidadeRestante'],
+      custoUnitario: json['custoUnitario'],
+      ativo: json['ativo'],
+    );
   }
 
   Map<String, dynamic> toJson() {

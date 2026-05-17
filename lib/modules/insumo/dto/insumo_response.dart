@@ -19,20 +19,23 @@ class InsumoResponse {
     this.unidadePadrao,
     this.estoqueMinimo,
     this.estoqueAtual,
+    this.abaixoDoMinimo,
     this.ativo
   });
 
-  InsumoResponse.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    nome = json['nome'];
-    unidadePadraoId = json['unidadePadraoId'];
-    unidadePadraoSimbolo = json['unidadePadraoSimbolo'];
-    unidadePadraoNome = json['unidadePadraoNome'];
-    unidadePadrao = json['unidadePadrao'];
-    estoqueMinimo = json['estoqueMinimo'];
-    estoqueAtual = json['estoqueAtual'];
-    abaixoDoMinimo = json['abaixoDoMinimo'];
-    ativo = json['ativo'];
+  factory InsumoResponse.fromJson(Map<String, dynamic> json) {
+    return InsumoResponse(
+      id: json['id'],
+      nome: json['nome'],
+      unidadePadraoId: json['unidadePadraoId'],
+      unidadePadraoSimbolo: json['unidadePadraoSimbolo'],
+      unidadePadraoNome: json['unidadePadraoNome'],
+      unidadePadrao: json['unidadePadrao'],
+      estoqueMinimo: json['estoqueMinimo'],
+      estoqueAtual: json['estoqueAtual'],
+      abaixoDoMinimo: json['abaixoDoMinimo'],
+      ativo: json['ativo'],
+    );
   }
 
   Map<String, dynamic> toJson() {
