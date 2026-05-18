@@ -3,6 +3,7 @@ import 'package:my_app_teste/core/auth_session.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/modules/categoria/page/categoria_page.dart';
 import 'package:my_app_teste/modules/dashboard/page/dashboard_page.dart';
+import 'package:my_app_teste/modules/movimentacao_estoque/page/estoque_page.dart';
 import 'package:my_app_teste/modules/produto/page/produto_page.dart';
 import 'package:my_app_teste/modules/usuario/page/usuario_list_page.dart';
 
@@ -17,7 +18,8 @@ class _HomeState extends State<Home> {
   static const _indiceInicio = 0;
   static const _indiceCategoria = 1;
   static const _indiceProduto = 2;
-  static const _indiceUsuarios = 3;
+  static const _indiceEstoque = 3;
+  static const _indiceUsuarios = 4;
 
   int _indiceSelecionado = _indiceInicio;
   bool _ehAdministrador = false;
@@ -26,10 +28,11 @@ class _HomeState extends State<Home> {
     DashboardPage(),
     CategoriaPage(),
     ProdutoPage(),
+    EstoquePage(),
     UsuarioListaPagina(),
   ];
 
-  static const _titulos = ['Início', 'Categoria', 'Produto', 'Usuários'];
+  static const _titulos = ['Início', 'Categoria', 'Produto', 'Estoque', 'Usuários'];
 
   @override
   void initState() {
@@ -110,6 +113,12 @@ class _HomeState extends State<Home> {
               title: const Text('Produto'),
               selected: _indiceSelecionado == _indiceProduto,
               onTap: () => _selecionar(_indiceProduto),
+            ),
+            ListTile(
+              leading: const Icon(Icons.inventory_2_outlined),
+              title: const Text('Estoque'),
+              selected: _indiceSelecionado == _indiceEstoque,
+              onTap: () => _selecionar(_indiceEstoque),
             ),
           ],
         ),
