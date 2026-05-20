@@ -248,7 +248,29 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
     );
   }
 
+  String? get _insumoTipoMedida {
+    if (_selectedInsumo?.unidadePadraoId == null) return null;
+    for (final u in _unidades) {
+      if (u.id == _selectedInsumo!.unidadePadraoId) return u.tipoMedida;
+    }
+    return null;
+  }
+
+  List<UnidadeMedida> get _unidadesCompativeis {
+    final tipo = _insumoTipoMedida;
+    if (tipo == null) return _unidades;
+    return _unidades.where((u) => u.tipoMedida == tipo).toList();
+  }
+
   void _openUnidadeSelector() {
+    if (_selectedInsumo == null) {
+      setState(() {
+        _insumoError = true;
+        _validationMessage = 'Selecione o insumo antes da unidade.';
+      });
+      return;
+    }
+    final unidades = _unidadesCompativeis;
     showModalBottomSheet<void>(
       context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
       builder: (ctx) => FractionallySizedBox(
@@ -264,11 +286,18 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
                 const Expanded(child: Text('Unidade de medida', style: TextStyle(color: EstoquePalette.text, fontSize: 18, fontWeight: FontWeight.w700))),
                 IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close_rounded), color: EstoquePalette.text),
               ]),
+              const SizedBox(height: 4),
+              Text(
+                'Compatíveis com ${_selectedInsumo!.nome} (${_selectedInsumo!.unidadePadraoSimbolo ?? '-'})',
+                style: const TextStyle(color: EstoquePalette.textMuted, fontSize: 12, fontWeight: FontWeight.w500),
+              ),
               const SizedBox(height: 8),
-              Expanded(child: ListView.separated(
-                itemCount: _unidades.length, separatorBuilder: (_, __) => const SizedBox(height: 10),
+              Expanded(child: unidades.isEmpty
+                ? const Center(child: Text('Nenhuma unidade compatível cadastrada', style: TextStyle(color: EstoquePalette.textMuted, fontSize: 14, fontWeight: FontWeight.w600)))
+                : ListView.separated(
+                itemCount: unidades.length, separatorBuilder: (_, __) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
-                  final u = _unidades[index];
+                  final u = unidades[index];
                   final selected = u.id == _selectedUnidade?.id;
                   return InkWell(
                     onTap: () { setState(() { _selectedUnidade = u; _unidadeError = false; _validationMessage = null; }); Navigator.pop(ctx); },

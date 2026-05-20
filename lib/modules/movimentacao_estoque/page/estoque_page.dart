@@ -37,6 +37,12 @@ class _EstoquePageState extends State<EstoquePage>
   String _selectedFilter = 'TUDO';
   String _search = '';
   int _tabIndex = 0;
+  int? _filterInsumoId;
+  DateTime? _filterDateFrom;
+  DateTime? _filterDateTo;
+
+  bool get _hasAdvancedFilters =>
+      _filterInsumoId != null || _filterDateFrom != null || _filterDateTo != null;
 
   @override
   void initState() {
@@ -111,6 +117,21 @@ class _EstoquePageState extends State<EstoquePage>
       case 'AJUSTES':
         list = list.where((m) => m.isAjuste).toList();
         break;
+    }
+
+    if (_filterInsumoId != null) {
+      list = list.where((m) => m.insumoId == _filterInsumoId).toList();
+    }
+
+    if (_filterDateFrom != null || _filterDateTo != null) {
+      list = list.where((m) {
+        if (m.dataHora == null) return false;
+        final dt = DateTime.tryParse(m.dataHora!);
+        if (dt == null) return false;
+        if (_filterDateFrom != null && dt.isBefore(_filterDateFrom!)) return false;
+        if (_filterDateTo != null && dt.isAfter(_filterDateTo!)) return false;
+        return true;
+      }).toList();
     }
 
     // Sort by date, most recent first
@@ -241,8 +262,278 @@ class _EstoquePageState extends State<EstoquePage>
               ],
             ),
           ),
+          if (_tabIndex == 0)
+            _HeaderIconButton(
+              icon: Icons.filter_alt_outlined,
+              showBadge: _hasAdvancedFilters,
+              onTap: _openFiltersSheet,
+            ),
         ],
       ),
+    );
+  }
+
+  Future<void> _openFiltersSheet() async {
+    String tempFilter = _selectedFilter;
+    int? tempInsumoId = _filterInsumoId;
+    DateTime? tempFrom = _filterDateFrom;
+    DateTime? tempTo = _filterDateTo;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(builder: (ctx, setSheet) {
+          String fmtDate(DateTime? d) {
+            if (d == null) return 'Selecionar';
+            return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+          }
+
+          Future<void> pickDate(bool isFrom) async {
+            final initial = isFrom ? (tempFrom ?? DateTime.now()) : (tempTo ?? DateTime.now());
+            final picked = await showDatePicker(
+              context: ctx,
+              initialDate: initial,
+              firstDate: DateTime(2020),
+              lastDate: DateTime(2100),
+            );
+            if (picked != null) {
+              setSheet(() {
+                if (isFrom) {
+                  tempFrom = DateTime(picked.year, picked.month, picked.day);
+                } else {
+                  tempTo = DateTime(picked.year, picked.month, picked.day, 23, 59, 59);
+                }
+              });
+            }
+          }
+
+          Widget tipoChip(String value, String label) {
+            final selected = tempFilter == value;
+            return InkWell(
+              onTap: () => setSheet(() => tempFilter = value),
+              borderRadius: BorderRadius.circular(999),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: selected ? EstoquePalette.primary : EstoquePalette.surfaceAlt,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: selected ? EstoquePalette.primary : EstoquePalette.border),
+                ),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: selected ? Colors.white : EstoquePalette.text,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            );
+          }
+
+          return FractionallySizedBox(
+            heightFactor: 0.82,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: EstoquePalette.surface,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: EstoquePalette.borderSoft,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Filtros',
+                              style: TextStyle(
+                                color: EstoquePalette.text,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            icon: const Icon(Icons.close_rounded),
+                            color: EstoquePalette.text,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: ListView(
+                          children: [
+                            const Text(
+                              'TIPO',
+                              style: TextStyle(
+                                color: EstoquePalette.textMuted,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                tipoChip('TUDO', 'Tudo'),
+                                tipoChip('ENTRADAS', 'Entradas'),
+                                tipoChip('SAIDAS', 'Saídas'),
+                                tipoChip('AJUSTES', 'Ajustes'),
+                              ],
+                            ),
+                            const SizedBox(height: 22),
+                            const Text(
+                              'INSUMO',
+                              style: TextStyle(
+                                color: EstoquePalette.textMuted,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            DropdownButtonFormField<int?>(
+                              initialValue: tempInsumoId,
+                              isExpanded: true,
+                              decoration: InputDecoration(
+                                filled: true,
+                                fillColor: EstoquePalette.surfaceAlt,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: const BorderSide(color: EstoquePalette.border),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: const BorderSide(color: EstoquePalette.border),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: const BorderSide(color: EstoquePalette.primary),
+                                ),
+                              ),
+                              items: [
+                                const DropdownMenuItem<int?>(
+                                  value: null,
+                                  child: Text('Todos os insumos'),
+                                ),
+                                ..._insumos.where((i) => i.id != null).map(
+                                      (i) => DropdownMenuItem<int?>(
+                                        value: i.id,
+                                        child: Text(i.nome, overflow: TextOverflow.ellipsis),
+                                      ),
+                                    ),
+                              ],
+                              onChanged: (value) => setSheet(() => tempInsumoId = value),
+                            ),
+                            const SizedBox(height: 22),
+                            const Text(
+                              'PERÍODO',
+                              style: TextStyle(
+                                color: EstoquePalette.textMuted,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _DateBox(
+                                    label: 'De',
+                                    value: fmtDate(tempFrom),
+                                    onTap: () => pickDate(true),
+                                    onClear: tempFrom == null ? null : () => setSheet(() => tempFrom = null),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _DateBox(
+                                    label: 'Até',
+                                    value: fmtDate(tempTo),
+                                    onTap: () => pickDate(false),
+                                    onClear: tempTo == null ? null : () => setSheet(() => tempTo = null),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () {
+                                setSheet(() {
+                                  tempFilter = 'TUDO';
+                                  tempInsumoId = null;
+                                  tempFrom = null;
+                                  tempTo = null;
+                                });
+                              },
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: EstoquePalette.text,
+                                backgroundColor: EstoquePalette.surfaceAlt,
+                                side: const BorderSide(color: EstoquePalette.border),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              child: const Text('Limpar'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                setState(() {
+                                  _selectedFilter = tempFilter;
+                                  _filterInsumoId = tempInsumoId;
+                                  _filterDateFrom = tempFrom;
+                                  _filterDateTo = tempTo;
+                                });
+                                Navigator.pop(ctx);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: EstoquePalette.primary,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              child: const Text('Aplicar'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        });
+      },
     );
   }
 
@@ -327,6 +618,78 @@ class _EstoquePageState extends State<EstoquePage>
     }
 
     final movs = _filteredMovimentacoes;
+
+    if (movs.isEmpty) {
+      String message;
+      if (_filterInsumoId != null) {
+        final insumo = _insumos.firstWhere(
+          (i) => i.id == _filterInsumoId,
+          orElse: () => Insumo(nome: ''),
+        );
+        final nome = insumo.nome.isEmpty ? 'Este produto' : insumo.nome;
+        message = '$nome não tem movimentação de estoque.';
+      } else if (_filterDateFrom != null || _filterDateTo != null) {
+        message = 'Nenhuma movimentação encontrada no período selecionado.';
+      } else {
+        message = 'Nenhuma movimentação encontrada com os filtros aplicados.';
+      }
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 40, 16, 140),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: EstoquePalette.surfaceAlt,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: EstoquePalette.border),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: EstoquePalette.inputFill,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: const Icon(
+                    Icons.inbox_outlined,
+                    color: EstoquePalette.primary,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: EstoquePalette.text,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _selectedFilter = 'TUDO';
+                      _filterInsumoId = null;
+                      _filterDateFrom = null;
+                      _filterDateTo = null;
+                    });
+                  },
+                  icon: const Icon(Icons.refresh_rounded, size: 16),
+                  label: const Text('Limpar filtros'),
+                  style: TextButton.styleFrom(foregroundColor: EstoquePalette.primary),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
 
     // Group by date
     final grouped = <String, List<MovimentacaoEstoque>>{};
@@ -611,8 +974,9 @@ class _EstoquePageState extends State<EstoquePage>
 class _HeaderIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onTap;
+  final bool showBadge;
 
-  const _HeaderIconButton({required this.icon, this.onTap});
+  const _HeaderIconButton({required this.icon, this.onTap, this.showBadge = false});
 
   @override
   Widget build(BuildContext context) {
@@ -630,7 +994,90 @@ class _HeaderIconButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: EstoquePalette.border),
           ),
-          child: Icon(icon, color: EstoquePalette.text, size: 22),
+          child: Stack(
+            children: [
+              Center(child: Icon(icon, color: EstoquePalette.text, size: 22)),
+              if (showBadge)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    width: 9,
+                    height: 9,
+                    decoration: BoxDecoration(
+                      color: EstoquePalette.primary,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: EstoquePalette.surface, width: 1.5),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DateBox extends StatelessWidget {
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+  final VoidCallback? onClear;
+
+  const _DateBox({required this.label, required this.value, required this.onTap, this.onClear});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: EstoquePalette.surfaceAlt,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: EstoquePalette.border),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      color: EstoquePalette.textMuted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      color: EstoquePalette.text,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (onClear != null)
+              InkWell(
+                onTap: onClear,
+                borderRadius: BorderRadius.circular(20),
+                child: const Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Icon(Icons.close_rounded, size: 16, color: EstoquePalette.textMuted),
+                ),
+              )
+            else
+              const Icon(Icons.calendar_today_rounded, size: 16, color: EstoquePalette.textMuted),
+          ],
         ),
       ),
     );
