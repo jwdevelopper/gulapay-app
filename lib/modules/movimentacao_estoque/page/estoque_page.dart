@@ -241,10 +241,6 @@ class _EstoquePageState extends State<EstoquePage>
               ],
             ),
           ),
-          _HeaderIconButton(
-            icon: Icons.filter_alt_outlined,
-            onTap: () {},
-          ),
         ],
       ),
     );

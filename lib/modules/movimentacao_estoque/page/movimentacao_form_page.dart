@@ -319,18 +319,19 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
   }
 
   Widget _buildTextField({required TextEditingController controller, required String hint, required ValueChanged<String> onChanged,
-    int maxLines = 1, TextInputType keyboardType = TextInputType.text, bool error = false, bool price = false, String? suffix}) {
+    int maxLines = 1, TextInputType keyboardType = TextInputType.text, bool error = false, bool price = false, bool largeText = false, String? suffix}) {
+    final big = price || largeText;
     return Container(
       decoration: BoxDecoration(color: EstoquePalette.surfaceAlt, borderRadius: BorderRadius.circular(16),
         border: Border.all(color: error ? EstoquePalette.error : EstoquePalette.border),
         boxShadow: const [BoxShadow(color: Color(0x0F9C5A1E), blurRadius: 12, offset: Offset(0, 4))]),
       child: TextField(controller: controller, onChanged: onChanged, maxLines: maxLines, keyboardType: keyboardType,
-        style: TextStyle(color: EstoquePalette.text, fontSize: price ? 28 : 15, fontWeight: price ? FontWeight.w700 : FontWeight.w500),
+        style: TextStyle(color: EstoquePalette.text, fontSize: big ? 28 : 15, fontWeight: big ? FontWeight.w700 : FontWeight.w500),
         decoration: InputDecoration(hintText: hint, hintStyle: const TextStyle(color: EstoquePalette.textMuted),
           prefixText: price ? 'R\$ ' : null,
           prefixStyle: const TextStyle(color: EstoquePalette.textMuted, fontSize: 20, fontWeight: FontWeight.w700),
           suffixText: suffix, suffixStyle: const TextStyle(color: EstoquePalette.textMuted, fontSize: 14, fontWeight: FontWeight.w600),
-          border: InputBorder.none, contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: price ? 20 : 16))));
+          border: InputBorder.none, contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: big ? 20 : 16))));
   }
 
   Widget _buildErrorBanner() {
@@ -440,7 +441,7 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
       const SizedBox(height: 8),
       Row(children: [
         Expanded(child: _buildTextField(controller: _quantidade, hint: '0', onChanged: (_) { if (_quantidadeError) setState(() { _quantidadeError = false; _validationMessage = null; }); },
-          keyboardType: const TextInputType.numberWithOptions(decimal: true), price: true, error: _quantidadeError)),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true), largeText: true, error: _quantidadeError)),
         const SizedBox(width: 10),
         _buildUnidadeSelector(),
       ]),
