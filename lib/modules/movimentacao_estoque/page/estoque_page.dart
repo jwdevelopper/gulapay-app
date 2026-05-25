@@ -3,26 +3,15 @@ import 'package:my_app_teste/modules/movimentacao_estoque/dto/insumo.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/dto/movimentacao_estoque.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/service/movimentacao_estoque_service.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/widgets/estoque_widgets.dart';
-import 'package:my_app_teste/shared/bottom_bar/bottom_bar.dart';
 
 import 'movimentacao_form_page.dart';
 
 class EstoquePage extends StatefulWidget {
-  final VoidCallback? onOpenDrawer;
-
-  const EstoquePage({super.key, this.onOpenDrawer});
+  const EstoquePage({super.key});
 
   @override
   State<EstoquePage> createState() => _EstoquePageState();
 }
-
-const List<BottomBarItem> _bottomBarItems = [
-  BottomBarItem(label: 'Inicio', icon: Icons.home_outlined),
-  BottomBarItem(label: 'Mesas', icon: Icons.grid_view_rounded),
-  BottomBarItem(label: 'Produtos', icon: Icons.inventory_2_outlined),
-  BottomBarItem(label: 'Clientes', icon: Icons.people_alt_outlined),
-  BottomBarItem(label: 'Mais', icon: Icons.more_horiz_rounded),
-];
 
 class _EstoquePageState extends State<EstoquePage>
     with SingleTickerProviderStateMixin {
@@ -232,10 +221,7 @@ class _EstoquePageState extends State<EstoquePage>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _HeaderIconButton(
-            icon: Icons.arrow_back_rounded,
-            onTap: () => Navigator.maybePop(context),
-          ),
+          const SizedBox(width: 44, height: 44),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -602,7 +588,7 @@ class _EstoquePageState extends State<EstoquePage>
     if (_allMovimentacoes.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 140),
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 96),
         children: [
           EstoqueEmptyState(
             title: 'Sem movimentações ainda',
@@ -635,7 +621,7 @@ class _EstoquePageState extends State<EstoquePage>
       }
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 40, 16, 140),
+        padding: const EdgeInsets.fromLTRB(16, 40, 16, 96),
         children: [
           Container(
             padding: const EdgeInsets.all(20),
@@ -703,7 +689,7 @@ class _EstoquePageState extends State<EstoquePage>
 
     return ListView.builder(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 140),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
       itemCount: dateKeys.length,
       itemBuilder: (context, index) {
         final dateKey = dateKeys[index];
@@ -765,7 +751,7 @@ class _EstoquePageState extends State<EstoquePage>
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 140),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
       children: [
         // Alert banner
         if (abaixo.isNotEmpty && _search.isEmpty) ...[
@@ -920,16 +906,6 @@ class _EstoquePageState extends State<EstoquePage>
         child: const Icon(Icons.add_rounded),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      bottomNavigationBar: BottomBar(
-        items: _bottomBarItems,
-        selectedIndex: 2,
-        onTap: (_) {},
-        backgroundColor: EstoquePalette.surface,
-        borderColor: EstoquePalette.borderSoft,
-        activeColor: EstoquePalette.primary,
-        inactiveColor: EstoquePalette.textMuted,
-        activeIndicatorColor: EstoquePalette.warningBg,
-      ),
       body: SafeArea(
         child: Column(
           children: [

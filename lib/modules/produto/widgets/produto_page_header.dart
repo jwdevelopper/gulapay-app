@@ -9,6 +9,7 @@ class ProdutoPageHeader extends StatelessWidget {
   final bool hasCategoryFilter;
   final bool hasActiveFilter;
   final VoidCallback onBackTap;
+  /// Se null e sem filtro de categoria, o botão de menu não aparece (navegação no shell).
   final VoidCallback? onMenuTap;
   final VoidCallback onFilterTap;
   final VoidCallback onClearFiltersTap;
@@ -20,7 +21,7 @@ class ProdutoPageHeader extends StatelessWidget {
     required this.hasCategoryFilter,
     required this.hasActiveFilter,
     required this.onBackTap,
-    required this.onMenuTap,
+    this.onMenuTap,
     required this.onFilterTap,
     required this.onClearFiltersTap,
   });
@@ -32,12 +33,18 @@ class ProdutoPageHeader extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ProdutoHeaderIconButton(
-            icon: hasCategoryFilter
-                ? Icons.arrow_back_rounded
-                : Icons.menu_rounded,
-            onTap: hasCategoryFilter ? onBackTap : onMenuTap,
-          ),
+          if (hasCategoryFilter)
+            ProdutoHeaderIconButton(
+              icon: Icons.arrow_back_rounded,
+              onTap: onBackTap,
+            )
+          else if (onMenuTap != null)
+            ProdutoHeaderIconButton(
+              icon: Icons.menu_rounded,
+              onTap: onMenuTap,
+            )
+          else
+            const SizedBox(width: 44, height: 44),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

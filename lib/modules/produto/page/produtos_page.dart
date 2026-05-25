@@ -7,26 +7,14 @@ import 'package:my_app_teste/modules/produto/models/produto_sort_option.dart';
 import 'package:my_app_teste/modules/produto/service/produto_service.dart';
 import 'package:my_app_teste/modules/produto/widgets/produtos_palette.dart';
 import 'package:my_app_teste/modules/produto/widgets/produtos_widgets.dart';
-import 'package:my_app_teste/shared/bottom_bar/bottom_bar.dart';
-
 import 'produto_form_page.dart';
 
 class ProdutosPage extends StatefulWidget {
-  final VoidCallback? onOpenDrawer;
-
-  const ProdutosPage({super.key, this.onOpenDrawer});
+  const ProdutosPage({super.key});
 
   @override
   State<ProdutosPage> createState() => _ProdutosPageState();
 }
-
-const List<BottomBarItem> _bottomBarItems = [
-  BottomBarItem(label: 'Inicio', icon: Icons.home_outlined),
-  BottomBarItem(label: 'Mesas', icon: Icons.grid_view_rounded),
-  BottomBarItem(label: 'Produtos', icon: Icons.inventory_2_outlined),
-  BottomBarItem(label: 'Clientes', icon: Icons.people_alt_outlined),
-  BottomBarItem(label: 'Mais', icon: Icons.more_horiz_rounded),
-];
 
 class _ProdutosPageState extends State<ProdutosPage> {
   final ProdutoService _service = ProdutoService();
@@ -421,7 +409,7 @@ class _ProdutosPageState extends State<ProdutosPage> {
     if (_loading) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 28, 16, 140),
+        padding: const EdgeInsets.fromLTRB(16, 28, 16, 96),
         children: const [
           SizedBox(height: 120),
           Center(
@@ -434,7 +422,7 @@ class _ProdutosPageState extends State<ProdutosPage> {
     if (_produtos.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 140),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 96),
         children: [
           const SizedBox(height: 24),
           EmptyStateCard(
@@ -452,7 +440,7 @@ class _ProdutosPageState extends State<ProdutosPage> {
     if (_filtered.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 140),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 96),
         children: [
           const SizedBox(height: 24),
           EmptyStateCard(
@@ -470,7 +458,7 @@ class _ProdutosPageState extends State<ProdutosPage> {
 
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 140),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
       itemCount: _filtered.length,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) => _buildProductCard(_filtered[index]),
@@ -489,16 +477,6 @@ class _ProdutosPageState extends State<ProdutosPage> {
         child: const Icon(Icons.add_rounded),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      bottomNavigationBar: BottomBar(
-        items: _bottomBarItems,
-        selectedIndex: 2,
-        onTap: (_) {},
-        backgroundColor: ProdutosPalette.surface,
-        borderColor: ProdutosPalette.borderSoft,
-        activeColor: ProdutosPalette.primary,
-        inactiveColor: ProdutosPalette.textMuted,
-        activeIndicatorColor: ProdutosPalette.warningBg,
-      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -508,7 +486,6 @@ class _ProdutosPageState extends State<ProdutosPage> {
               hasCategoryFilter: _filters.categoriaId != null,
               hasActiveFilter: _filters.hasActiveFilter || _search.isNotEmpty,
               onBackTap: _clearCategoryFilter,
-              onMenuTap: widget.onOpenDrawer,
               onFilterTap: _openFilterSheet,
               onClearFiltersTap: _clearSearchAndFilter,
             ),
