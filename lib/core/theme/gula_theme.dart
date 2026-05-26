@@ -41,7 +41,7 @@ final class GulaTheme {
         scrolledUnderElevation: 0,
         centerTitle: false,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: GulaColors.surface,
         elevation: 0,
         shape: RoundedRectangleBorder(

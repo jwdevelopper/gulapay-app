@@ -319,12 +319,16 @@ class FloorPlanController extends ChangeNotifier {
       _setError('Nao foi possivel localizar a mesa para edicao.');
       return;
     }
-    if (current.isJoined && draft.areaId != current.areaId) {
+
+    final sourceAreaValue = sourceArea;
+    final currentTable = current;
+
+    if (currentTable.isJoined && draft.areaId != currentTable.areaId) {
       _setError('Separe a mesa antes de mover o grupo para outra area.');
       return;
     }
 
-    final updatedTable = current.copyWith(
+    final updatedTable = currentTable.copyWith(
       code: trimmedCode,
       areaId: draft.areaId,
       width: draft.width,
@@ -333,21 +337,21 @@ class FloorPlanController extends ChangeNotifier {
       chairsCount: draft.chairsCount,
       seatedPeople: draft.seatedPeople,
       status: (draft.seatedPeople ?? 0) > 0
-          ? (current.activeOrderId != null ? TableStatus.withOrder : TableStatus.occupied)
-          : (current.activeOrderId != null ? TableStatus.withOrder : TableStatus.free),
+          ? (currentTable.activeOrderId != null ? TableStatus.withOrder : TableStatus.occupied)
+          : (currentTable.activeOrderId != null ? TableStatus.withOrder : TableStatus.free),
       lastOrderAt: (draft.seatedPeople ?? 0) > 0
-          ? (current.lastOrderAt ?? DateTime.now())
-          : current.lastOrderAt,
+          ? (currentTable.lastOrderAt ?? DateTime.now())
+          : currentTable.lastOrderAt,
       clearSeatedPeople: draft.seatedPeople == null,
     );
 
-    final sourceTables = sourceArea.tables
-        .where((table) => table.id != current.id)
+    final sourceTables = sourceAreaValue.tables
+        .where((table) => table.id != currentTable.id)
         .toList();
-    _replaceArea(sourceArea.copyWith(tables: sourceTables));
+    _replaceArea(sourceAreaValue.copyWith(tables: sourceTables));
 
     final targetTables = [
-      ...targetArea.tables.where((table) => table.id != current.id),
+      ...targetArea.tables.where((table) => table.id != currentTable.id),
       updatedTable,
     ];
     _replaceArea(targetArea.copyWith(tables: targetTables));
