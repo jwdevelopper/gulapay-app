@@ -51,6 +51,7 @@ class FloorPlanController extends ChangeNotifier {
   static const double _maxTableHeight = 180;
 
   final LocalFloorPlanRepository _repository;
+  final ValueNotifier<int> _moveTick = ValueNotifier<int>(0);
 
   List<RestaurantArea> _areas = const [];
   String? _selectedAreaId;
@@ -67,6 +68,7 @@ class FloorPlanController extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isSaving => _isSaving;
   String? get lastActionError => _lastActionError;
+  Listenable get moveListenable => _moveTick;
 
   RestaurantArea? get selectedArea {
     if (_selectedAreaId == null) {
@@ -84,6 +86,12 @@ class FloorPlanController extends ChangeNotifier {
   String? get movingTableId => _movingTableId;
   String? get suggestedJoinTargetId => _suggestedJoinTargetId;
   String? get suggestedJoinSourceId => _suggestedJoinSourceId;
+
+  @override
+  void dispose() {
+    _moveTick.dispose();
+    super.dispose();
+  }
 
   Future<void> load() async {
     _isLoading = true;
@@ -455,7 +463,7 @@ class FloorPlanController extends ChangeNotifier {
 
     _replaceArea(area.copyWith(tables: updatedTables));
     _updateJoinSuggestion(updatedTable);
-    notifyListeners();
+    _moveTick.value = _moveTick.value + 1;
   }
 
   Future<void> finishMove() async {

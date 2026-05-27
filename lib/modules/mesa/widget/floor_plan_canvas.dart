@@ -42,6 +42,7 @@ class FloorPlanCanvas extends StatefulWidget {
 
 class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
   late final TransformationController _transformationController;
+  late final Listenable _rebuildListenable;
   double _scale = 1;
 
   @override
@@ -49,6 +50,10 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
     super.initState();
     _transformationController = TransformationController();
     _transformationController.addListener(_syncScaleFromMatrix);
+    _rebuildListenable = Listenable.merge([
+      widget.controller,
+      widget.controller.moveListenable,
+    ]);
   }
 
   @override
@@ -81,121 +86,131 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final canvasWidth = max(
-          widget.isExpanded ? 1240.0 : 920.0,
-          constraints.maxWidth,
-        );
-        final canvasHeight = max(
-          widget.isExpanded ? 820.0 : 640.0,
-          constraints.maxHeight,
-        );
-        final canvasSize = Size(canvasWidth, canvasHeight);
+    return AnimatedBuilder(
+      animation: _rebuildListenable,
+      builder: (context, _) {
+        final area = widget.controller.areaById(widget.area.id) ?? widget.area;
 
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(widget.borderRadius),
-          child: Container(
-            decoration: BoxDecoration(
-              color: GulaColors.canvas,
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final canvasWidth = max(
+              widget.isExpanded ? 1240.0 : 920.0,
+              constraints.maxWidth,
+            );
+            final canvasHeight = max(
+              widget.isExpanded ? 820.0 : 640.0,
+              constraints.maxHeight,
+            );
+            final canvasSize = Size(canvasWidth, canvasHeight);
+
+            return ClipRRect(
               borderRadius: BorderRadius.circular(widget.borderRadius),
-              border: widget.borderRadius == 0
-                  ? null
-                  : Border.all(color: GulaColors.border),
-            ),
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: InteractiveViewer(
-                    transformationController: _transformationController,
-                    boundaryMargin: const EdgeInsets.all(180),
-                    constrained: false,
-                    panEnabled: widget.controller.movingTableId == null,
-                    scaleEnabled: widget.controller.movingTableId == null,
-                    minScale: 0.62,
-                    maxScale: 1.45,
-                    child: SizedBox(
-                      width: canvasWidth,
-                      height: canvasHeight,
-                      child: Stack(
-                        children: [
-                          CustomPaint(
-                            size: canvasSize,
-                            painter: _RestaurantFloorPainter(
-                              areaType: widget.area.type,
-                            ),
-                          ),
-                          ...widget.area.tables.map(
-                            (table) => Positioned(
-                              left: table.x,
-                              top: table.y,
-                              child: TableNode(
-                                table: table,
-                                areaName: widget.area.name,
-                                status: widget.controller.resolveStatus(table),
-                                isMoving:
-                                    widget.controller.movingTableId == table.id,
-                                isSuggestedJoin:
-                                    widget.controller.suggestedJoinTargetId ==
-                                        table.id ||
-                                    widget.controller.movingTableId == table.id,
-                                canDrag: widget.isEditMode,
-                                onTap: () => widget.isEditMode
-                                    ? widget.onEditTable(table)
-                                    : widget.onOpenTable(table),
-                                onDoubleTap: () {
-                                  if (!widget.isEditMode) {
-                                    widget.onOpenOrder(table);
-                                  }
-                                },
-                                onPanStart: () =>
-                                    widget.controller.beginMove(table.id),
-                                onPanUpdate: (delta) =>
-                                    widget.controller.moveTable(
-                                      table.id,
-                                      delta / _scale,
-                                      canvasSize,
-                                    ),
-                                onPanEnd: widget.controller.finishMove,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: GulaColors.canvas,
+                  borderRadius: BorderRadius.circular(widget.borderRadius),
+                  border: widget.borderRadius == 0
+                      ? null
+                      : Border.all(color: GulaColors.border),
+                ),
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: InteractiveViewer(
+                        transformationController: _transformationController,
+                        boundaryMargin: const EdgeInsets.all(180),
+                        constrained: false,
+                        panEnabled: widget.controller.movingTableId == null,
+                        scaleEnabled: widget.controller.movingTableId == null,
+                        minScale: 0.62,
+                        maxScale: 1.45,
+                        child: SizedBox(
+                          width: canvasWidth,
+                          height: canvasHeight,
+                          child: Stack(
+                            children: [
+                              CustomPaint(
+                                size: canvasSize,
+                                painter: _RestaurantFloorPainter(
+                                  areaType: area.type,
+                                ),
                               ),
-                            ),
+                              ...area.tables.map(
+                                (table) => Positioned(
+                                  left: table.x,
+                                  top: table.y,
+                                  child: TableNode(
+                                    table: table,
+                                    areaName: area.name,
+                                    status: widget.controller.resolveStatus(
+                                      table,
+                                    ),
+                                    isMoving: widget.controller.movingTableId ==
+                                        table.id,
+                                    isSuggestedJoin:
+                                        widget.controller.suggestedJoinTargetId ==
+                                            table.id ||
+                                        widget.controller.movingTableId ==
+                                            table.id,
+                                    canDrag: widget.isEditMode,
+                                    onTap: () => widget.isEditMode
+                                        ? widget.onEditTable(table)
+                                        : widget.onOpenTable(table),
+                                    onDoubleTap: () {
+                                      if (!widget.isEditMode) {
+                                        widget.onOpenOrder(table);
+                                      }
+                                    },
+                                    onPanStart: () =>
+                                        widget.controller.beginMove(table.id),
+                                    onPanUpdate: (delta) =>
+                                        widget.controller.moveTable(
+                                          table.id,
+                                          delta / _scale,
+                                          canvasSize,
+                                        ),
+                                    onPanEnd: widget.controller.finishMove,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
-                if (widget.showMapBadge)
-                  Positioned(
-                    left: 14,
-                    top: 14,
-                    child: _AreaMapBadge(area: widget.area),
-                  ),
-                Positioned(
-                  right: 12,
-                  top: 12,
-                  child: _CanvasControls(
-                    isEditMode: widget.isEditMode,
-                    onToggleEditMode: widget.onToggleEditMode,
-                    onZoomOut: () => _setScale(_scale - 0.12),
-                    onZoomIn: () => _setScale(_scale + 0.12),
-                    onResetZoom: () => _setScale(1),
-                    onExpand: widget.onExpand,
-                    showExpand: !widget.isExpanded,
-                  ),
-                ),
-                if (widget.controller.suggestedJoinTargetId != null)
-                  Positioned(
-                    left: 12,
-                    right: 12,
-                    bottom: 12,
-                    child: _JoinSuggestionBanner(
-                      onJoin: widget.onJoinSuggested,
+                    if (widget.showMapBadge)
+                      Positioned(
+                        left: 14,
+                        top: 14,
+                        child: _AreaMapBadge(area: area),
+                      ),
+                    Positioned(
+                      right: 12,
+                      top: 12,
+                      child: _CanvasControls(
+                        isEditMode: widget.isEditMode,
+                        onToggleEditMode: widget.onToggleEditMode,
+                        onZoomOut: () => _setScale(_scale - 0.12),
+                        onZoomIn: () => _setScale(_scale + 0.12),
+                        onResetZoom: () => _setScale(1),
+                        onExpand: widget.onExpand,
+                        showExpand: !widget.isExpanded,
+                      ),
                     ),
-                  ),
-              ],
-            ),
-          ),
+                    if (widget.controller.suggestedJoinTargetId != null)
+                      Positioned(
+                        left: 12,
+                        right: 12,
+                        bottom: 12,
+                        child: _JoinSuggestionBanner(
+                          onJoin: widget.onJoinSuggested,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
     );

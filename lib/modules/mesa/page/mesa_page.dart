@@ -19,6 +19,9 @@ class MesaPage extends StatefulWidget {
 class _MesaPageState extends State<MesaPage> {
   late final FloorPlanController _controller;
   bool _isEditMode = false;
+  static const double _extraNarrowWidth = 360;
+  static const double _narrowWidth = 420;
+  static const double _wideWidth = 1024;
 
   @override
   void initState() {
@@ -43,7 +46,13 @@ class _MesaPageState extends State<MesaPage> {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final isWide = MediaQuery.of(context).size.width >= 980;
+        final screenWidth = MediaQuery.of(context).size.width;
+        final isExtraNarrow = screenWidth <= _extraNarrowWidth;
+        final isNarrow = screenWidth <= _narrowWidth;
+        final isWide = screenWidth >= _wideWidth;
+        final canvasHeight = isExtraNarrow
+          ? 360.0
+          : (isNarrow ? 400.0 : 420.0);
 
         return Scaffold(
           backgroundColor: GulaColors.background,
@@ -54,7 +63,7 @@ class _MesaPageState extends State<MesaPage> {
                 children: [
                   _buildHeader(context, area),
                   const SizedBox(height: 16),
-                  _buildAreaSelector(area),
+                  _buildAreaSelector(area, compact: isNarrow),
                   const SizedBox(height: 16),
                   Expanded(
                     child: isWide
@@ -63,15 +72,21 @@ class _MesaPageState extends State<MesaPage> {
                             children: [
                               Expanded(flex: 3, child: _buildCanvas(area)),
                               const SizedBox(width: 16),
-                              const SizedBox(width: 320, child: TableLegend()),
+                              SizedBox(
+                                width: isWide ? 360 : 320,
+                                child: TableLegend(compact: isNarrow),
+                              ),
                             ],
                           )
                         : ListView(
                             padding: EdgeInsets.zero,
                             children: [
-                              SizedBox(height: 420, child: _buildCanvas(area)),
+                              SizedBox(
+                                height: canvasHeight,
+                                child: _buildCanvas(area),
+                              ),
                               const SizedBox(height: 14),
-                              const TableLegend(),
+                              TableLegend(compact: isNarrow),
                             ],
                           ),
                   ),
@@ -109,116 +124,205 @@ class _MesaPageState extends State<MesaPage> {
               .length,
     );
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: GulaColors.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: GulaColors.border),
+    final metrics = [
+      _HeaderMetric(
+        icon: Icons.table_restaurant_outlined,
+        label: 'Mesas',
+        value: '$totalMesas',
       ),
-      child: Wrap(
-        alignment: WrapAlignment.spaceBetween,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        runSpacing: 14,
-        spacing: 14,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Mesas do restaurante',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                '${area.name} ativa - $totalOcupadas/$totalMesas mesas em uso',
-                style: const TextStyle(
-                  color: GulaColors.textMuted,
-                  fontWeight: FontWeight.w600,
+      _HeaderMetric(
+        icon: Icons.event_available_outlined,
+        label: 'Livres',
+        value: '$totalLivres',
+      ),
+      _HeaderMetric(
+        icon: Icons.warning_amber_rounded,
+        label: 'Alertas',
+        value: '$totalAlertas',
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isExtraNarrow = constraints.maxWidth <= _extraNarrowWidth;
+        final isNarrow = constraints.maxWidth <= _narrowWidth;
+        final isWide = constraints.maxWidth >= _wideWidth;
+        final verticalGap = isNarrow ? 8.0 : 12.0;
+        final denseButtons = isExtraNarrow;
+        final ButtonStyle? segmentedStyle = denseButtons
+            ? ButtonStyle(
+                visualDensity: VisualDensity.compact,
+                padding: MaterialStateProperty.all(
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 ),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              )
+            : null;
+        final ButtonStyle? outlinedStyle = denseButtons
+            ? OutlinedButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              )
+            : null;
+
+        final actions = [
+          SegmentedButton<bool>(
+            showSelectedIcon: false,
+            selected: {_isEditMode},
+            style: segmentedStyle,
+            segments: const [
+              ButtonSegment<bool>(
+                value: false,
+                icon: Icon(Icons.receipt_long_outlined),
+                label: Text('Operar'),
               ),
-              const SizedBox(height: 12),
-              Wrap(
+              ButtonSegment<bool>(
+                value: true,
+                icon: Icon(Icons.edit_location_alt_outlined),
+                label: Text('Editar'),
+              ),
+            ],
+            onSelectionChanged: (selection) {
+              setState(() {
+                _isEditMode = selection.first;
+              });
+            },
+          ),
+          OutlinedButton.icon(
+            onPressed: () => _showTableEditor(),
+            style: outlinedStyle,
+            icon: const Icon(Icons.add_circle_outline),
+            label: const Text('Nova mesa'),
+          ),
+          OutlinedButton.icon(
+            onPressed: () async {
+              await _controller.resetSeed();
+              if (!context.mounted) {
+                return;
+              }
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Mapa restaurado para a base inicial.'),
+                ),
+              );
+            },
+            style: outlinedStyle,
+            icon: const Icon(Icons.refresh_outlined),
+            label: Text(
+              _controller.isSaving ? 'Salvando...' : 'Recarregar base',
+            ),
+          ),
+        ];
+
+        final metricsWidget = isNarrow
+            ? SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    metrics[0],
+                    const SizedBox(width: 8),
+                    metrics[1],
+                    const SizedBox(width: 8),
+                    metrics[2],
+                  ],
+                ),
+              )
+            : Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: [
-                  _HeaderMetric(
-                    icon: Icons.table_restaurant_outlined,
-                    label: 'Mesas',
-                    value: '$totalMesas',
-                  ),
-                  _HeaderMetric(
-                    icon: Icons.event_available_outlined,
-                    label: 'Livres',
-                    value: '$totalLivres',
-                  ),
-                  _HeaderMetric(
-                    icon: Icons.warning_amber_rounded,
-                    label: 'Alertas',
-                    value: '$totalAlertas',
-                  ),
-                ],
-              ),
-            ],
-          ),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              SegmentedButton<bool>(
-                showSelectedIcon: false,
-                selected: {_isEditMode},
-                segments: const [
-                  ButtonSegment<bool>(
-                    value: false,
-                    icon: Icon(Icons.receipt_long_outlined),
-                    label: Text('Operar'),
-                  ),
-                  ButtonSegment<bool>(
-                    value: true,
-                    icon: Icon(Icons.edit_location_alt_outlined),
-                    label: Text('Editar'),
-                  ),
-                ],
-                onSelectionChanged: (selection) {
-                  setState(() {
-                    _isEditMode = selection.first;
-                  });
-                },
-              ),
-              OutlinedButton.icon(
-                onPressed: () => _showTableEditor(),
-                icon: const Icon(Icons.add_circle_outline),
-                label: const Text('Nova mesa'),
-              ),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  await _controller.resetSeed();
-                  if (!context.mounted) {
-                    return;
-                  }
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Mapa restaurado para a base inicial.'),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.refresh_outlined),
-                label: Text(
-                  _controller.isSaving ? 'Salvando...' : 'Recarregar base',
+                children: metrics,
+              );
+
+        final actionsWidget = isNarrow
+            ? SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    actions[0],
+                    const SizedBox(width: 8),
+                    actions[1],
+                    const SizedBox(width: 8),
+                    actions[2],
+                  ],
                 ),
+              )
+            : Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: actions,
+              );
+
+        final titleBlock = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Mesas do restaurante',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '${area.name} ativa - $totalOcupadas/$totalMesas mesas em uso',
+              style: const TextStyle(
+                color: GulaColors.textMuted,
+                fontWeight: FontWeight.w600,
               ),
-            ],
+            ),
+          ],
+        );
+
+        return Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(isNarrow ? 14 : 18),
+          decoration: BoxDecoration(
+            color: GulaColors.surface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: GulaColors.border),
           ),
-        ],
-      ),
+          child: isNarrow
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    titleBlock,
+                    SizedBox(height: verticalGap),
+                    metricsWidget,
+                    SizedBox(height: verticalGap),
+                    actionsWidget,
+                  ],
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          titleBlock,
+                          SizedBox(height: verticalGap),
+                          metricsWidget,
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: isWide ? 420 : 320,
+                      ),
+                      child: Align(
+                        alignment: Alignment.topRight,
+                        child: actionsWidget,
+                      ),
+                    ),
+                  ],
+                ),
+        );
+      },
     );
   }
 
-  Widget _buildAreaSelector(RestaurantArea selectedArea) {
+  Widget _buildAreaSelector(RestaurantArea selectedArea, {bool compact = false}) {
     return SizedBox(
-      height: 76,
+      height: compact ? 64 : 76,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemBuilder: (context, index) {
@@ -226,6 +330,7 @@ class _MesaPageState extends State<MesaPage> {
           return RestaurantAreaTab(
             area: item,
             isSelected: item.id == selectedArea.id,
+            compact: compact,
             onTap: () => _controller.selectArea(item.id),
           );
         },

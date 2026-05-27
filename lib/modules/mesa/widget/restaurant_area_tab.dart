@@ -8,11 +8,13 @@ class RestaurantAreaTab extends StatelessWidget {
     required this.area,
     required this.isSelected,
     required this.onTap,
+    this.compact = false,
   });
 
   final RestaurantArea area;
   final bool isSelected;
   final VoidCallback onTap;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -20,13 +22,24 @@ class RestaurantAreaTab extends StatelessWidget {
         ? 0.0
         : (area.occupancyCount / area.totalTables).clamp(0.0, 1.0).toDouble();
 
+    final tabWidth = compact ? 148.0 : 168.0;
+    final iconSize = compact ? 16.0 : 18.0;
+    final iconBox = compact ? 30.0 : 34.0;
+    final nameSize = compact ? 12.0 : 13.0;
+    final infoSize = compact ? 10.0 : 11.0;
+    final progressHeight = compact ? 4.0 : 5.0;
+    final padding = EdgeInsets.symmetric(
+      horizontal: compact ? 10 : 12,
+      vertical: compact ? 8 : 10,
+    );
+
     return Semantics(
       button: true,
       selected: isSelected,
       label:
           '${area.name}, ${area.occupancyCount} de ${area.totalTables} em uso',
       child: SizedBox(
-        width: 168,
+        width: tabWidth,
         child: Material(
           color: Colors.transparent,
           child: InkWell(
@@ -34,7 +47,7 @@ class RestaurantAreaTab extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: padding,
               decoration: BoxDecoration(
                 color: isSelected ? GulaColors.primary : GulaColors.surface,
                 borderRadius: BorderRadius.circular(18),
@@ -46,16 +59,16 @@ class RestaurantAreaTab extends StatelessWidget {
                     color: Colors.black.withValues(
                       alpha: isSelected ? 0.08 : 0.025,
                     ),
-                    blurRadius: 14,
-                    offset: const Offset(0, 7),
+                    blurRadius: compact ? 10 : 14,
+                    offset: Offset(0, compact ? 5 : 7),
                   ),
                 ],
               ),
               child: Row(
                 children: [
                   Container(
-                    width: 34,
-                    height: 34,
+                    width: iconBox,
+                    height: iconBox,
                     decoration: BoxDecoration(
                       color: isSelected
                           ? Colors.white.withValues(alpha: 0.18)
@@ -64,11 +77,11 @@ class RestaurantAreaTab extends StatelessWidget {
                     ),
                     child: Icon(
                       _areaIcon(area.type),
-                      size: 18,
+                      size: iconSize,
                       color: isSelected ? Colors.white : GulaColors.text,
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  SizedBox(width: compact ? 8 : 10),
                   Expanded(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -81,14 +94,14 @@ class RestaurantAreaTab extends StatelessWidget {
                           style: TextStyle(
                             color: isSelected ? Colors.white : GulaColors.text,
                             fontWeight: FontWeight.w800,
-                            fontSize: 13,
+                            fontSize: nameSize,
                           ),
                         ),
-                        const SizedBox(height: 5),
+                        SizedBox(height: compact ? 4 : 5),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(999),
                           child: LinearProgressIndicator(
-                            minHeight: 5,
+                            minHeight: progressHeight,
                             value: occupancyRate,
                             backgroundColor: isSelected
                                 ? Colors.white.withValues(alpha: 0.24)
@@ -98,7 +111,7 @@ class RestaurantAreaTab extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 5),
+                        SizedBox(height: compact ? 4 : 5),
                         Text(
                           '${area.occupancyCount}/${area.totalTables} em uso',
                           maxLines: 1,
@@ -107,7 +120,7 @@ class RestaurantAreaTab extends StatelessWidget {
                             color: isSelected
                                 ? Colors.white.withValues(alpha: 0.9)
                                 : GulaColors.textMuted,
-                            fontSize: 11,
+                            fontSize: infoSize,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
