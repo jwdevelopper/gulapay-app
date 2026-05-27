@@ -8,11 +8,15 @@ class ApiClient {
   static const String _tokenKey = 'token';
 
   static final Dio dio = Dio(
-    BaseOptions(baseUrl: ConstantsApi.baseUrl + ConstantsApi.porta),
+    BaseOptions(baseUrl: ConstantsApi.urlBaseCompleta),
   )..interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          if (!options.path.contains(ConstantsApi.urlLogin)) {
+          final isPublicAuthRoute =
+              options.path.contains(ConstantsApi.urlLogin) ||
+              options.path.contains(ConstantsApi.urlRegistrarUsuario);
+
+          if (!isPublicAuthRoute) {
             final prefs = await SharedPreferences.getInstance();
             final token = prefs.getString(_tokenKey);
             if (token != null && token.isNotEmpty) {

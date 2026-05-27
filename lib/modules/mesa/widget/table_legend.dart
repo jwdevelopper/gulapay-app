@@ -9,21 +9,27 @@ class TableLegend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: GulaColors.surface,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(color: GulaColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Legenda operacional',
-            style: TextStyle(
-              color: GulaColors.text,
-              fontWeight: FontWeight.w700,
-            ),
+          const Row(
+            children: [
+              Icon(Icons.info_outline, size: 18, color: GulaColors.textMuted),
+              SizedBox(width: 8),
+              Text(
+                'Legenda operacional',
+                style: TextStyle(
+                  color: GulaColors.text,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           Wrap(
@@ -35,15 +41,13 @@ class TableLegend extends StatelessWidget {
               TableStatusBadge(status: TableStatus.noOrder30Min),
               TableStatusBadge(status: TableStatus.awaitingRelease1H),
               TableStatusBadge(status: TableStatus.withOrder),
+              TableStatusBadge(status: TableStatus.attention),
             ],
           ),
           const SizedBox(height: 14),
           const Text(
-            'Aproxime mesas da mesma area para sugerir uniao. Toque simples abre o painel e toque duplo entra no pedido sem duplicar comanda.',
-            style: TextStyle(
-              color: GulaColors.textMuted,
-              height: 1.35,
-            ),
+            'No modo editar, arraste mesas e aproxime itens da mesma area para sugerir uniao. A comanda e sempre reaproveitada dentro do mesmo grupo.',
+            style: TextStyle(color: GulaColors.textMuted, height: 1.35),
           ),
         ],
       ),

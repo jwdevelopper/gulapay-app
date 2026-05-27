@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:my_app_teste/core/theme/gula_theme.dart';
 import 'package:my_app_teste/modules/mesa/model/restaurant_models.dart';
@@ -12,6 +13,8 @@ class TableNode extends StatelessWidget {
     required this.status,
     required this.isMoving,
     required this.isSuggestedJoin,
+    required this.canDrag,
+    required this.areaName,
     required this.onTap,
     required this.onDoubleTap,
     required this.onPanStart,
@@ -23,6 +26,8 @@ class TableNode extends StatelessWidget {
   final TableStatus status;
   final bool isMoving;
   final bool isSuggestedJoin;
+  final bool canDrag;
+  final String areaName;
   final VoidCallback onTap;
   final VoidCallback onDoubleTap;
   final VoidCallback onPanStart;
@@ -38,119 +43,152 @@ class TableNode extends StatelessWidget {
       table.chairsCount,
     );
 
-    return GestureDetector(
-      onTap: onTap,
-      onDoubleTap: onDoubleTap,
-      onPanStart: (_) => onPanStart(),
-      onPanUpdate: (details) => onPanUpdate(details.delta),
-      onPanEnd: (_) => onPanEnd(),
-      child: AnimatedScale(
-        duration: const Duration(milliseconds: 160),
-        scale: isMoving ? 1.02 : 1,
-        child: SizedBox(
-          width: table.width,
-          height: table.height,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              ...chairOffsets.map(
-                (offset) => Positioned(
-                  left: offset.dx - 5,
-                  top: offset.dy - 5,
-                  child: Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: GulaColors.surfaceAlt,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: GulaColors.border),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned.fill(
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  decoration: decoration,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              table.code,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: GulaColors.text,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 13,
+    final semanticsLabel = [
+      table.code,
+      areaName,
+      tableStatusLabel(status),
+      '${table.chairsCount} cadeiras',
+      if (table.isJoined) 'mesa agrupada',
+    ].join(', ');
+
+    return Semantics(
+      button: true,
+      label: semanticsLabel,
+      hint: canDrag
+          ? 'Toque para detalhes ou arraste para reposicionar.'
+          : 'Toque para detalhes.',
+      child: Tooltip(
+        message: canDrag
+            ? '${table.code} - arraste para reposicionar'
+            : '${table.code} - ${tableStatusLabel(status)}',
+        child: MouseRegion(
+          cursor: canDrag ? SystemMouseCursors.grab : SystemMouseCursors.click,
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            dragStartBehavior: DragStartBehavior.down,
+            onTap: onTap,
+            onDoubleTap: onDoubleTap,
+            onPanStart: canDrag ? (_) => onPanStart() : null,
+            onPanUpdate: canDrag
+                ? (details) => onPanUpdate(details.delta)
+                : null,
+            onPanEnd: canDrag ? (_) => onPanEnd() : null,
+            child: AnimatedScale(
+              duration: const Duration(milliseconds: 160),
+              scale: isMoving ? 1.04 : 1,
+              child: SizedBox(
+                width: table.width,
+                height: table.height,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    ...chairOffsets.map(
+                      (offset) => Positioned(
+                        left: offset.dx - 5,
+                        top: offset.dy - 5,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: GulaColors.surfaceAlt,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: GulaColors.border),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
                               ),
-                            ),
+                            ],
                           ),
-                          if (table.isJoined)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: GulaColors.surfaceAlt.withOpacity(0.86),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: const Text(
-                                'Grupo',
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w800,
-                                  color: GulaColors.text,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      const Spacer(),
-                      TableStatusBadge(status: status, compact: true),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.chair_alt_outlined,
-                            size: 13,
-                            color: GulaColors.textMuted,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${table.chairsCount} cadeiras',
-                            style: const TextStyle(
-                              color: GulaColors.textMuted,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (isSuggestedJoin)
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: _borderRadiusForShape(table.shape),
-                        border: Border.all(
-                          color: GulaColors.primary,
-                          width: 2,
                         ),
                       ),
                     ),
-                  ),
+                    Positioned.fill(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        decoration: decoration,
+                        padding: const EdgeInsets.all(8),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final compact =
+                                constraints.maxWidth < 106 ||
+                                constraints.maxHeight < 78;
+                            final veryCompact = constraints.maxHeight < 70;
+
+                            return Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        table.code,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          color: GulaColors.text,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                    if (table.isJoined) ...[
+                                      const SizedBox(width: 4),
+                                      const Icon(
+                                        Icons.link,
+                                        size: 12,
+                                        color: GulaColors.text,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 5),
+                                _NodeStatusPill(
+                                  status: status,
+                                  compact: compact,
+                                ),
+                                if (!veryCompact) ...[
+                                  const SizedBox(height: 5),
+                                  _CapacityLine(count: table.chairsCount),
+                                ],
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    if (canDrag)
+                      const Positioned(
+                        right: 7,
+                        bottom: 6,
+                        child: Icon(
+                          Icons.open_with_rounded,
+                          size: 13,
+                          color: GulaColors.textMuted,
+                        ),
+                      ),
+                    if (isSuggestedJoin)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              borderRadius: _borderRadiusForShape(table.shape),
+                              border: Border.all(
+                                color: GulaColors.primary,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-            ],
+              ),
+            ),
           ),
         ),
       ),
@@ -171,7 +209,7 @@ class TableNode extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
@@ -188,7 +226,7 @@ class TableNode extends StatelessWidget {
       ),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.08),
+          color: Colors.black.withValues(alpha: 0.08),
           blurRadius: 18,
           offset: const Offset(0, 10),
         ),
@@ -210,7 +248,7 @@ class TableNode extends StatelessWidget {
   }
 
   List<Offset> _chairOffsets(Size size, TableShape shape, int chairsCount) {
-    final seats = chairsCount.clamp(1, 12) as int;
+    final seats = chairsCount.clamp(1, 12).toInt();
     if (shape == TableShape.round || shape == TableShape.oval) {
       return List<Offset>.generate(seats, (index) {
         final angle = (2 * pi * index) / seats;
@@ -246,5 +284,104 @@ class TableNode extends StatelessWidget {
       positions.add(Offset(size.width + 6, dy));
     }
     return positions.take(seats).toList();
+  }
+}
+
+class _NodeStatusPill extends StatelessWidget {
+  const _NodeStatusPill({required this.status, required this.compact});
+
+  final TableStatus status;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final child = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          tableStatusIcon(status),
+          size: compact ? 13 : 12,
+          color: GulaColors.text,
+        ),
+        if (!compact) ...[
+          const SizedBox(width: 4),
+          Text(
+            _shortLabel(status),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: GulaColors.text,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ],
+    );
+
+    return Container(
+      constraints: compact
+          ? const BoxConstraints.tightFor(width: 26, height: 24)
+          : const BoxConstraints(maxWidth: 88),
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 0 : 8,
+        vertical: compact ? 0 : 4,
+      ),
+      decoration: BoxDecoration(
+        color: GulaColors.surfaceAlt.withValues(alpha: 0.76),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: GulaColors.border.withValues(alpha: 0.8)),
+      ),
+      alignment: Alignment.center,
+      child: FittedBox(child: child),
+    );
+  }
+
+  String _shortLabel(TableStatus status) {
+    switch (status) {
+      case TableStatus.free:
+        return 'Livre';
+      case TableStatus.occupied:
+        return 'Ocupada';
+      case TableStatus.noOrder30Min:
+        return '30 min';
+      case TableStatus.awaitingRelease1H:
+        return '1 h';
+      case TableStatus.withOrder:
+        return 'Pedido';
+      case TableStatus.attention:
+        return 'Atencao';
+    }
+  }
+}
+
+class _CapacityLine extends StatelessWidget {
+  const _CapacityLine({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return FittedBox(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.chair_alt_outlined,
+            size: 12,
+            color: GulaColors.textMuted,
+          ),
+          const SizedBox(width: 3),
+          Text(
+            '$count cad.',
+            style: const TextStyle(
+              color: GulaColors.textMuted,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

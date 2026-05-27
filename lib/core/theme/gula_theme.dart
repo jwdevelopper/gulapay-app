@@ -13,12 +13,12 @@ final class GulaColors {
   static const textMuted = Color(0xFF8D745E);
   static const primary = Color(0xFFD96A3A);
   static const primarySoft = Color(0xFFE59A66);
-  static const success = Color(0xFFD5B07C);
+  static const success = Color(0xFFA8C49A);
   static const warning = Color(0xFFE3C15D);
   static const danger = Color(0xFFD86A3B);
   static const free = Color(0xFFEFE7D6);
   static const occupied = Color(0xFFC8A27D);
-  static const attention = Color(0xFFE8C65A);
+  static const attention = Color(0xFFB7C7DA);
   static const critical = Color(0xFFD66A3A);
 }
 
@@ -89,7 +89,9 @@ final class GulaTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: GulaColors.primary,
           foregroundColor: Colors.white,
-          disabledBackgroundColor: GulaColors.primarySoft.withOpacity(0.4),
+          disabledBackgroundColor: GulaColors.primarySoft.withValues(
+            alpha: 0.4,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
           ),

@@ -75,7 +75,7 @@ class TableStatusBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: GulaColors.border.withOpacity(0.9)),
+        border: Border.all(color: GulaColors.border.withValues(alpha: 0.9)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

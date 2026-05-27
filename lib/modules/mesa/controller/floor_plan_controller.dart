@@ -40,9 +40,15 @@ class TableOrderOpenResult {
 }
 
 class FloorPlanController extends ChangeNotifier {
-  FloorPlanController({
-    LocalFloorPlanRepository? repository,
-  }) : _repository = repository ?? LocalFloorPlanRepository();
+  FloorPlanController({LocalFloorPlanRepository? repository})
+    : _repository = repository ?? LocalFloorPlanRepository();
+
+  static const double _canvasEdgePadding = 36;
+  static const double _snapInterval = 12;
+  static const double _minTableWidth = 72;
+  static const double _minTableHeight = 56;
+  static const double _maxTableWidth = 220;
+  static const double _maxTableHeight = 180;
 
   final LocalFloorPlanRepository _repository;
 
@@ -52,6 +58,7 @@ class FloorPlanController extends ChangeNotifier {
   bool _isSaving = false;
   String? _movingTableId;
   String? _suggestedJoinTargetId;
+  String? _suggestedJoinSourceId;
   String? _lastActionError;
   String? _lastOpenedScopeId;
   DateTime? _lastOrderOpenAt;
@@ -76,6 +83,7 @@ class FloorPlanController extends ChangeNotifier {
 
   String? get movingTableId => _movingTableId;
   String? get suggestedJoinTargetId => _suggestedJoinTargetId;
+  String? get suggestedJoinSourceId => _suggestedJoinSourceId;
 
   Future<void> load() async {
     _isLoading = true;
@@ -126,7 +134,9 @@ class FloorPlanController extends ChangeNotifier {
       return TableStatus.occupied;
     }
 
-    return table.status == TableStatus.attention ? TableStatus.attention : TableStatus.free;
+    return table.status == TableStatus.attention
+        ? TableStatus.attention
+        : TableStatus.free;
   }
 
   List<RestaurantTable> tablesForScope(String tableId) {
@@ -150,24 +160,21 @@ class FloorPlanController extends ChangeNotifier {
   }
 
   int groupChairsCount(String tableId) {
-    return tablesForScope(tableId).fold<int>(
-      0,
-      (total, table) => total + table.chairsCount,
-    );
+    return tablesForScope(
+      tableId,
+    ).fold<int>(0, (total, table) => total + table.chairsCount);
   }
 
   int groupSeatedCount(String tableId) {
-    return tablesForScope(tableId).fold<int>(
-      0,
-      (total, table) => total + (table.seatedPeople ?? 0),
-    );
+    return tablesForScope(
+      tableId,
+    ).fold<int>(0, (total, table) => total + (table.seatedPeople ?? 0));
   }
 
   int groupItemsCount(String tableId) {
-    return tablesForScope(tableId).fold<int>(
-      0,
-      (total, table) => max(total, table.orderItemsCount),
-    );
+    return tablesForScope(
+      tableId,
+    ).fold<int>(0, (total, table) => max(total, table.orderItemsCount));
   }
 
   double groupPartialTotal(String tableId) {
@@ -226,6 +233,17 @@ class FloorPlanController extends ChangeNotifier {
       if (candidate.isJoined || table.isJoined) {
         return false;
       }
+      final activeOrderIds = <String>{
+        ...tablesForScope(
+          tableId,
+        ).map((item) => item.activeOrderId).whereType<String>(),
+        ...tablesForScope(
+          candidate.id,
+        ).map((item) => item.activeOrderId).whereType<String>(),
+      };
+      if (activeOrderIds.length > 1) {
+        return false;
+      }
       return true;
     }).toList();
   }
@@ -266,20 +284,42 @@ class FloorPlanController extends ChangeNotifier {
       _setError('A quantidade de cadeiras deve ficar entre 1 e 12.');
       return;
     }
-    if (draft.width < 72 || draft.height < 56) {
+    if ((draft.seatedPeople ?? 0) > draft.chairsCount) {
+      _setError('Pessoas sentadas nao podem ultrapassar a capacidade da mesa.');
+      return;
+    }
+    if (draft.width < _minTableWidth || draft.height < _minTableHeight) {
       _setError('A mesa precisa ter dimensoes minimas para leitura.');
+      return;
+    }
+    if (draft.width > _maxTableWidth || draft.height > _maxTableHeight) {
+      _setError('A mesa ultrapassa o tamanho maximo permitido no mapa.');
+      return;
+    }
+
+    final duplicatedCode = targetArea.tables.any(
+      (table) =>
+          table.id != draft.id &&
+          table.code.trim().toLowerCase() == trimmedCode.toLowerCase(),
+    );
+    if (duplicatedCode) {
+      _setError('Ja existe uma mesa com esse codigo nessa area.');
       return;
     }
 
     if (draft.id == null) {
       final tables = [...targetArea.tables];
+      final position = _nextAvailablePosition(
+        targetArea,
+        Size(draft.width, draft.height),
+      );
       tables.add(
         RestaurantTable(
           id: 'm${DateTime.now().microsecondsSinceEpoch}',
           code: trimmedCode,
           areaId: draft.areaId,
-          x: 48,
-          y: 48 + (tables.length * 18),
+          x: position.dx,
+          y: position.dy,
           width: draft.width,
           height: draft.height,
           shape: draft.shape,
@@ -327,6 +367,17 @@ class FloorPlanController extends ChangeNotifier {
       _setError('Separe a mesa antes de mover o grupo para outra area.');
       return;
     }
+    if (currentTable.activeOrderId != null &&
+        draft.areaId != currentTable.areaId) {
+      _setError('Encerre a comanda antes de mover a mesa para outra area.');
+      return;
+    }
+    if (currentTable.activeOrderId != null && (draft.seatedPeople ?? 0) < 1) {
+      _setError(
+        'Mesa com comanda ativa precisa manter ao menos uma pessoa sentada.',
+      );
+      return;
+    }
 
     final updatedTable = currentTable.copyWith(
       code: trimmedCode,
@@ -337,8 +388,12 @@ class FloorPlanController extends ChangeNotifier {
       chairsCount: draft.chairsCount,
       seatedPeople: draft.seatedPeople,
       status: (draft.seatedPeople ?? 0) > 0
-          ? (currentTable.activeOrderId != null ? TableStatus.withOrder : TableStatus.occupied)
-          : (currentTable.activeOrderId != null ? TableStatus.withOrder : TableStatus.free),
+          ? (currentTable.activeOrderId != null
+                ? TableStatus.withOrder
+                : TableStatus.occupied)
+          : (currentTable.activeOrderId != null
+                ? TableStatus.withOrder
+                : TableStatus.free),
       lastOrderAt: (draft.seatedPeople ?? 0) > 0
           ? (currentTable.lastOrderAt ?? DateTime.now())
           : currentTable.lastOrderAt,
@@ -361,30 +416,37 @@ class FloorPlanController extends ChangeNotifier {
 
   void beginMove(String tableId) {
     _movingTableId = tableId;
+    _suggestedJoinSourceId = null;
+    _suggestedJoinTargetId = null;
     notifyListeners();
   }
 
   void unselectJoinSuggestion() {
     _movingTableId = null;
     _suggestedJoinTargetId = null;
+    _suggestedJoinSourceId = null;
   }
 
-  Future<void> moveTable(
-    String tableId,
-    Offset delta,
-    Size canvasSize,
-  ) async {
+  Future<void> moveTable(String tableId, Offset delta, Size canvasSize) async {
     final table = findTableById(tableId);
     final area = table == null ? null : areaById(table.areaId);
     if (table == null || area == null) {
       return;
     }
 
-    final snap = 12.0;
-    final maxX = max(0.0, canvasSize.width - table.width - 24);
-    final maxY = max(0.0, canvasSize.height - table.height - 24);
-    final nextX = _snapValue((table.x + delta.dx).clamp(0.0, maxX), snap);
-    final nextY = _snapValue((table.y + delta.dy).clamp(0.0, maxY), snap);
+    final minX = _canvasEdgePadding;
+    final minY = _canvasEdgePadding;
+    final maxX = max(minX, canvasSize.width - table.width - _canvasEdgePadding);
+    final maxY = max(
+      minY,
+      canvasSize.height - table.height - _canvasEdgePadding,
+    );
+    final nextX = (table.x + delta.dx).clamp(minX, maxX).toDouble();
+    final nextY = (table.y + delta.dy).clamp(minY, maxY).toDouble();
+
+    if ((nextX - table.x).abs() < 0.1 && (nextY - table.y).abs() < 0.1) {
+      return;
+    }
 
     final updatedTable = table.copyWith(x: nextX, y: nextY);
     final updatedTables = area.tables
@@ -397,9 +459,23 @@ class FloorPlanController extends ChangeNotifier {
   }
 
   Future<void> finishMove() async {
+    final tableId = _movingTableId;
+    if (tableId != null) {
+      _snapTableToGrid(tableId);
+    }
     _movingTableId = null;
     await _persist();
     notifyListeners();
+  }
+
+  Future<String?> joinSuggestedTables() async {
+    final sourceId = _suggestedJoinSourceId ?? _movingTableId;
+    final targetId = _suggestedJoinTargetId;
+    if (sourceId == null || targetId == null) {
+      return _setError('Aproxime duas mesas validas para uniao.');
+    }
+
+    return joinTables(sourceTableId: sourceId, targetTableId: targetId);
   }
 
   Future<String?> joinTables({
@@ -415,15 +491,23 @@ class FloorPlanController extends ChangeNotifier {
       return _setError('Mesas de areas diferentes nao podem ser unidas.');
     }
     if (source.isJoined || target.isJoined) {
-      return _setError('Separe a mesa atual antes de criar um novo agrupamento.');
+      return _setError(
+        'Separe a mesa atual antes de criar um novo agrupamento.',
+      );
     }
 
     final activeOrderIds = <String>{
-      ...tablesForScope(sourceTableId).map((table) => table.activeOrderId).whereType<String>(),
-      ...tablesForScope(targetTableId).map((table) => table.activeOrderId).whereType<String>(),
+      ...tablesForScope(
+        sourceTableId,
+      ).map((table) => table.activeOrderId).whereType<String>(),
+      ...tablesForScope(
+        targetTableId,
+      ).map((table) => table.activeOrderId).whereType<String>(),
     };
     if (activeOrderIds.length > 1) {
-      return _setError('As mesas possuem pedidos diferentes e nao podem ser unidas agora.');
+      return _setError(
+        'As mesas possuem pedidos diferentes e nao podem ser unidas agora.',
+      );
     }
 
     final area = areaById(source.areaId);
@@ -450,8 +534,8 @@ class FloorPlanController extends ChangeNotifier {
         status: mergedOrderCarrier.activeOrderId != null
             ? TableStatus.withOrder
             : (table.seatedPeople ?? 0) > 0
-                ? TableStatus.occupied
-                : TableStatus.free,
+            ? TableStatus.occupied
+            : TableStatus.free,
       );
     }).toList();
 
@@ -471,10 +555,7 @@ class FloorPlanController extends ChangeNotifier {
     );
 
     _replaceArea(
-      area.copyWith(
-        tables: snappedTables,
-        joinGroups: updatedGroups,
-      ),
+      area.copyWith(tables: snappedTables, joinGroups: updatedGroups),
     );
     unselectJoinSuggestion();
     await _persist();
@@ -516,10 +597,12 @@ class FloorPlanController extends ChangeNotifier {
         status: keepOrder && anchorWithOrder.activeOrderId != null
             ? TableStatus.withOrder
             : (table.seatedPeople ?? 0) > 0
-                ? TableStatus.occupied
-                : TableStatus.free,
+            ? TableStatus.occupied
+            : TableStatus.free,
         activeOrderId: keepOrder ? anchorWithOrder.activeOrderId : null,
-        lastOrderAt: keepOrder ? anchorWithOrder.lastOrderAt : table.lastOrderAt,
+        lastOrderAt: keepOrder
+            ? anchorWithOrder.lastOrderAt
+            : table.lastOrderAt,
         customerName: keepOrder ? anchorWithOrder.customerName : null,
         orderItemsCount: keepOrder ? anchorWithOrder.orderItemsCount : 0,
         partialTotal: keepOrder ? anchorWithOrder.partialTotal : 0,
@@ -532,7 +615,9 @@ class FloorPlanController extends ChangeNotifier {
         .where((group) => group.id != groupId)
         .toList();
 
-    _replaceArea(area.copyWith(tables: updatedTables, joinGroups: updatedGroups));
+    _replaceArea(
+      area.copyWith(tables: updatedTables, joinGroups: updatedGroups),
+    );
     await _persist();
     notifyListeners();
     return null;
@@ -679,6 +764,7 @@ class FloorPlanController extends ChangeNotifier {
     final area = areaById(movingTable.areaId);
     if (area == null || movingTable.isJoined) {
       _suggestedJoinTargetId = null;
+      _suggestedJoinSourceId = null;
       return;
     }
 
@@ -698,12 +784,77 @@ class FloorPlanController extends ChangeNotifier {
     }
 
     _suggestedJoinTargetId = bestCandidate?.id;
+    _suggestedJoinSourceId = bestCandidate == null ? null : movingTable.id;
+  }
+
+  void _snapTableToGrid(String tableId) {
+    final table = findTableById(tableId);
+    final area = table == null ? null : areaById(table.areaId);
+    if (table == null || area == null) {
+      return;
+    }
+
+    final updatedTable = table.copyWith(
+      x: _snapValue(table.x, _snapInterval),
+      y: _snapValue(table.y, _snapInterval),
+    );
+    final updatedTables = area.tables
+        .map((item) => item.id == tableId ? updatedTable : item)
+        .toList();
+    _replaceArea(area.copyWith(tables: updatedTables));
+    _updateJoinSuggestion(updatedTable);
   }
 
   double _edgeDistance(RestaurantTable a, RestaurantTable b) {
-    final horizontal = (a.x - b.x).abs() - ((a.width + b.width) / 2);
-    final vertical = (a.y - b.y).abs() - ((a.height + b.height) / 2);
-    return max(horizontal.abs(), vertical.abs());
+    final aRect = Rect.fromLTWH(a.x, a.y, a.width, a.height);
+    final bRect = Rect.fromLTWH(b.x, b.y, b.width, b.height);
+    final dx = max(
+      0.0,
+      max(aRect.left - bRect.right, bRect.left - aRect.right),
+    );
+    final dy = max(
+      0.0,
+      max(aRect.top - bRect.bottom, bRect.top - aRect.bottom),
+    );
+    return sqrt((dx * dx) + (dy * dy));
+  }
+
+  Offset _nextAvailablePosition(RestaurantArea area, Size tableSize) {
+    const columns = 4;
+    const start = _canvasEdgePadding;
+    const gap = 34.0;
+
+    for (var index = 0; index < 24; index++) {
+      final column = index % columns;
+      final row = index ~/ columns;
+      final position = Offset(
+        start + column * (_maxTableWidth + gap),
+        start + row * (_maxTableHeight + gap),
+      );
+      final proposed = Rect.fromLTWH(
+        position.dx,
+        position.dy,
+        tableSize.width,
+        tableSize.height,
+      ).inflate(18);
+      final overlaps = area.tables.any((table) {
+        final current = Rect.fromLTWH(
+          table.x,
+          table.y,
+          table.width,
+          table.height,
+        ).inflate(18);
+        return proposed.overlaps(current);
+      });
+      if (!overlaps) {
+        return position;
+      }
+    }
+
+    return Offset(
+      start,
+      start + (area.tables.length * (_minTableHeight + gap)),
+    );
   }
 
   List<RestaurantTable> _snapJoinedTables(
@@ -719,21 +870,22 @@ class FloorPlanController extends ChangeNotifier {
 
     final source = tables[sourceIndex];
     final target = tables[targetIndex];
-    final sourceCenter = Offset(source.x + (source.width / 2), source.y + (source.height / 2));
-    final targetCenter = Offset(target.x + (target.width / 2), target.y + (target.height / 2));
+    final sourceCenter = Offset(
+      source.x + (source.width / 2),
+      source.y + (source.height / 2),
+    );
+    final targetCenter = Offset(
+      target.x + (target.width / 2),
+      target.y + (target.height / 2),
+    );
 
     final shouldStackHorizontally =
-        (sourceCenter.dx - targetCenter.dx).abs() >= (sourceCenter.dy - targetCenter.dy).abs();
+        (sourceCenter.dx - targetCenter.dx).abs() >=
+        (sourceCenter.dy - targetCenter.dy).abs();
 
     final snappedTarget = shouldStackHorizontally
-        ? target.copyWith(
-            x: source.x + source.width + 18,
-            y: source.y,
-          )
-        : target.copyWith(
-            x: source.x,
-            y: source.y + source.height + 18,
-          );
+        ? target.copyWith(x: source.x + source.width + 18, y: source.y)
+        : target.copyWith(x: source.x, y: source.y + source.height + 18);
 
     final result = [...tables];
     result[targetIndex] = snappedTarget;
@@ -754,10 +906,7 @@ class FloorPlanController extends ChangeNotifier {
     _isSaving = true;
     notifyListeners();
     await _repository.save(
-      FloorPlanSnapshot(
-        selectedAreaId: _selectedAreaId!,
-        areas: _areas,
-      ),
+      FloorPlanSnapshot(selectedAreaId: _selectedAreaId!, areas: _areas),
     );
     _isSaving = false;
     _lastActionError = null;

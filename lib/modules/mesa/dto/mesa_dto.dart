@@ -28,14 +28,14 @@ class MesaDto {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['id'] = this.id;
-    data['numero'] = this.numero;
-    data['descricao'] = this.descricao;
-    data['capacidade'] = this.capacidade;
-    data['status'] = this.status;
-    data['ativo'] = this.ativo;
-    data['message'] = this.message;
+    final data = <String, dynamic>{};
+    data['id'] = id;
+    data['numero'] = numero;
+    data['descricao'] = descricao;
+    data['capacidade'] = capacidade;
+    data['status'] = status;
+    data['ativo'] = ativo;
+    data['message'] = message;
     return data;
   }
 }

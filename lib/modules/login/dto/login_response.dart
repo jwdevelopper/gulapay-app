@@ -10,9 +10,9 @@ class ResponseLogin {
   ResponseLogin({this.token, this.tokenType, this.expiresIn, this.message, this.error, this.statusCode, this.detail});
 
   ResponseLogin.fromJson(Map<String, dynamic> json) {
-    token = json['token'];
+    token = json['token'] ?? json['accessToken'];
     tokenType = json['tokenType'];
-    expiresIn = json['expiresIn'];
+    expiresIn = json['expiresIn']?.toString() ?? json['expiresInMinutes']?.toString();
     message = json['message'];
     error = json['error'];
     statusCode = json['statusCode'];
