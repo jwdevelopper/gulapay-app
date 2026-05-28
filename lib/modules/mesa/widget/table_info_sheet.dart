@@ -185,7 +185,7 @@ class TableInfoSheet extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: onSeparateGroup,
                   icon: const Icon(Icons.call_split_outlined),
-                  label: const Text('Separar grupo'),
+                  label: const Text('Desfazer mistura'),
                 ),
               ),
             ],

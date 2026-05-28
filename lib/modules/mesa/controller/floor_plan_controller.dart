@@ -234,26 +234,32 @@ class FloorPlanController extends ChangeNotifier {
       return const [];
     }
 
-    return area.tables.where((candidate) {
+    final candidates = <RestaurantTable>[];
+    final seenKeys = <String>{};
+
+    for (final candidate in area.tables) {
       if (candidate.id == tableId) {
-        return false;
+        continue;
       }
-      if (candidate.isJoined || table.isJoined) {
-        return false;
+
+      final candidateKey = candidate.joinGroupId ?? candidate.id;
+      if (!seenKeys.add(candidateKey)) {
+        continue;
       }
-      final activeOrderIds = <String>{
-        ...tablesForScope(
-          tableId,
-        ).map((item) => item.activeOrderId).whereType<String>(),
-        ...tablesForScope(
-          candidate.id,
-        ).map((item) => item.activeOrderId).whereType<String>(),
-      };
-      if (activeOrderIds.length > 1) {
-        return false;
+
+      if (table.joinGroupId != null &&
+          candidate.joinGroupId == table.joinGroupId) {
+        continue;
       }
-      return true;
-    }).toList();
+
+      if (!_canJoinScopes(table.id, candidate.id)) {
+        continue;
+      }
+
+      candidates.add(candidate);
+    }
+
+    return candidates;
   }
 
   RestaurantArea? areaById(String areaId) {
@@ -442,6 +448,11 @@ class FloorPlanController extends ChangeNotifier {
       return;
     }
 
+    if (table.isJoined && table.joinGroupId != null) {
+      _moveJoinGroup(table.joinGroupId!, delta, canvasSize);
+      return;
+    }
+
     final minX = _canvasEdgePadding;
     final minY = _canvasEdgePadding;
     final maxX = max(minX, canvasSize.width - table.width - _canvasEdgePadding);
@@ -469,7 +480,12 @@ class FloorPlanController extends ChangeNotifier {
   Future<void> finishMove() async {
     final tableId = _movingTableId;
     if (tableId != null) {
-      _snapTableToGrid(tableId);
+      final table = findTableById(tableId);
+      if (table != null && table.isJoined && table.joinGroupId != null) {
+        _snapJoinGroupToGrid(table.joinGroupId!);
+      } else {
+        _snapTableToGrid(tableId);
+      }
     }
     _movingTableId = null;
     await _persist();
@@ -498,36 +514,48 @@ class FloorPlanController extends ChangeNotifier {
     if (source.areaId != target.areaId) {
       return _setError('Mesas de areas diferentes nao podem ser unidas.');
     }
-    if (source.isJoined || target.isJoined) {
-      return _setError(
-        'Separe a mesa atual antes de criar um novo agrupamento.',
-      );
-    }
-
-    final activeOrderIds = <String>{
-      ...tablesForScope(
-        sourceTableId,
-      ).map((table) => table.activeOrderId).whereType<String>(),
-      ...tablesForScope(
-        targetTableId,
-      ).map((table) => table.activeOrderId).whereType<String>(),
-    };
-    if (activeOrderIds.length > 1) {
-      return _setError(
-        'As mesas possuem pedidos diferentes e nao podem ser unidas agora.',
-      );
-    }
 
     final area = areaById(source.areaId);
     if (area == null) {
       return _setError('Area da mesa nao encontrada.');
     }
 
+    final sourceGroupId = source.joinGroupId;
+    final targetGroupId = target.joinGroupId;
+    if (sourceGroupId != null && sourceGroupId == targetGroupId) {
+      return _setError('As mesas ja estao no mesmo grupo.');
+    }
+
+    if (!_canJoinScopes(sourceTableId, targetTableId)) {
+      return _setError(
+        'As mesas possuem pedidos diferentes e nao podem ser unidas agora.',
+      );
+    }
+
+    final sourceScope = tablesForScope(sourceTableId);
+    final targetScope = tablesForScope(targetTableId);
+    final tablesMap = <String, RestaurantTable>{
+      for (final table in sourceScope) table.id: table,
+      for (final table in targetScope) table.id: table,
+    };
+    final mergedTables = tablesMap.values.toList();
+
+    final oldGroupIds = <String>{
+      if (sourceGroupId != null) sourceGroupId,
+      if (targetGroupId != null) targetGroupId,
+    };
+
+    final originalPositions = _collectOriginalPositions(
+      area,
+      mergedTables,
+      oldGroupIds,
+    );
+
     final joinGroupId = 'jg-${DateTime.now().millisecondsSinceEpoch}';
-    final mergedOrderCarrier = source.activeOrderId != null ? source : target;
+    final mergedOrderCarrier = _selectOrderCarrier(mergedTables);
 
     final updatedTables = area.tables.map((table) {
-      if (table.id != sourceTableId && table.id != targetTableId) {
+      if (!tablesMap.containsKey(table.id)) {
         return table;
       }
 
@@ -547,20 +575,25 @@ class FloorPlanController extends ChangeNotifier {
       );
     }).toList();
 
-    final updatedGroups = [
-      ...area.joinGroups,
+    final updatedGroups = area.joinGroups
+        .where((group) => !oldGroupIds.contains(group.id))
+        .toList();
+    updatedGroups.add(
       TableJoinGroup(
         id: joinGroupId,
         areaId: area.id,
-        tableIds: [sourceTableId, targetTableId],
+        tableIds: mergedTables.map((table) => table.id).toList(),
+        originalPositions: originalPositions,
       ),
-    ];
-
-    final snappedTables = _snapJoinedTables(
-      updatedTables,
-      sourceTableId,
-      targetTableId,
     );
+
+    final snappedTables = mergedTables.length == 2
+        ? _snapJoinedTables(
+            updatedTables,
+            sourceTableId,
+            targetTableId,
+          )
+        : updatedTables;
 
     _replaceArea(
       area.copyWith(tables: snappedTables, joinGroups: updatedGroups),
@@ -584,7 +617,21 @@ class FloorPlanController extends ChangeNotifier {
       return _setError('Grupo de mesas nao encontrado.');
     }
 
-    final groupTables = area.tables
+    final currentArea = area;
+
+    final group = currentArea.joinGroups.firstWhere(
+      (group) => group.id == groupId,
+      orElse: () => TableJoinGroup(
+        id: groupId,
+        areaId: currentArea.id,
+        tableIds: const [],
+      ),
+    );
+    final originalPositions = {
+      for (final entry in group.originalPositions) entry.tableId: entry,
+    };
+
+    final groupTables = currentArea.tables
         .where((table) => table.joinGroupId == groupId)
         .toList();
     final anchorWithOrder = groupTables.firstWhere(
@@ -592,16 +639,19 @@ class FloorPlanController extends ChangeNotifier {
       orElse: () => groupTables.first,
     );
 
-    final updatedTables = area.tables.map((table) {
+    final updatedTables = currentArea.tables.map((table) {
       if (table.joinGroupId != groupId) {
         return table;
       }
 
       final keepOrder = table.id == anchorWithOrder.id;
+      final original = originalPositions[table.id];
 
       return table.copyWith(
         isJoined: false,
         clearJoinGroup: true,
+        x: original?.x,
+        y: original?.y,
         status: keepOrder && anchorWithOrder.activeOrderId != null
             ? TableStatus.withOrder
             : (table.seatedPeople ?? 0) > 0
@@ -619,12 +669,12 @@ class FloorPlanController extends ChangeNotifier {
       );
     }).toList();
 
-    final updatedGroups = area.joinGroups
+    final updatedGroups = currentArea.joinGroups
         .where((group) => group.id != groupId)
         .toList();
 
     _replaceArea(
-      area.copyWith(tables: updatedTables, joinGroups: updatedGroups),
+      currentArea.copyWith(tables: updatedTables, joinGroups: updatedGroups),
     );
     await _persist();
     notifyListeners();
@@ -776,23 +826,7 @@ class FloorPlanController extends ChangeNotifier {
       return;
     }
 
-    RestaurantTable? bestCandidate;
-    double shortestDistance = double.infinity;
-
-    for (final candidate in area.tables) {
-      if (candidate.id == movingTable.id || candidate.isJoined) {
-        continue;
-      }
-
-      final distance = _edgeDistance(movingTable, candidate);
-      if (distance < 30 && distance < shortestDistance) {
-        shortestDistance = distance;
-        bestCandidate = candidate;
-      }
-    }
-
-    _suggestedJoinTargetId = bestCandidate?.id;
-    _suggestedJoinSourceId = bestCandidate == null ? null : movingTable.id;
+    _updateJoinSuggestionForTables(area, [movingTable]);
   }
 
   void _snapTableToGrid(String tableId) {
@@ -813,9 +847,217 @@ class FloorPlanController extends ChangeNotifier {
     _updateJoinSuggestion(updatedTable);
   }
 
+  void _snapJoinGroupToGrid(String groupId) {
+    RestaurantArea? area;
+    for (final candidate in _areas) {
+      if (candidate.tables.any((table) => table.joinGroupId == groupId)) {
+        area = candidate;
+        break;
+      }
+    }
+    if (area == null) {
+      return;
+    }
+
+    final updatedTables = area.tables.map((table) {
+      if (table.joinGroupId != groupId) {
+        return table;
+      }
+
+      return table.copyWith(
+        x: _snapValue(table.x, _snapInterval),
+        y: _snapValue(table.y, _snapInterval),
+      );
+    }).toList();
+
+    _replaceArea(area.copyWith(tables: updatedTables));
+  }
+
+  void _moveJoinGroup(String groupId, Offset delta, Size canvasSize) {
+    RestaurantArea? area;
+    List<RestaurantTable> groupTables = const [];
+
+    for (final candidate in _areas) {
+      final matches = candidate.tables
+          .where((table) => table.joinGroupId == groupId)
+          .toList();
+      if (matches.isNotEmpty) {
+        area = candidate;
+        groupTables = matches;
+        break;
+      }
+    }
+
+    if (area == null || groupTables.length < 2) {
+      return;
+    }
+
+    final bounds = _groupBounds(groupTables);
+    final minX = _canvasEdgePadding;
+    final minY = _canvasEdgePadding;
+    final maxX = max(minX, canvasSize.width - bounds.width - _canvasEdgePadding);
+    final maxY = max(minY, canvasSize.height - bounds.height - _canvasEdgePadding);
+
+    final nextLeft = (bounds.left + delta.dx).clamp(minX, maxX).toDouble();
+    final nextTop = (bounds.top + delta.dy).clamp(minY, maxY).toDouble();
+    final adjustedDelta = Offset(nextLeft - bounds.left, nextTop - bounds.top);
+
+    if (adjustedDelta.dx.abs() < 0.1 && adjustedDelta.dy.abs() < 0.1) {
+      return;
+    }
+
+    final updatedTables = area.tables.map((table) {
+      if (table.joinGroupId != groupId) {
+        return table;
+      }
+
+      return table.copyWith(
+        x: table.x + adjustedDelta.dx,
+        y: table.y + adjustedDelta.dy,
+      );
+    }).toList();
+
+    final updatedArea = area.copyWith(tables: updatedTables);
+    final updatedGroupTables = updatedTables
+        .where((table) => table.joinGroupId == groupId)
+        .toList();
+
+    _replaceArea(updatedArea);
+    _updateJoinSuggestionForTables(updatedArea, updatedGroupTables);
+    _moveTick.value = _moveTick.value + 1;
+  }
+
+  Rect _groupBounds(List<RestaurantTable> tables) {
+    var minX = tables.first.x;
+    var minY = tables.first.y;
+    var maxX = tables.first.x + tables.first.width;
+    var maxY = tables.first.y + tables.first.height;
+
+    for (final table in tables.skip(1)) {
+      minX = min(minX, table.x);
+      minY = min(minY, table.y);
+      maxX = max(maxX, table.x + table.width);
+      maxY = max(maxY, table.y + table.height);
+    }
+
+    return Rect.fromLTRB(minX, minY, maxX, maxY);
+  }
+
+  void _updateJoinSuggestionForTables(
+    RestaurantArea area,
+    List<RestaurantTable> movingTables,
+  ) {
+    if (movingTables.isEmpty) {
+      _suggestedJoinTargetId = null;
+      _suggestedJoinSourceId = null;
+      return;
+    }
+
+    final movingAnchor = _selectOrderCarrier(movingTables);
+    final movingGroupId = movingAnchor.joinGroupId;
+    final movingRect = _groupBounds(movingTables);
+
+    RestaurantTable? bestCandidate;
+    double shortestDistance = double.infinity;
+    final seenKeys = <String>{};
+
+    for (final candidate in area.tables) {
+      if (candidate.id == movingAnchor.id) {
+        continue;
+      }
+      if (movingGroupId != null && candidate.joinGroupId == movingGroupId) {
+        continue;
+      }
+
+      final candidateKey = candidate.joinGroupId ?? candidate.id;
+      if (!seenKeys.add(candidateKey)) {
+        continue;
+      }
+
+      if (!_canJoinScopes(movingAnchor.id, candidate.id)) {
+        continue;
+      }
+
+      final candidateTables = candidate.joinGroupId == null
+          ? <RestaurantTable>[candidate]
+          : area.tables
+              .where((table) => table.joinGroupId == candidate.joinGroupId)
+              .toList();
+
+      final distance = _edgeDistanceRects(
+        movingRect,
+        _groupBounds(candidateTables),
+      );
+      if (distance < 30 && distance < shortestDistance) {
+        shortestDistance = distance;
+        bestCandidate = _selectOrderCarrier(candidateTables);
+      }
+    }
+
+    _suggestedJoinTargetId = bestCandidate?.id;
+    _suggestedJoinSourceId = bestCandidate == null ? null : movingAnchor.id;
+  }
+
+  bool _canJoinScopes(String sourceTableId, String targetTableId) {
+    final activeOrderIds = <String>{
+      ...tablesForScope(
+        sourceTableId,
+      ).map((table) => table.activeOrderId).whereType<String>(),
+      ...tablesForScope(
+        targetTableId,
+      ).map((table) => table.activeOrderId).whereType<String>(),
+    };
+    return activeOrderIds.length <= 1;
+  }
+
+  List<TableOriginalPosition> _collectOriginalPositions(
+    RestaurantArea area,
+    List<RestaurantTable> tables,
+    Set<String> groupIds,
+  ) {
+    final positions = <String, TableOriginalPosition>{};
+
+    for (final group in area.joinGroups) {
+      if (!groupIds.contains(group.id)) {
+        continue;
+      }
+      for (final entry in group.originalPositions) {
+        positions[entry.tableId] = entry;
+      }
+    }
+
+    for (final table in tables) {
+      positions.putIfAbsent(
+        table.id,
+        () => TableOriginalPosition(tableId: table.id, x: table.x, y: table.y),
+      );
+    }
+
+    return positions.values.toList();
+  }
+
+  RestaurantTable _selectOrderCarrier(List<RestaurantTable> tables) {
+    for (final table in tables) {
+      if (table.activeOrderId != null) {
+        return table;
+      }
+    }
+    for (final table in tables) {
+      if ((table.seatedPeople ?? 0) > 0) {
+        return table;
+      }
+    }
+    return tables.first;
+  }
+
   double _edgeDistance(RestaurantTable a, RestaurantTable b) {
-    final aRect = Rect.fromLTWH(a.x, a.y, a.width, a.height);
-    final bRect = Rect.fromLTWH(b.x, b.y, b.width, b.height);
+    return _edgeDistanceRects(
+      Rect.fromLTWH(a.x, a.y, a.width, a.height),
+      Rect.fromLTWH(b.x, b.y, b.width, b.height),
+    );
+  }
+
+  double _edgeDistanceRects(Rect aRect, Rect bRect) {
     final dx = max(
       0.0,
       max(aRect.left - bRect.right, bRect.left - aRect.right),

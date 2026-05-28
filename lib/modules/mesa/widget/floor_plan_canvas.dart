@@ -44,6 +44,7 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
   late final TransformationController _transformationController;
   late final Listenable _rebuildListenable;
   double _scale = 1;
+  String? _selectedGroupId;
 
   @override
   void initState() {
@@ -85,11 +86,33 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
   }
 
   @override
+  void didUpdateWidget(covariant FloorPlanCanvas oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.isEditMode && _selectedGroupId != null) {
+      setState(() {
+        _selectedGroupId = null;
+      });
+    } else if (oldWidget.area.id != widget.area.id &&
+        _selectedGroupId != null) {
+      setState(() {
+        _selectedGroupId = null;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _rebuildListenable,
       builder: (context, _) {
         final area = widget.controller.areaById(widget.area.id) ?? widget.area;
+        final selectedGroupTables = _selectedGroupId == null
+            ? const <RestaurantTable>[]
+            : area.tables
+                .where((table) => table.joinGroupId == _selectedGroupId)
+                .toList();
+        final showUnmixBar =
+            widget.isEditMode && selectedGroupTables.length > 1;
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -102,6 +125,7 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
               constraints.maxHeight,
             );
             final canvasSize = Size(canvasWidth, canvasHeight);
+            final overlayCompact = constraints.maxWidth < 520;
 
             return ClipRRect(
               borderRadius: BorderRadius.circular(widget.borderRadius),
@@ -135,77 +159,73 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
                                   areaType: area.type,
                                 ),
                               ),
-                              ...area.tables.map(
-                                (table) => Positioned(
-                                  left: table.x,
-                                  top: table.y,
-                                  child: TableNode(
-                                    table: table,
-                                    areaName: area.name,
-                                    status: widget.controller.resolveStatus(
-                                      table,
-                                    ),
-                                    isMoving: widget.controller.movingTableId ==
-                                        table.id,
-                                    isSuggestedJoin:
-                                        widget.controller.suggestedJoinTargetId ==
-                                            table.id ||
-                                        widget.controller.movingTableId ==
-                                            table.id,
-                                    canDrag: widget.isEditMode,
-                                    onTap: () => widget.isEditMode
-                                        ? widget.onEditTable(table)
-                                        : widget.onOpenTable(table),
-                                    onDoubleTap: () {
-                                      if (!widget.isEditMode) {
-                                        widget.onOpenOrder(table);
-                                      }
-                                    },
-                                    onPanStart: () =>
-                                        widget.controller.beginMove(table.id),
-                                    onPanUpdate: (delta) =>
-                                        widget.controller.moveTable(
-                                          table.id,
-                                          delta / _scale,
-                                          canvasSize,
-                                        ),
-                                    onPanEnd: widget.controller.finishMove,
-                                  ),
-                                ),
-                              ),
+                              ..._buildTableNodes(area, canvasSize),
                             ],
                           ),
                         ),
                       ),
                     ),
-                    if (widget.showMapBadge)
-                      Positioned(
-                        left: 14,
-                        top: 14,
-                        child: _AreaMapBadge(area: area),
-                      ),
                     Positioned(
+                      left: 12,
                       right: 12,
                       top: 12,
-                      child: _CanvasControls(
-                        isEditMode: widget.isEditMode,
-                        onToggleEditMode: widget.onToggleEditMode,
-                        onZoomOut: () => _setScale(_scale - 0.12),
-                        onZoomIn: () => _setScale(_scale + 0.12),
-                        onResetZoom: () => _setScale(1),
-                        onExpand: widget.onExpand,
-                        showExpand: !widget.isExpanded,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (widget.showMapBadge)
+                            Expanded(
+                              child: _AreaMapBadge(
+                                area: area,
+                                compact: overlayCompact,
+                              ),
+                            ),
+                          if (widget.showMapBadge) const SizedBox(width: 8),
+                          _CanvasControls(
+                            isEditMode: widget.isEditMode,
+                            onToggleEditMode: widget.onToggleEditMode,
+                            onZoomOut: () => _setScale(_scale - 0.12),
+                            onZoomIn: () => _setScale(_scale + 0.12),
+                            onResetZoom: () => _setScale(1),
+                            onExpand: widget.onExpand,
+                            showExpand: !widget.isExpanded,
+                            compact: overlayCompact,
+                          ),
+                        ],
                       ),
                     ),
                     if (widget.controller.suggestedJoinTargetId != null)
                       Positioned(
                         left: 12,
-                        right: 12,
                         bottom: 12,
                         child: _JoinSuggestionBanner(
                           onJoin: widget.onJoinSuggested,
                         ),
                       ),
+                    Positioned(
+                      right: 12,
+                      bottom: 12,
+                      child: IgnorePointer(
+                        ignoring: !showUnmixBar,
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 160),
+                          curve: Curves.easeOut,
+                          opacity: showUnmixBar ? 1 : 0,
+                          child: AnimatedSlide(
+                            duration: const Duration(milliseconds: 160),
+                            curve: Curves.easeOut,
+                            offset: showUnmixBar
+                                ? Offset.zero
+                                : const Offset(0, 0.3),
+                            child: _UnmixFloatingBar(
+                              tableCount: selectedGroupTables.length,
+                              onUnmix: () => _handleSeparateGroup(
+                                _selectedGroupId!,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -215,18 +235,313 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
       },
     );
   }
+
+  List<Widget> _buildTableNodes(RestaurantArea area, Size canvasSize) {
+    final groupMap = <String, List<RestaurantTable>>{};
+    final soloTables = <RestaurantTable>[];
+
+    for (final table in area.tables) {
+      if (table.isJoined && table.joinGroupId != null) {
+        groupMap
+            .putIfAbsent(table.joinGroupId!, () => <RestaurantTable>[])
+            .add(table);
+      } else {
+        soloTables.add(table);
+      }
+    }
+
+    for (final entry in groupMap.entries) {
+      if (entry.value.length == 1) {
+        soloTables.add(entry.value.first);
+      }
+    }
+
+    final nodes = <Widget>[];
+
+    for (final entry in groupMap.entries) {
+      if (entry.value.length < 2) {
+        continue;
+      }
+      final isSuggestedJoin = entry.value.any(
+        (table) => widget.controller.suggestedJoinTargetId == table.id,
+      );
+      final isSelected = entry.key == _selectedGroupId;
+      nodes.add(_buildMergedGroupNode(
+        area: area,
+        groupId: entry.key,
+        tables: entry.value,
+        canvasSize: canvasSize,
+        isSuggestedJoin: isSuggestedJoin,
+        isSelected: isSelected,
+      ));
+    }
+
+    nodes.addAll(soloTables.map((table) {
+      return Positioned(
+        left: table.x,
+        top: table.y,
+        child: TableNode(
+          table: table,
+          areaName: area.name,
+          status: widget.controller.resolveStatus(table),
+          isMoving: widget.controller.movingTableId == table.id,
+          isSuggestedJoin: widget.controller.suggestedJoinTargetId == table.id ||
+              widget.controller.movingTableId == table.id,
+          canDrag: widget.isEditMode,
+          onTap: () => widget.isEditMode
+              ? _selectGroup(null, () => widget.onEditTable(table))
+              : widget.onOpenTable(table),
+          onDoubleTap: () {
+            if (!widget.isEditMode) {
+              widget.onOpenOrder(table);
+            }
+          },
+          onPanStart: () => _selectGroup(null, () {
+            widget.controller.beginMove(table.id);
+          }),
+          onPanUpdate: (delta) => widget.controller.moveTable(
+            table.id,
+            delta / _scale,
+            canvasSize,
+          ),
+          onPanEnd: widget.controller.finishMove,
+        ),
+      );
+    }));
+
+    return nodes;
+  }
+
+  Widget _buildMergedGroupNode({
+    required RestaurantArea area,
+    required String groupId,
+    required List<RestaurantTable> tables,
+    required Size canvasSize,
+    required bool isSuggestedJoin,
+    required bool isSelected,
+  }) {
+    final sorted = [...tables]..sort((a, b) => a.code.compareTo(b.code));
+    final anchor = _anchorTable(sorted);
+    final bounds = _groupBounds(sorted);
+    final groupStatus = _resolveGroupStatus(sorted);
+    final groupLabel = _groupLabel(sorted);
+    final groupChairs = sorted.fold<int>(0, (sum, table) => sum + table.chairsCount);
+    final isMoving = sorted.any(
+      (table) => widget.controller.movingTableId == table.id,
+    );
+
+    final mergedTable = RestaurantTable(
+      id: groupId,
+      code: groupLabel,
+      areaId: area.id,
+      x: bounds.left,
+      y: bounds.top,
+      width: bounds.width,
+      height: bounds.height,
+      shape: TableShape.rectangular,
+      chairsCount: groupChairs,
+      status: groupStatus,
+      isJoined: true,
+      joinGroupId: groupId,
+      activeOrderId: anchor.activeOrderId,
+      lastOrderAt: anchor.lastOrderAt,
+      seatedPeople: anchor.seatedPeople,
+      customerName: anchor.customerName,
+      orderItemsCount: anchor.orderItemsCount,
+      partialTotal: anchor.partialTotal,
+    );
+
+    return Positioned(
+      left: bounds.left,
+      top: bounds.top,
+      child: TableNode(
+        table: mergedTable,
+        areaName: area.name,
+        status: groupStatus,
+        isMoving: isMoving,
+        isSuggestedJoin: isSuggestedJoin || isSelected,
+        canDrag: widget.isEditMode,
+        onTap: () => widget.isEditMode
+            ? _selectGroup(groupId, () => widget.onEditTable(anchor))
+            : widget.onOpenTable(anchor),
+        onDoubleTap: () {
+          if (!widget.isEditMode) {
+            widget.onOpenOrder(anchor);
+          }
+        },
+        onPanStart: () => _selectGroup(groupId, () {
+          widget.controller.beginMove(anchor.id);
+        }),
+        onPanUpdate: (delta) => widget.controller.moveTable(
+          anchor.id,
+          delta / _scale,
+          canvasSize,
+        ),
+        onPanEnd: widget.controller.finishMove,
+      ),
+    );
+  }
+
+  Rect _groupBounds(List<RestaurantTable> tables) {
+    var minX = tables.first.x;
+    var minY = tables.first.y;
+    var maxX = tables.first.x + tables.first.width;
+    var maxY = tables.first.y + tables.first.height;
+
+    for (final table in tables.skip(1)) {
+      minX = min(minX, table.x);
+      minY = min(minY, table.y);
+      maxX = max(maxX, table.x + table.width);
+      maxY = max(maxY, table.y + table.height);
+    }
+
+    return Rect.fromLTRB(minX, minY, maxX, maxY);
+  }
+
+  RestaurantTable _anchorTable(List<RestaurantTable> tables) {
+    for (final table in tables) {
+      if (table.activeOrderId != null) {
+        return table;
+      }
+    }
+    for (final table in tables) {
+      if ((table.seatedPeople ?? 0) > 0) {
+        return table;
+      }
+    }
+    return tables.first;
+  }
+
+  String _groupLabel(List<RestaurantTable> tables) {
+    if (tables.length == 2) {
+      return '${tables[0].code} + ${tables[1].code}';
+    }
+    final extra = tables.length - 1;
+    return '${tables[0].code} + $extra mesas';
+  }
+
+  TableStatus _resolveGroupStatus(List<RestaurantTable> tables) {
+    final statuses = tables
+        .map((table) => widget.controller.resolveStatus(table))
+        .toList();
+
+    if (statuses.contains(TableStatus.withOrder)) {
+      return TableStatus.withOrder;
+    }
+    if (statuses.contains(TableStatus.awaitingRelease1H)) {
+      return TableStatus.awaitingRelease1H;
+    }
+    if (statuses.contains(TableStatus.noOrder30Min)) {
+      return TableStatus.noOrder30Min;
+    }
+    if (statuses.contains(TableStatus.occupied)) {
+      return TableStatus.occupied;
+    }
+    if (statuses.contains(TableStatus.attention)) {
+      return TableStatus.attention;
+    }
+    return TableStatus.free;
+  }
+
+  Future<void> _handleSeparateGroup(String groupId) async {
+    final error = await widget.controller.separateGroup(groupId);
+    if (!mounted) {
+      return;
+    }
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error)),
+      );
+      return;
+    }
+    if (_selectedGroupId == groupId) {
+      setState(() {
+        _selectedGroupId = null;
+      });
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Mistura desfeita com sucesso.')),
+    );
+  }
+
+  void _selectGroup(String? groupId, VoidCallback action) {
+    if (widget.isEditMode && _selectedGroupId != groupId) {
+      setState(() {
+        _selectedGroupId = groupId;
+      });
+    } else if (!widget.isEditMode && _selectedGroupId != null) {
+      setState(() {
+        _selectedGroupId = null;
+      });
+    }
+    action();
+  }
+}
+
+class _UnmixFloatingBar extends StatelessWidget {
+  const _UnmixFloatingBar({required this.tableCount, required this.onUnmix});
+
+  final int tableCount;
+  final VoidCallback onUnmix;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: GulaColors.surfaceAlt.withValues(alpha: 0.96),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: GulaColors.primary),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 9),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.call_split_rounded, size: 18, color: GulaColors.primary),
+          const SizedBox(width: 8),
+          Text(
+            'Desfazer ($tableCount)',
+            style: const TextStyle(
+              color: GulaColors.text,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(width: 10),
+          FilledButton.tonalIcon(
+            onPressed: onUnmix,
+            icon: const Icon(Icons.undo_rounded, size: 18),
+            label: const Text('Desfazer'),
+            style: FilledButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _AreaMapBadge extends StatelessWidget {
-  const _AreaMapBadge({required this.area});
+  const _AreaMapBadge({required this.area, this.compact = false});
 
   final RestaurantArea area;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return IgnorePointer(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 10 : 12,
+          vertical: compact ? 7 : 9,
+        ),
         decoration: BoxDecoration(
           color: GulaColors.surfaceAlt.withValues(alpha: 0.94),
           borderRadius: BorderRadius.circular(18),
@@ -234,22 +549,30 @@ class _AreaMapBadge extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 14,
-              offset: const Offset(0, 7),
+              blurRadius: compact ? 10 : 14,
+              offset: Offset(0, compact ? 5 : 7),
             ),
           ],
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: MainAxisSize.max,
           children: [
-            Icon(_areaIcon(area.type), size: 17, color: GulaColors.text),
-            const SizedBox(width: 8),
-            Text(
-              '${area.name} - ${area.totalTables} mesas',
-              style: const TextStyle(
-                color: GulaColors.text,
-                fontWeight: FontWeight.w800,
-                fontSize: 13,
+            Icon(
+              _areaIcon(area.type),
+              size: compact ? 15 : 17,
+              color: GulaColors.text,
+            ),
+            SizedBox(width: compact ? 6 : 8),
+            Flexible(
+              child: Text(
+                '${area.name} - ${area.totalTables} mesas',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: GulaColors.text,
+                  fontWeight: FontWeight.w800,
+                  fontSize: compact ? 12 : 13,
+                ),
               ),
             ),
           ],
@@ -279,6 +602,7 @@ class _CanvasControls extends StatelessWidget {
     required this.onResetZoom,
     required this.onExpand,
     required this.showExpand,
+    this.compact = false,
   });
 
   final bool isEditMode;
@@ -288,11 +612,12 @@ class _CanvasControls extends StatelessWidget {
   final VoidCallback onResetZoom;
   final VoidCallback onExpand;
   final bool showExpand;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: EdgeInsets.all(compact ? 3 : 4),
       decoration: BoxDecoration(
         color: GulaColors.surfaceAlt.withValues(alpha: 0.96),
         borderRadius: BorderRadius.circular(18),
@@ -300,8 +625,8 @@ class _CanvasControls extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 14,
-            offset: const Offset(0, 7),
+            blurRadius: compact ? 10 : 14,
+            offset: Offset(0, compact ? 5 : 7),
           ),
         ],
       ),
@@ -316,28 +641,33 @@ class _CanvasControls extends StatelessWidget {
                 : Icons.edit_location_alt_outlined,
             isActive: isEditMode,
             onPressed: onToggleEditMode,
+            compact: compact,
           ),
           const SizedBox(width: 2),
           _ControlButton(
             tooltip: 'Diminuir zoom',
             icon: Icons.remove_rounded,
             onPressed: onZoomOut,
+            compact: compact,
           ),
           _ControlButton(
             tooltip: 'Restaurar zoom',
             icon: Icons.center_focus_strong_outlined,
             onPressed: onResetZoom,
+            compact: compact,
           ),
           _ControlButton(
             tooltip: 'Aumentar zoom',
             icon: Icons.add_rounded,
             onPressed: onZoomIn,
+            compact: compact,
           ),
           if (showExpand)
             _ControlButton(
               tooltip: 'Abrir editor expandido',
               icon: Icons.open_in_full_rounded,
               onPressed: onExpand,
+              compact: compact,
             ),
         ],
       ),
@@ -351,12 +681,14 @@ class _ControlButton extends StatelessWidget {
     required this.icon,
     required this.onPressed,
     this.isActive = false,
+    this.compact = false,
   });
 
   final String tooltip;
   final IconData icon;
   final VoidCallback onPressed;
   final bool isActive;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -368,12 +700,12 @@ class _ControlButton extends StatelessWidget {
         style: IconButton.styleFrom(
           backgroundColor: isActive ? GulaColors.primary : Colors.transparent,
           foregroundColor: isActive ? Colors.white : GulaColors.text,
-          fixedSize: const Size(38, 38),
+          fixedSize: Size(compact ? 32 : 38, compact ? 32 : 38),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(13),
+            borderRadius: BorderRadius.circular(compact ? 11 : 13),
           ),
         ),
-        icon: Icon(icon, size: 19),
+        icon: Icon(icon, size: compact ? 17 : 19),
       ),
     );
   }

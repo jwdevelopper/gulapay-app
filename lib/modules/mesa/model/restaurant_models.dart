@@ -151,21 +151,25 @@ class TableJoinGroup {
     required this.id,
     required this.areaId,
     required this.tableIds,
+    this.originalPositions = const <TableOriginalPosition>[],
   });
 
   final String id;
   final String areaId;
   final List<String> tableIds;
+  final List<TableOriginalPosition> originalPositions;
 
   TableJoinGroup copyWith({
     String? id,
     String? areaId,
     List<String>? tableIds,
+    List<TableOriginalPosition>? originalPositions,
   }) {
     return TableJoinGroup(
       id: id ?? this.id,
       areaId: areaId ?? this.areaId,
       tableIds: tableIds ?? this.tableIds,
+      originalPositions: originalPositions ?? this.originalPositions,
     );
   }
 
@@ -174,6 +178,9 @@ class TableJoinGroup {
       'id': id,
       'areaId': areaId,
       'tableIds': tableIds,
+      'originalPositions': originalPositions
+          .map((position) => position.toMap())
+          .toList(),
     };
   }
 
@@ -182,6 +189,53 @@ class TableJoinGroup {
       id: map['id'] as String,
       areaId: map['areaId'] as String,
       tableIds: List<String>.from(map['tableIds'] as List<dynamic>),
+      originalPositions: (map['originalPositions'] as List<dynamic>? ?? const [])
+          .map(
+            (entry) => TableOriginalPosition.fromMap(
+              Map<String, dynamic>.from(entry as Map),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class TableOriginalPosition {
+  TableOriginalPosition({
+    required this.tableId,
+    required this.x,
+    required this.y,
+  });
+
+  final String tableId;
+  final double x;
+  final double y;
+
+  TableOriginalPosition copyWith({
+    String? tableId,
+    double? x,
+    double? y,
+  }) {
+    return TableOriginalPosition(
+      tableId: tableId ?? this.tableId,
+      x: x ?? this.x,
+      y: y ?? this.y,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'tableId': tableId,
+      'x': x,
+      'y': y,
+    };
+  }
+
+  factory TableOriginalPosition.fromMap(Map<String, dynamic> map) {
+    return TableOriginalPosition(
+      tableId: map['tableId'] as String,
+      x: (map['x'] as num).toDouble(),
+      y: (map['y'] as num).toDouble(),
     );
   }
 }
