@@ -5,8 +5,8 @@ class InsumoResponse {
   String? unidadePadraoSimbolo;
   String? unidadePadraoNome;
   String? unidadePadrao;
-  int? estoqueMinimo;
-  int? estoqueAtual;
+  double? estoqueMinimo;
+  double? estoqueAtual;
   bool? abaixoDoMinimo;
   bool? ativo;
 
@@ -38,18 +38,4 @@ class InsumoResponse {
     );
   }
 
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['id'] = this.id;
-    data['nome'] = this.nome;
-    data['unidadePadraoId'] = this.unidadePadraoId;
-    data['unidadePadraoSimbolo'] = this.unidadePadraoSimbolo;
-    data['unidadePadraoNome'] = this.unidadePadraoNome;
-    data['unidadePadrao'] = this.unidadePadrao;
-    data['estoqueMinimo'] = this.estoqueMinimo;
-    data['estoqueAtual'] = this.estoqueAtual;
-    data['abaixoDoMinimo'] = this.abaixoDoMinimo;
-    data['ativo'] = this.ativo;
-    return data;
-  }
 }

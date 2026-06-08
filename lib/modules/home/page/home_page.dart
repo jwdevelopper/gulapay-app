@@ -5,6 +5,7 @@ import 'package:my_app_teste/modules/categoria/page/categoria_page.dart';
 import 'package:my_app_teste/modules/dashboard/page/dashboard_page.dart';
 import 'package:my_app_teste/modules/produto/page/produto_page.dart';
 import 'package:my_app_teste/modules/usuario/page/usuario_list_page.dart';
+import 'package:my_app_teste/modules/insumo/pages/insumos_list_page.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -18,6 +19,7 @@ class _HomeState extends State<Home> {
   static const _indiceCategoria = 1;
   static const _indiceProduto = 2;
   static const _indiceUsuarios = 3;
+  static const _indiceInsumos = 4;
 
   int _indiceSelecionado = _indiceInicio;
   bool _ehAdministrador = false;
@@ -27,9 +29,10 @@ class _HomeState extends State<Home> {
     CategoriaPage(),
     ProdutoPage(),
     UsuarioListaPagina(),
+    InsumosListPage(),
   ];
 
-  static const _titulos = ['Início', 'Categoria', 'Produto', 'Usuários'];
+  static const _titulos = ['Início', 'Categoria', 'Produto', 'Usuários', 'Insumos'];
 
   @override
   void initState() {
@@ -110,6 +113,12 @@ class _HomeState extends State<Home> {
               title: const Text('Produto'),
               selected: _indiceSelecionado == _indiceProduto,
               onTap: () => _selecionar(_indiceProduto),
+            ),
+            ListTile(
+              leading: const Icon(Icons.local_grocery_store),
+              title: const Text('Insumos'),
+              selected: _indiceSelecionado == _indiceInsumos,
+              onTap: () => _selecionar(_indiceInsumos),
             ),
           ],
         ),
