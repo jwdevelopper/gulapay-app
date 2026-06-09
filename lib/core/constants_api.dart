@@ -6,4 +6,5 @@ final class ConstantsApi {
   static const urlLogin = "/auth/login";
   static const urlUsuarios = "/usuarios";
   static const urlInsumos = "/insumos";
+  static const urlLotes = "/lotes";
 }
