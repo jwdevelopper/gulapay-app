@@ -1,3 +1,4 @@
+
 class LoteCreateRequest {
   int? insumoId;
   String? codigo;
