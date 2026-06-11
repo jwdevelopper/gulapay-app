@@ -3,7 +3,7 @@ class LoteCreateRequest {
   String? codigo;
   String? validade;
   double? quantidadeInicial;
-  double? unidadeId;
+  int? unidadeId;
   double? custoUnitario;
 
   LoteCreateRequest({
@@ -16,8 +16,8 @@ class LoteCreateRequest {
   });
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['insumo'] = this.insumoId;
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['insumoId'] = this.insumoId;
     data['codigo'] = this.codigo;
     data['validade'] = this.validade;
     data['quantidadeInicial'] = this.quantidadeInicial;

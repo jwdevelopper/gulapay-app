@@ -14,6 +14,7 @@ class LoteResponse {
     this.id,
     this.insumoId,
     this.insumoNome,
+    this.unidadePadraoSimbolo,
     this.codigo,
     this.validade,
     this.quantidadeInicial,
@@ -27,11 +28,12 @@ class LoteResponse {
       id: json['id'],
       insumoId: json['insumoId'],
       insumoNome: json['insumoNome'],
+      unidadePadraoSimbolo: json['unidadePadraoSimbolo'],
       codigo: json['codigo'],
       validade: json['validade'],
-      quantidadeInicial: json['quantidadeInicial'],
-      quantidadeRestante: json['quantidadeRestante'],
-      custoUnitario: json['custoUnitario'],
+      quantidadeInicial: (json['quantidadeInicial'] as num?)?.toDouble(),
+      quantidadeRestante: (json['quantidadeRestante'] as num?)?.toDouble(),
+      custoUnitario: (json['custoUnitario'] as num?)?.toDouble(),
       ativo: json['ativo'],
     );
   }

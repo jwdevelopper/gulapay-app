@@ -1,9 +1,9 @@
-class LoteUpdate {
+class LotePatch {
   String? codigo;
   String? validade;
   bool? ativo;
 
-  LoteUpdate({
+  LotePatch({
     this.codigo,
     this.validade,
     this.ativo

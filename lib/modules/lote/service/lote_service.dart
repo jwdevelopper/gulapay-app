@@ -22,23 +22,14 @@ class LoteService {
     }
   }
 
-  Future<List<LoteResponse>> listar({
-    bool apenasAtivos = true,
-    int? insumoId,
-    String? pesquisa,
-  }) async {
+  /// Lista os lotes de um insumo. O backend exige `insumoId` e devolve os
+  /// lotes já ordenados por validade (FEFO). Busca por código/insumo e
+  /// filtros por validade são aplicados no cliente.
+  Future<List<LoteResponse>> listar({required int insumoId}) async {
     try {
-      final queryParameters = <String, dynamic>{'apenasAtivos': apenasAtivos};
-      if (insumoId != null) {
-        queryParameters['insumoId'] = insumoId;
-      }
-      if (pesquisa != null && pesquisa.trim().isNotEmpty) {
-        queryParameters['codigo'] = pesquisa.trim();
-      }
-
       final resposta = await _dio.get(
         ConstantsApi.urlLotes,
-        queryParameters: queryParameters,
+        queryParameters: <String, dynamic>{'insumoId': insumoId},
       );
 
       final dados = resposta.data;
