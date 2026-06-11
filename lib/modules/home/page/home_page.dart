@@ -5,6 +5,7 @@ import 'package:my_app_teste/modules/categoria/page/categoria_page.dart';
 import 'package:my_app_teste/modules/cliente/page/cliente_page.dart';
 import 'package:my_app_teste/modules/dashboard/page/dashboard_page.dart';
 import 'package:my_app_teste/modules/produto/page/produto_page.dart';
+import 'package:my_app_teste/modules/unidade_medida/page/unidade_medida_page.dart';
 import 'package:my_app_teste/modules/usuario/page/usuario_list_page.dart';
 
 class Home extends StatefulWidget {
@@ -20,6 +21,7 @@ class _HomeState extends State<Home> {
   static const _indiceCategoria = 2;
   static const _indiceProduto = 3;
   static const _indiceClientes = 4;
+  static const _indiceUnidades = 5;
 
   int _indiceSelecionado = _indiceInicio;
   bool _ehAdministrador = false;
@@ -30,9 +32,17 @@ class _HomeState extends State<Home> {
     CategoriaPage(),
     ProdutoPage(),
     ClientePage(),
+    UnidadeMedidaPage(),
   ];
 
-  static const _titulos = ['Início', 'Usuários', 'Categoria', 'Produto', 'Clientes'];
+  static const _titulos = [
+    'Início',
+    'Usuários',
+    'Categoria',
+    'Produto',
+    'Clientes',
+    'Unidades de Medida',
+  ];
 
   @override
   void initState() {
@@ -115,11 +125,17 @@ class _HomeState extends State<Home> {
             ),
             
             ListTile(
-            leading: Icon(Icons.supervised_user_circle),
+              leading: const Icon(Icons.supervised_user_circle),
               title: const Text('Clientes'),
-             selected: _indiceSelecionado == _indiceClientes,
+              selected: _indiceSelecionado == _indiceClientes,
               onTap: () => _selecionar(_indiceClientes),
-            ),  
+            ),
+            ListTile(
+              leading: const Icon(Icons.straighten),
+              title: const Text('Unidades de Medida'),
+              selected: _indiceSelecionado == _indiceUnidades,
+              onTap: () => _selecionar(_indiceUnidades),
+            ),
           ],
         ),
       ),
