@@ -3,11 +3,13 @@ import 'package:my_app_teste/core/api_client.dart';
 import 'package:my_app_teste/core/auth_session.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/modules/categoria/page/categoria_page.dart';
+import 'package:my_app_teste/modules/cliente/page/cliente_page.dart';
 import 'package:my_app_teste/modules/dashboard/page/dashboard_page.dart';
 import 'package:my_app_teste/modules/login/page/login_page.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/page/estoque_page.dart';
 import 'package:my_app_teste/modules/pedidos/page/pedidos_page.dart';
 import 'package:my_app_teste/modules/produto/page/produto_page.dart';
+import 'package:my_app_teste/modules/unidade_medida/page/unidade_medida_page.dart';
 import 'package:my_app_teste/modules/usuario/page/usuario_list_page.dart';
 import 'package:my_app_teste/modules/insumo/pages/insumos_list_page.dart';
 import 'package:my_app_teste/modules/lote/page/lotes_page.dart';
@@ -69,6 +71,12 @@ class _HomeState extends State<Home> {
       pagina: CategoriaPage(),
     ),
     _AbaPrincipal(
+      tituloAppBar: 'Clientes',
+      rotuloInferior: 'Clientes',
+      icone: Icons.groups_outlined,
+      pagina: ClientePage(),
+    ),
+    _AbaPrincipal(
       tituloAppBar: 'Insumos',
       rotuloInferior: 'Insumos',
       icone: Icons.local_grocery_store_outlined,
@@ -79,6 +87,12 @@ class _HomeState extends State<Home> {
       rotuloInferior: 'Lotes',
       icone: Icons.layers_outlined,
       pagina: LotesPage(),
+    ),
+    _AbaPrincipal(
+      tituloAppBar: 'Unidades de Medida',
+      rotuloInferior: 'Unidades',
+      icone: Icons.straighten_outlined,
+      pagina: UnidadeMedidaPage(),
     ),
     _AbaPrincipal(
       tituloAppBar: 'Usuários',
