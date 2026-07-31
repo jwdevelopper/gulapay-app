@@ -9,6 +9,8 @@ import 'package:my_app_teste/modules/movimentacao_estoque/page/estoque_page.dart
 import 'package:my_app_teste/modules/pedidos/page/pedidos_page.dart';
 import 'package:my_app_teste/modules/produto/page/produto_page.dart';
 import 'package:my_app_teste/modules/usuario/page/usuario_list_page.dart';
+import 'package:my_app_teste/modules/insumo/pages/insumos_list_page.dart';
+import 'package:my_app_teste/modules/lote/page/lotes_page.dart';
 import 'package:my_app_teste/shared/bottom_bar/bottom_bar.dart';
 
 class _AbaPrincipal {
@@ -65,6 +67,18 @@ class _HomeState extends State<Home> {
       rotuloInferior: 'Categorias',
       icone: Icons.category_outlined,
       pagina: CategoriaPage(),
+    ),
+    _AbaPrincipal(
+      tituloAppBar: 'Insumos',
+      rotuloInferior: 'Insumos',
+      icone: Icons.local_grocery_store_outlined,
+      pagina: InsumosListPage(),
+    ),
+    _AbaPrincipal(
+      tituloAppBar: 'Lotes',
+      rotuloInferior: 'Lotes',
+      icone: Icons.layers_outlined,
+      pagina: LotesPage(),
     ),
     _AbaPrincipal(
       tituloAppBar: 'Usuários',
