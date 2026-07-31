@@ -7,6 +7,7 @@ import 'package:my_app_teste/modules/cliente/page/cliente_page.dart';
 import 'package:my_app_teste/modules/dashboard/page/dashboard_page.dart';
 import 'package:my_app_teste/modules/entregador/page/entregador_page.dart';
 import 'package:my_app_teste/modules/login/page/login_page.dart';
+import 'package:my_app_teste/modules/mesa/page/mesa_page.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/page/estoque_page.dart';
 import 'package:my_app_teste/modules/pedidos/page/pedidos_page.dart';
 import 'package:my_app_teste/modules/produto/page/produto_page.dart';
@@ -46,6 +47,12 @@ class _HomeState extends State<Home> {
       rotuloInferior: 'Início',
       icone: Icons.home_outlined,
       pagina: DashboardPage(),
+    ),
+    _AbaPrincipal(
+      tituloAppBar: 'Mesas',
+      rotuloInferior: 'Mesas',
+      icone: Icons.grid_view_outlined,
+      pagina: MesaPage(),
     ),
     _AbaPrincipal(
       tituloAppBar: 'Produtos',
