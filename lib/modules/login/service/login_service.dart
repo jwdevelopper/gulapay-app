@@ -1,4 +1,4 @@
-import 'package:dio/dio.dart';
+﻿import 'package:dio/dio.dart';
 import 'package:my_app_teste/core/api_client.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/constants_api.dart';
@@ -16,8 +16,8 @@ class LoginService {
       final loginResponse = ResponseLogin.fromJson(response.data);
 
       // Salva o token automaticamente após login bem-sucedido
-      if (loginResponse.accessToken != null && loginResponse.accessToken!.isNotEmpty) {
-        await ApiClient.salvarToken(loginResponse.accessToken!);
+      if (loginResponse.token != null && loginResponse.token!.isNotEmpty) {
+        await ApiClient.salvarToken(loginResponse.token!);
       }
 
       return loginResponse;

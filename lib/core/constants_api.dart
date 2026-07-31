@@ -1,3 +1,4 @@
+/// Constantes de endereço e endpoints da API.
 final class ConstantsApi {
   ConstantsApi._();
   static const baseUrl = "https://gulapay-backend.renannardi.com";
@@ -9,4 +10,6 @@ final class ConstantsApi {
   static const urlInsumos = "/insumos";
   static const urlLotes = "/lotes";
   static const urlUnidadesMedida = "/unidades-medida";
+  static const urlCategorias = "/categorias";
+  static const urlProdutos = "/produtos";
 }

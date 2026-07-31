@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:my_app_teste/core/constants_api.dart';
 
+/// Cliente Dio único da aplicação. Injeta o token JWT
+/// automaticamente em todas as requisições autenticadas.
 class ApiClient {
   ApiClient._();
 
@@ -26,14 +28,15 @@ class ApiClient {
       InterceptorsWrapper(
         onRequest: (options, handler) async {
           try {
-            // don't attach token to login/register endpoints
-            if (!options.path.contains(ConstantsApi.urlLogin) &&
-                !options.path.contains(ConstantsApi.urlRegistrarUsuario)) {
+            final isAuthEndpoint = options.path.contains(ConstantsApi.urlLogin) ||
+                options.path.contains(ConstantsApi.urlRegistrarUsuario);
+
+            if (!isAuthEndpoint) {
               final token = await getToken();
-            if (token != null && token.isNotEmpty) {
-              options.headers['Authorization'] = 'Bearer $token';
+              if (token != null && token.isNotEmpty) {
+                options.headers['Authorization'] = 'Bearer $token';
+              }
             }
-          }
           } catch (_) {}
           return handler.next(options);
         },
