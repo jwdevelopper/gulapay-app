@@ -5,6 +5,7 @@ import 'package:my_app_teste/core/auth_session.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/core/widgets/app_campo_busca.dart';
 import 'package:my_app_teste/core/widgets/app_estado_vazio.dart';
+import 'package:my_app_teste/core/widgets/app_menu_acoes.dart';
 import 'package:my_app_teste/core/widgets/app_tag.dart';
 import 'package:my_app_teste/modules/usuario/dto/usuario_response.dart';
 import 'package:my_app_teste/modules/usuario/page/usuario_form_page.dart';
@@ -353,8 +354,18 @@ class _UsuarioListaPaginaState extends State<UsuarioListaPagina> {
                     ],
                   ),
                 ),
-                const FaIcon(FontAwesomeIcons.chevronRight,
-                    size: 14, color: AppTema.primariaEscura),
+                AppMenuAcoes(
+                  onEditar: () => _abrirFormulario(usuario: u),
+                  // Fallback ao swipe: mesma confirmação + delete.
+                  onExcluir: () async {
+                    if (await _confirmarExclusao(u)) {
+                      await _excluir(u);
+                    }
+                  },
+                  rotuloEditar: 'Editar usuário',
+                  rotuloExcluir: 'Excluir usuário',
+                  tooltip: 'Ações do usuário',
+                ),
               ],
             ),
           ),

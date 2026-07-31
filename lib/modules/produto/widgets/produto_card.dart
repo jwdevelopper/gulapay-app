@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/widgets/app_menu_acoes.dart';
 import 'package:my_app_teste/modules/produto/dto/produto.dart';
 
 import 'produto_card_container.dart';
@@ -16,7 +17,11 @@ class ProdutoCard extends StatelessWidget {
   final String priceText;
   final VoidCallback onTap;
   final VoidCallback onEdit;
-  final VoidCallback onDelete;
+
+  /// Mesma função usada pelo [Dismissible] no swipe-to-delete e pelo PopupMenu
+  /// "Excluir produto". O parent é responsável por mostrar a confirmação,
+  /// chamar a API e devolver [true] quando o card pode ser removido da lista.
+  final Future<bool> Function() onConfirmDelete;
 
   const ProdutoCard({
     super.key,
@@ -30,22 +35,15 @@ class ProdutoCard extends StatelessWidget {
     required this.priceText,
     required this.onTap,
     required this.onEdit,
-    required this.onDelete,
+    required this.onConfirmDelete,
   });
 
   @override
   Widget build(BuildContext context) {
     return ProdutoCardContainer(
       onTap: onTap,
-      actions: [
-        ProdutoCardAction(
-          label: 'Excluir',
-          icon: Icons.delete_outline_rounded,
-          backgroundColor: ProdutosPalette.primaryPressed,
-          foregroundColor: Colors.white,
-          onTap: onDelete,
-        ),
-      ],
+      dismissibleKey: (produto.id ?? produto.nome).toString(),
+      onConfirmDelete: onConfirmDelete,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -115,63 +113,13 @@ class ProdutoCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
-              PopupMenuButton<String>(
-                tooltip: 'Acoes do produto',
-                padding: EdgeInsets.zero,
-                offset: const Offset(0, 8),
-                color: ProdutosPalette.surface,
-                surfaceTintColor: Colors.transparent,
-                elevation: 10,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: const BorderSide(color: ProdutosPalette.borderSoft),
-                ),
-                constraints: const BoxConstraints(minWidth: 176),
-                onSelected: (value) {
-                  switch (value) {
-                    case 'edit':
-                      onEdit();
-                      break;
-                    case 'delete':
-                      onDelete();
-                      break;
-                  }
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem<String>(
-                    value: 'edit',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.edit_rounded,
-                          size: 18,
-                          color: ProdutosPalette.text,
-                        ),
-                        SizedBox(width: 12),
-                        Text('Editar produto'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.delete_outline_rounded,
-                          size: 18,
-                          color: ProdutosPalette.primaryPressed,
-                        ),
-                        SizedBox(width: 12),
-                        Text('Excluir produto'),
-                      ],
-                    ),
-                  ),
-                ],
-                icon: const Icon(
-                  Icons.more_horiz_rounded,
-                  color: ProdutosPalette.textMuted,
-                  size: 22,
-                ),
+              AppMenuAcoes(
+                onEditar: onEdit,
+                // Fallback ao swipe: mesma função de confirmação + delete.
+                onExcluir: () => onConfirmDelete(),
+                rotuloEditar: 'Editar produto',
+                rotuloExcluir: 'Excluir produto',
+                tooltip: 'Ações do produto',
               ),
             ],
           ),
