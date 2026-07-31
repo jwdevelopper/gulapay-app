@@ -5,6 +5,7 @@ import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/modules/categoria/page/categoria_page.dart';
 import 'package:my_app_teste/modules/cliente/page/cliente_page.dart';
 import 'package:my_app_teste/modules/dashboard/page/dashboard_page.dart';
+import 'package:my_app_teste/modules/entregador/page/entregador_page.dart';
 import 'package:my_app_teste/modules/login/page/login_page.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/page/estoque_page.dart';
 import 'package:my_app_teste/modules/pedidos/page/pedidos_page.dart';
@@ -93,6 +94,12 @@ class _HomeState extends State<Home> {
       rotuloInferior: 'Unidades',
       icone: Icons.straighten_outlined,
       pagina: UnidadeMedidaPage(),
+    ),
+    _AbaPrincipal(
+      tituloAppBar: 'Entregadores',
+      rotuloInferior: 'Entregas',
+      icone: Icons.delivery_dining_outlined,
+      pagina: EntregadorPage(),
     ),
     _AbaPrincipal(
       tituloAppBar: 'Usuários',
