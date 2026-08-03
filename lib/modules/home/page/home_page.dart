@@ -1,7 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/api_client.dart';
+import 'package:my_app_teste/core/auth_session.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/modules/categoria/page/categoria_page.dart';
+import 'package:my_app_teste/modules/cliente/page/cliente_page.dart';
 import 'package:my_app_teste/modules/dashboard/page/dashboard_page.dart';
+import 'package:my_app_teste/modules/entregador/page/entregador_page.dart';
+import 'package:my_app_teste/modules/login/page/login_page.dart';
+import 'package:my_app_teste/modules/mesa/page/mesa_page.dart';
+import 'package:my_app_teste/modules/movimentacao_estoque/page/estoque_page.dart';
+import 'package:my_app_teste/modules/pedidos/page/pedidos_page.dart';
 import 'package:my_app_teste/modules/produto/page/produto_page.dart';
+import 'package:my_app_teste/modules/unidade_medida/page/unidade_medida_page.dart';
+import 'package:my_app_teste/modules/usuario/page/usuario_list_page.dart';
+import 'package:my_app_teste/modules/insumo/pages/insumos_list_page.dart';
+import 'package:my_app_teste/modules/lote/page/lotes_page.dart';
+import 'package:my_app_teste/shared/bottom_bar/bottom_bar.dart';
+
+class _AbaPrincipal {
+  final String tituloAppBar;
+  final String rotuloInferior;
+  final IconData icone;
+  final Widget pagina;
+  final bool apenasAdmin;
+
+  const _AbaPrincipal({
+    required this.tituloAppBar,
+    required this.rotuloInferior,
+    required this.icone,
+    required this.pagina,
+    this.apenasAdmin = false,
+  });
+}
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -11,79 +41,277 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-
-  int _selectedIndex = 0;
-
-  List<Widget> _pages = [
-    DashboardPage(),
-    CategoriaPage(),
-    ProdutoPage(),
+  static const List<_AbaPrincipal> _todasAbas = [
+    _AbaPrincipal(
+      tituloAppBar: 'Início',
+      rotuloInferior: 'Início',
+      icone: Icons.home_outlined,
+      pagina: DashboardPage(),
+    ),
+    _AbaPrincipal(
+      tituloAppBar: 'Mesas',
+      rotuloInferior: 'Mesas',
+      icone: Icons.grid_view_outlined,
+      pagina: MesaPage(),
+    ),
+    _AbaPrincipal(
+      tituloAppBar: 'Produtos',
+      rotuloInferior: 'Produtos',
+      icone: Icons.shopping_bag_outlined,
+      pagina: ProdutoPage(),
+    ),
+    _AbaPrincipal(
+      tituloAppBar: 'Pedidos',
+      rotuloInferior: 'Pedidos',
+      icone: Icons.receipt_long_outlined,
+      pagina: PedidosPagina(),
+    ),
+    _AbaPrincipal(
+      tituloAppBar: 'Estoque',
+      rotuloInferior: 'Estoque',
+      icone: Icons.inventory_2_outlined,
+      pagina: EstoquePage(),
+    ),
+    _AbaPrincipal(
+      tituloAppBar: 'Categorias',
+      rotuloInferior: 'Categorias',
+      icone: Icons.category_outlined,
+      pagina: CategoriaPage(),
+    ),
+    _AbaPrincipal(
+      tituloAppBar: 'Clientes',
+      rotuloInferior: 'Clientes',
+      icone: Icons.groups_outlined,
+      pagina: ClientePage(),
+    ),
+    _AbaPrincipal(
+      tituloAppBar: 'Insumos',
+      rotuloInferior: 'Insumos',
+      icone: Icons.local_grocery_store_outlined,
+      pagina: InsumosListPage(),
+    ),
+    _AbaPrincipal(
+      tituloAppBar: 'Lotes',
+      rotuloInferior: 'Lotes',
+      icone: Icons.layers_outlined,
+      pagina: LotesPage(),
+    ),
+    _AbaPrincipal(
+      tituloAppBar: 'Unidades de Medida',
+      rotuloInferior: 'Unidades',
+      icone: Icons.straighten_outlined,
+      pagina: UnidadeMedidaPage(),
+    ),
+    _AbaPrincipal(
+      tituloAppBar: 'Entregadores',
+      rotuloInferior: 'Entregas',
+      icone: Icons.delivery_dining_outlined,
+      pagina: EntregadorPage(),
+    ),
+    _AbaPrincipal(
+      tituloAppBar: 'Usuários',
+      rotuloInferior: 'Equipe',
+      icone: Icons.people_outline,
+      pagina: UsuarioListaPagina(),
+      apenasAdmin: true,
+    ),
   ];
 
+  int _indiceSelecionado = 0;
+  bool _ehAdministrador = false;
+
+  List<_AbaPrincipal> get _abasVisiveis => _todasAbas
+      .where((aba) => !aba.apenasAdmin || _ehAdministrador)
+      .toList();
+
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Home"),
-      ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: Colors.blue,
-              ),
+  void initState() {
+    super.initState();
+    _carregarPerfil();
+  }
+
+  Future<void> _carregarPerfil() async {
+    final admin = await SessaoAutenticacao.ehAdministrador();
+    if (!mounted) return;
+    setState(() {
+      _ehAdministrador = admin;
+      if (_indiceSelecionado >= _abasVisiveis.length) {
+        _indiceSelecionado = 0;
+      }
+    });
+  }
+
+  void _aoTocarAba(int indice) {
+    setState(() => _indiceSelecionado = indice);
+  }
+
+  void _selecionarPeloMenu(int indice) {
+    Navigator.pop(context); // fecha o drawer antes de trocar de aba
+    setState(() => _indiceSelecionado = indice);
+  }
+
+  Widget _construirMenuLateral(List<_AbaPrincipal> abas) {
+    final selecionado = _indiceSelecionado.clamp(0, abas.length - 1);
+    return Drawer(
+      backgroundColor: AppTema.fundo,
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          const DrawerHeader(
+            decoration: BoxDecoration(color: AppTema.primaria),
+            child: Align(
+              alignment: Alignment.bottomLeft,
               child: Text(
                 'Menu',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 24,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
+          ),
+          for (var i = 0; i < abas.length; i++)
             ListTile(
-              leading: Icon(Icons.home),
-              title: Text('Home'),
-              onTap: () {
-                setState(() {
-                  _selectedIndex = 0;
-                });
-              },
+              leading: Icon(abas[i].icone),
+              title: Text(abas[i].tituloAppBar),
+              selected: i == selecionado,
+              selectedColor: AppTema.primariaEscura,
+              iconColor: AppTema.textoSecundario,
+              textColor: AppTema.textoEscuro,
+              selectedTileColor: AppTema.fundoDica,
+              onTap: () => _selecionarPeloMenu(i),
             ),
-            ListTile(
-              leading: Icon(Icons.person),
-              title: Text('Usuario'),
-              onTap: () {
-                // Navigator.pop(context);
-              },
-            ),
+        ],
+      ),
+    );
+  }
 
-            ListTile(
-              leading: Icon(Icons.category),
-              title: Text('Categoria'),
-              onTap: () {
-                setState(() {
-                  _selectedIndex = 1;
-                });
-              },
+  Future<void> _confirmarLogout() async {
+    final sair = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Sair'),
+          content: const Text('Deseja encerrar a sessão?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
             ),
-            ListTile(
-              leading: Icon(Icons.shopping_cart),
-              title: Text('Produto'),
-              onTap: () {
-                setState(() {
-                  _selectedIndex = 2;
-                });
-              },
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Sair'),
             ),
           ],
+        );
+      },
+    );
+    if (sair != true || !mounted) return;
+    await ApiClient.removerToken();
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => LoginPage()),
+    );
+  }
+
+  void _abrirNotificacoes() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTema.cartao,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Notificações',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppTema.textoEscuro,
+                      ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Nenhuma notificação no momento.',
+                  style: TextStyle(
+                    color: AppTema.textoSecundario,
+                    fontSize: 15,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final abas = _abasVisiveis;
+    final abaAtual =
+        _indiceSelecionado < abas.length ? abas[_indiceSelecionado] : abas.first;
+
+    return Scaffold(
+      backgroundColor: AppTema.fundo,
+      drawer: _construirMenuLateral(abas),
+      appBar: AppBar(
+        title: Text(
+          abaAtual.tituloAppBar,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppTema.textoEscuro,
+          ),
+        ),
+        backgroundColor: AppTema.fundo,
+        foregroundColor: AppTema.textoEscuro,
+        iconTheme: const IconThemeData(color: AppTema.primariaEscura),
+        elevation: 0,
+        actions: [
+          IconButton(
+            tooltip: 'Notificações',
+            onPressed: _abrirNotificacoes,
+            icon: const Icon(Icons.notifications_outlined),
+          ),
+          IconButton(
+            tooltip: 'Sair',
+            onPressed: _confirmarLogout,
+            icon: const Icon(Icons.logout_rounded),
+          ),
+          const SizedBox(width: 4),
+        ],
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: AppTema.bordaCampo),
         ),
       ),
       body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
-      )
+        index: _indiceSelecionado.clamp(0, abas.length - 1),
+        children: abas.map((a) => a.pagina).toList(),
+      ),
+      bottomNavigationBar: BottomBar(
+        items: abas
+            .map(
+              (a) =>
+                  BottomBarItem(label: a.rotuloInferior, icon: a.icone),
+            )
+            .toList(),
+        selectedIndex: _indiceSelecionado.clamp(0, abas.length - 1),
+        onTap: _aoTocarAba,
+        backgroundColor: AppTema.cartao,
+        borderColor: AppTema.bordaCampo,
+        activeColor: AppTema.primariaEscura,
+        inactiveColor: AppTema.textoSecundario,
+        activeIndicatorColor: AppTema.fundoDica,
+      ),
     );
   }
 }
