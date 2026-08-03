@@ -145,6 +145,48 @@ class _HomeState extends State<Home> {
     setState(() => _indiceSelecionado = indice);
   }
 
+  void _selecionarPeloMenu(int indice) {
+    Navigator.pop(context); // fecha o drawer antes de trocar de aba
+    setState(() => _indiceSelecionado = indice);
+  }
+
+  Widget _construirMenuLateral(List<_AbaPrincipal> abas) {
+    final selecionado = _indiceSelecionado.clamp(0, abas.length - 1);
+    return Drawer(
+      backgroundColor: AppTema.fundo,
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          const DrawerHeader(
+            decoration: BoxDecoration(color: AppTema.primaria),
+            child: Align(
+              alignment: Alignment.bottomLeft,
+              child: Text(
+                'Menu',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          for (var i = 0; i < abas.length; i++)
+            ListTile(
+              leading: Icon(abas[i].icone),
+              title: Text(abas[i].tituloAppBar),
+              selected: i == selecionado,
+              selectedColor: AppTema.primariaEscura,
+              iconColor: AppTema.textoSecundario,
+              textColor: AppTema.textoEscuro,
+              selectedTileColor: AppTema.fundoDica,
+              onTap: () => _selecionarPeloMenu(i),
+            ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _confirmarLogout() async {
     final sair = await showDialog<bool>(
       context: context,
@@ -220,6 +262,7 @@ class _HomeState extends State<Home> {
 
     return Scaffold(
       backgroundColor: AppTema.fundo,
+      drawer: _construirMenuLateral(abas),
       appBar: AppBar(
         title: Text(
           abaAtual.tituloAppBar,
@@ -230,8 +273,8 @@ class _HomeState extends State<Home> {
         ),
         backgroundColor: AppTema.fundo,
         foregroundColor: AppTema.textoEscuro,
+        iconTheme: const IconThemeData(color: AppTema.primariaEscura),
         elevation: 0,
-        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             tooltip: 'Notificações',
