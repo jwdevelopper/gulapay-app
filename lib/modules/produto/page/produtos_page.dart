@@ -121,6 +121,19 @@ class _ProdutosPageState extends State<ProdutosPage> {
     return list;
   }
 
+  String get _screenTitle => _selectedCategoria?.nome.isNotEmpty == true
+      ? _selectedCategoria!.nome
+      : 'Produtos';
+
+  String get _screenSubtitle {
+    if (_loading) return 'Carregando produtos...';
+    if (_selectedCategoria != null) {
+      return '${_filtered.length} itens • filtro ativo';
+    }
+    if (_produtos.isEmpty) return 'Comece a cadastrar';
+    return '${_produtos.length} itens • ${_categorias.length} categorias';
+  }
+
   String get _sortLabel => produtoSortOptions
       .firstWhere(
         (option) => option.value == _sort,
