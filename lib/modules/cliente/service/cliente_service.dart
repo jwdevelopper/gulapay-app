@@ -55,3 +55,15 @@ Future<void> inativarCliente(int id) async {
     throw ApiError.fromDioException(e);
   }
 }
+
+// Reativar cliente
+Future<ClienteResponse> reativarCliente(int id, ClienteResponse dados) async {
+  final dto = ClienteUpdateRequest(
+    nome: dados.nome,
+    telefone: dados.telefone,
+    email: dados.email,
+    endereco: dados.endereco,
+    ativo: true,
+  );
+  return editarCliente(id, dto);
+}

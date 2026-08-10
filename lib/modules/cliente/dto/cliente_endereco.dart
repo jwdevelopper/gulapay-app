@@ -1,5 +1,5 @@
- class ClienteEndereco {
- String? logradouro;
+class ClienteEndereco {
+  String? logradouro;
   String? numero;
   String? complemento;
   String? bairro;
@@ -27,15 +27,13 @@
     cep = json['cep'];
   }
 
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['logradouro'] = this.logradouro;
-    data['numero'] = this.numero;
-    data['complemento'] = this.complemento;
-    data['bairro'] = this.bairro;
-    data['cidade'] = this.cidade;
-    data['uf'] = this.uf;
-    data['cep'] = this.cep;
-    return data;
-  }
+  Map<String, dynamic> toJson() => {
+        'logradouro': logradouro,
+        'numero': numero,
+        'complemento': complemento,
+        'bairro': bairro,
+        'cidade': cidade,
+        'uf': uf,
+        'cep': cep,
+      };
 }

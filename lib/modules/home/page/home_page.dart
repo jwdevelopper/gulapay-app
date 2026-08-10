@@ -16,23 +16,23 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   static const _indiceInicio = 0;
-  static const _indiceCategoria = 1;
-  static const _indiceProduto = 2;
-  static const _indiceUsuarios = 3;
-  static const _indiceCliente = 4;
+  static const _indiceUsuarios = 1;
+  static const _indiceCategoria = 2;
+  static const _indiceProduto = 3;
+  static const _indiceClientes = 4;
 
   int _indiceSelecionado = _indiceInicio;
   bool _ehAdministrador = false;
 
   final List<Widget> _paginas = const [
     DashboardPage(),
+    UsuarioListaPagina(),
     CategoriaPage(),
     ProdutoPage(),
-    UsuarioListaPagina(),
     ClientePage(),
   ];
 
-  static const _titulos = ['Início', 'Categoria', 'Produto', 'Usuários', 'Clientes'];
+  static const _titulos = ['Início', 'Usuários', 'Categoria', 'Produto', 'Clientes'];
 
   @override
   void initState() {
@@ -113,11 +113,12 @@ class _HomeState extends State<Home> {
               selected: _indiceSelecionado == _indiceProduto,
               onTap: () => _selecionar(_indiceProduto),
             ),
+            
             ListTile(
-            leading: const Icon(Icons.supervised_user_circle),
-              title: Text('Cliente'),
-              selected: _indiceSelecionado == _indiceCliente,
-              onTap: () => _selecionar(_indiceCliente),
+            leading: Icon(Icons.supervised_user_circle),
+              title: const Text('Clientes'),
+             selected: _indiceSelecionado == _indiceClientes,
+              onTap: () => _selecionar(_indiceClientes),
             ),  
           ],
         ),
