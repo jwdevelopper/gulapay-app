@@ -41,88 +41,99 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  static const List<_AbaPrincipal> _todasAbas = [
-    _AbaPrincipal(
-      tituloAppBar: 'Início',
-      rotuloInferior: 'Início',
-      icone: Icons.home_outlined,
-      pagina: DashboardPage(),
-    ),
-    _AbaPrincipal(
-      tituloAppBar: 'Mesas',
-      rotuloInferior: 'Mesas',
-      icone: Icons.grid_view_outlined,
-      pagina: MesaPage(),
-    ),
-    _AbaPrincipal(
-      tituloAppBar: 'Produtos',
-      rotuloInferior: 'Produtos',
-      icone: Icons.shopping_bag_outlined,
-      pagina: ProdutoPage(),
-    ),
-    _AbaPrincipal(
-      tituloAppBar: 'Pedidos',
-      rotuloInferior: 'Pedidos',
-      icone: Icons.receipt_long_outlined,
-      pagina: PedidosPagina(),
-    ),
-    _AbaPrincipal(
-      tituloAppBar: 'Estoque',
-      rotuloInferior: 'Estoque',
-      icone: Icons.inventory_2_outlined,
-      pagina: EstoquePage(),
-    ),
-    _AbaPrincipal(
-      tituloAppBar: 'Categorias',
-      rotuloInferior: 'Categorias',
-      icone: Icons.category_outlined,
-      pagina: CategoriaPage(),
-    ),
-    _AbaPrincipal(
-      tituloAppBar: 'Clientes',
-      rotuloInferior: 'Clientes',
-      icone: Icons.groups_outlined,
-      pagina: ClientePage(),
-    ),
-    _AbaPrincipal(
-      tituloAppBar: 'Insumos',
-      rotuloInferior: 'Insumos',
-      icone: Icons.local_grocery_store_outlined,
-      pagina: InsumosListPage(),
-    ),
-    _AbaPrincipal(
-      tituloAppBar: 'Lotes',
-      rotuloInferior: 'Lotes',
-      icone: Icons.layers_outlined,
-      pagina: LotesPage(),
-    ),
-    _AbaPrincipal(
-      tituloAppBar: 'Unidades de Medida',
-      rotuloInferior: 'Unidades',
-      icone: Icons.straighten_outlined,
-      pagina: UnidadeMedidaPage(),
-    ),
-    _AbaPrincipal(
-      tituloAppBar: 'Entregadores',
-      rotuloInferior: 'Entregas',
-      icone: Icons.delivery_dining_outlined,
-      pagina: EntregadorPage(),
-    ),
-    _AbaPrincipal(
-      tituloAppBar: 'Usuários',
-      rotuloInferior: 'Equipe',
-      icone: Icons.people_outline,
-      pagina: UsuarioListaPagina(),
-      apenasAdmin: true,
-    ),
-  ];
-
   int _indiceSelecionado = 0;
   bool _ehAdministrador = false;
 
-  List<_AbaPrincipal> get _abasVisiveis => _todasAbas
-      .where((aba) => !aba.apenasAdmin || _ehAdministrador)
-      .toList();
+  // Convertido em getter para injetar a troca de aba dentro do DashboardPage
+  List<_AbaPrincipal> get _todasAbas => [
+        _AbaPrincipal(
+          tituloAppBar: 'Início',
+          rotuloInferior: 'Início',
+          icone: Icons.home_outlined,
+          pagina: DashboardPage(
+            onNavegarParaAba: (indice) {
+              setState(() => _indiceSelecionado = indice);
+            },
+          ),
+        ),
+        const _AbaPrincipal(
+          tituloAppBar: 'Mesas',
+          rotuloInferior: 'Mesas',
+          icone: Icons.grid_view_outlined,
+          pagina: MesaPage(),
+        ),
+        const _AbaPrincipal(
+          tituloAppBar: 'Produtos',
+          rotuloInferior: 'Produtos',
+          icone: Icons.shopping_bag_outlined,
+          pagina: ProdutoPage(),
+        ),
+        const _AbaPrincipal(
+          tituloAppBar: 'Pedidos',
+          rotuloInferior: 'Pedidos',
+          icone: Icons.receipt_long_outlined,
+          pagina: PedidosPagina(),
+        ),
+        const _AbaPrincipal(
+          tituloAppBar: 'Estoque',
+          rotuloInferior: 'Estoque',
+          icone: Icons.inventory_2_outlined,
+          pagina: EstoquePage(),
+        ),
+        const _AbaPrincipal(
+          tituloAppBar: 'Categorias',
+          rotuloInferior: 'Categorias',
+          icone: Icons.category_outlined,
+          pagina: CategoriaPage(),
+        ),
+        const _AbaPrincipal(
+          tituloAppBar: 'Clientes',
+          rotuloInferior: 'Clientes',
+          icone: Icons.groups_outlined,
+          pagina: ClientePage(),
+        ),
+        const _AbaPrincipal(
+          tituloAppBar: 'Insumos',
+          rotuloInferior: 'Insumos',
+          icone: Icons.local_grocery_store_outlined,
+          pagina: InsumosListPage(),
+        ),
+        const _AbaPrincipal(
+          tituloAppBar: 'Lotes',
+          rotuloInferior: 'Lotes',
+          icone: Icons.layers_outlined,
+          pagina: LotesPage(),
+        ),
+        const _AbaPrincipal(
+          tituloAppBar: 'Unidades de Medida',
+          rotuloInferior: 'Unidades',
+          icone: Icons.straighten_outlined,
+          pagina: UnidadeMedidaPage(),
+        ),
+        const _AbaPrincipal(
+          tituloAppBar: 'Entregadores',
+          rotuloInferior: 'Entregas',
+          icone: Icons.delivery_dining_outlined,
+          pagina: EntregadorPage(),
+        ),
+        const _AbaPrincipal(
+          tituloAppBar: 'Usuários',
+          rotuloInferior: 'Equipe',
+          icone: Icons.people_outline,
+          pagina: UsuarioListaPagina(),
+          apenasAdmin: true,
+        ),
+      ];
+
+  List<_AbaPrincipal> get _abasVisiveis =>
+      _todasAbas.where((aba) => !aba.apenasAdmin || _ehAdministrador).toList();
+
+  List<_AbaPrincipal> get _abasNavBar => _abasVisiveis.where((aba) {
+        return aba.rotuloInferior == 'Início' ||
+            aba.rotuloInferior == 'Mesas' ||
+            aba.rotuloInferior == 'Pedidos' ||
+            aba.rotuloInferior == 'Clientes';
+      }).toList();
 
   @override
   void initState() {
@@ -142,11 +153,15 @@ class _HomeState extends State<Home> {
   }
 
   void _aoTocarAba(int indice) {
-    setState(() => _indiceSelecionado = indice);
+    final aba = _abasNavBar[indice];
+    final indiceCompleto = _abasVisiveis.indexOf(aba);
+    if (indiceCompleto >= 0) {
+      setState(() => _indiceSelecionado = indiceCompleto);
+    }
   }
 
   void _selecionarPeloMenu(int indice) {
-    Navigator.pop(context); // fecha o drawer antes de trocar de aba
+    Navigator.pop(context);
     setState(() => _indiceSelecionado = indice);
   }
 
@@ -256,13 +271,15 @@ class _HomeState extends State<Home> {
 
   @override
   Widget build(BuildContext context) {
-    final abas = _abasVisiveis;
-    final abaAtual =
-        _indiceSelecionado < abas.length ? abas[_indiceSelecionado] : abas.first;
+    final abasDrawer = _abasVisiveis;
+    final abasNavBar = _abasNavBar;
+    final abaAtual = _indiceSelecionado < abasDrawer.length
+        ? abasDrawer[_indiceSelecionado]
+        : abasDrawer.first;
 
     return Scaffold(
       backgroundColor: AppTema.fundo,
-      drawer: _construirMenuLateral(abas),
+      drawer: _construirMenuLateral(abasDrawer),
       appBar: AppBar(
         title: Text(
           abaAtual.tituloAppBar,
@@ -294,17 +311,14 @@ class _HomeState extends State<Home> {
         ),
       ),
       body: IndexedStack(
-        index: _indiceSelecionado.clamp(0, abas.length - 1),
-        children: abas.map((a) => a.pagina).toList(),
+        index: _indiceSelecionado.clamp(0, abasDrawer.length - 1),
+        children: abasDrawer.map((a) => a.pagina).toList(),
       ),
       bottomNavigationBar: BottomBar(
-        items: abas
-            .map(
-              (a) =>
-                  BottomBarItem(label: a.rotuloInferior, icon: a.icone),
-            )
+        items: abasNavBar
+            .map((a) => BottomBarItem(label: a.rotuloInferior, icon: a.icone))
             .toList(),
-        selectedIndex: _indiceSelecionado.clamp(0, abas.length - 1),
+        selectedIndex: abasNavBar.indexOf(abaAtual),
         onTap: _aoTocarAba,
         backgroundColor: AppTema.cartao,
         borderColor: AppTema.bordaCampo,

@@ -213,52 +213,6 @@ class _EstoquePageState extends State<EstoquePage>
     }
   }
 
-  // ──── Header ────
-
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(width: 44, height: 44),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Estoque',
-                  style: TextStyle(
-                    color: EstoquePalette.text,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    height: 1.05,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  _screenSubtitle,
-                  style: const TextStyle(
-                    color: EstoquePalette.textMuted,
-                    fontSize: 12,
-                    height: 1.15,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (_tabIndex == 0)
-            _HeaderIconButton(
-              icon: Icons.filter_alt_outlined,
-              showBadge: _hasAdvancedFilters,
-              onTap: _openFiltersSheet,
-            ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _openFiltersSheet() async {
     String tempFilter = _selectedFilter;
     int? tempInsumoId = _filterInsumoId;
@@ -841,8 +795,6 @@ class _EstoquePageState extends State<EstoquePage>
     );
   }
 
-  // ──── Search field (for Saldos tab) ────
-
   Widget _buildSearchField() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -894,7 +846,7 @@ class _EstoquePageState extends State<EstoquePage>
     );
   }
 
-  @override
+ @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: EstoquePalette.background,
@@ -909,19 +861,34 @@ class _EstoquePageState extends State<EstoquePage>
       body: SafeArea(
         child: Column(
           children: [
-            _buildHeader(),
+            const SizedBox(height: 16), 
             _buildTabBar(),
-            const SizedBox(height: 10),
+            const SizedBox(height: 16),
 
-            // Tab-specific controls
             if (_tabIndex == 0) ...[
-              TipoFilterChips(
-                selectedFilter: _selectedFilter,
-                onFilterChanged: (filter) =>
-                    setState(() => _selectedFilter = filter),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TipoFilterChips(
+                        selectedFilter: _selectedFilter,
+                        onFilterChanged: (filter) =>
+                            setState(() => _selectedFilter = filter),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    _HeaderIconButton(
+                      icon: Icons.filter_alt_outlined,
+                      showBadge: _hasAdvancedFilters,
+                      onTap: _openFiltersSheet,
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 6),
             ],
+            
             if (_tabIndex == 1) ...[
               _buildSearchField(),
               const SizedBox(height: 10),
