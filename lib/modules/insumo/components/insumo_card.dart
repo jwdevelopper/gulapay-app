@@ -240,7 +240,8 @@ class InsumoCard extends StatelessWidget {
   Widget _buildDismissBackground() {
     return Container(
       alignment: Alignment.centerRight,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.only(right: 16),
+      margin: const EdgeInsets.symmetric(vertical: 1),
       decoration: BoxDecoration(
         color: Colors.red.shade500,
         borderRadius: BorderRadius.circular(14),

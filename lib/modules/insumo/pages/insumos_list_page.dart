@@ -4,11 +4,16 @@ import 'package:my_app_teste/modules/insumo/components/insumo_card.dart';
 import 'package:my_app_teste/modules/insumo/components/insumo_search_field.dart';
 import 'package:my_app_teste/modules/insumo/components/insumo_sort_sheet.dart';
 import 'package:my_app_teste/modules/insumo/dto/insumo_response.dart';
+import 'package:my_app_teste/modules/insumo/models/insumo_list_filter.dart';
+import 'package:my_app_teste/modules/insumo/components/insumo_filter_component.dart';
 import 'package:my_app_teste/modules/insumo/models/insumo_sort_options.dart';
 import 'package:my_app_teste/modules/insumo/pages/insumo_form_page.dart';
 import 'package:my_app_teste/modules/insumo/service/insumo_service.dart';
 import 'package:my_app_teste/modules/insumo/components/empty_state_card.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
+import 'package:my_app_teste/modules/unidade_medida/dto/unidade_medida_response.dart';
+import 'package:my_app_teste/modules/insumo/components/insumo_chips.dart';
+import 'package:my_app_teste/modules/unidade_medida/service/unidade_medida_service.dart';
 
 class InsumosListPage extends StatefulWidget {
   const InsumosListPage({super.key});
@@ -22,6 +27,9 @@ class _InsumosListPageState extends State<InsumosListPage> {
   final TextEditingController _searchController = TextEditingController();
 
   List<InsumoResponse> _insumos = [];
+  List<UnidadeMedidaResponse> unidadesMedidas = [];
+  InsumosFilters _filter = InsumosFilters();
+  int? selectedUnidadeMedidaId;
   bool _loading = false;
   String _search = '';
   String _sort = 'stock_asc';
@@ -30,6 +38,7 @@ class _InsumosListPageState extends State<InsumosListPage> {
   void initState() {
     super.initState();
     _load();
+    _loadUnidades();
   }
 
   @override
@@ -56,6 +65,24 @@ class _InsumosListPageState extends State<InsumosListPage> {
   List<InsumoResponse> get _filtered {
     var list = List<InsumoResponse>.from(_insumos);
 
+    if (_filter.unidadePadraoId != null) {
+      list = list.where((insumo) {
+        return insumo.unidadePadraoId == _filter.unidadePadraoId;
+      }).toList();
+    }
+
+    if (_filter.abaixoDoMinimo == true) {
+      list = list.where((insumo) {
+        return insumo .abaixoDoMinimo == true;
+      }).toList();
+    }
+
+    if (_filter.ativo != null) {
+      list = list.where((insumo) {
+        return insumo.ativo == _filter.ativo;
+      }).toList();
+    }
+
     if (_hasActiveSearch) {
       final query = _search.toLowerCase().trim();
       list = list.where((insumo) {
@@ -75,7 +102,7 @@ class _InsumosListPageState extends State<InsumosListPage> {
   Future<void> _load() async {
     if (mounted) setState(() => _loading = true);
     try {
-      final lista = await _insumoService.listar(apenasAtivos: true);
+      final lista = await _insumoService.listar(apenasAtivos: false);
       if (!mounted) return;
       setState(() {
         _insumos = lista;
@@ -87,6 +114,22 @@ class _InsumosListPageState extends State<InsumosListPage> {
       );
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _loadUnidades() async {
+    try {
+      final unidades = await listarUnidadesMedida();
+
+      if (!mounted) return;
+      setState(() {
+        unidadesMedidas = unidades;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao carregar unidades de medida: $e')),
+      );
     }
   }
 
@@ -191,6 +234,16 @@ class _InsumosListPageState extends State<InsumosListPage> {
     final selected = await InsumoSortSheet.show(context, selectedSort: _sort);
     if (selected == null || selected == _sort) return;
     setState(() => _sort = selected);
+  }
+
+  Future<void> _openFilterSheet() async {
+    final result = await InsumoFilterComponent.show(
+      context,
+      initialFilter: _filter,
+    );
+    if (result == null) return;
+    setState(() => _filter = result);
+    await _load();
   }
 
   void _clearSearch() {
@@ -330,19 +383,10 @@ class _InsumosListPageState extends State<InsumosListPage> {
   }
 
   Widget _buildResultsHeader() {
-    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
         children: [
-          Text(
-            '${_filtered.length} '
-            '${_filtered.length == 1 ? 'insumo' : 'insumos'}',
-            style: TextStyle(
-              fontSize: 13,
-              color: theme.textTheme.bodySmall?.color,
-            ),
-          ),
           const Spacer(),
           if (_hasActiveSearch)
             TextButton(
@@ -352,6 +396,9 @@ class _InsumosListPageState extends State<InsumosListPage> {
           TextButton.icon(
             onPressed: _openSortSheet,
             icon: const Icon(Icons.sort_rounded, size: 18),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTema.primaria, // Changes the text and icon color
+            ),
             label: Text(_sortLabel),
           ),
         ],
@@ -449,6 +496,7 @@ class _InsumosListPageState extends State<InsumosListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTema.fundo,
       floatingActionButton: FloatingActionButton(
         onPressed: _openCreate,
         foregroundColor: Colors.white,
@@ -461,14 +509,44 @@ class _InsumosListPageState extends State<InsumosListPage> {
         children: [
           const SizedBox(height: 12),
           _buildSummaryStrip(),
-          InsumoSearchField(
-            controller: _searchController,
-            search: _search,
-            onChanged: (value) => setState(() => _search = value),
-            onClear: _clearSearch,
+          const SizedBox(height: 4),
+          Row(
+            children: [
+            Expanded(
+              child: InsumoSearchField(
+                controller: _searchController,
+                search: _search,
+                onChanged: (value) => setState(() => _search = value),
+                onClear: _clearSearch,
+              ),
+            ),
+            IconButton(
+              onPressed: _openFilterSheet,
+              icon: const Icon(Icons.filter_alt_outlined),
+              iconSize: 35,
+            ),
+            ]
+          ),
+          const SizedBox(height: 4),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                  child: UnidadesMedidasChips(
+                    unidadesMedidas: unidadesMedidas,
+                    selectedUnidadeMedidaId: _filter.unidadePadraoId,
+                    onClear: () => setState(() {
+                      _filter = _filter.copyWith(clearUnidadePadraoId: true);
+                    }),
+                    onSelected: (unidade) => setState(() {
+                      _filter = _filter.copyWith(unidadePadraoId: unidade.id);
+                    }),
+                  ),
+              ),],
           ),
           const SizedBox(height: 4),
           _buildResultsHeader(),
+          const SizedBox(height: 4),
           Expanded(
             child: RefreshIndicator(
               onRefresh: _reload,

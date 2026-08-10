@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:my_app_teste/core/api_error.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/modules/insumo/dto/insumo_create_request.dart';
 import 'package:my_app_teste/modules/insumo/dto/insumo_response.dart';
 import 'package:my_app_teste/modules/insumo/dto/insumo_update.dart';
 import 'package:my_app_teste/modules/insumo/service/insumo_service.dart';
-import 'package:my_app_teste/modules/insumo/components/unidade_medida_mock.dart';
+import 'package:my_app_teste/modules/unidade_medida/dto/unidade_medida_response.dart';
+import 'package:my_app_teste/modules/unidade_medida/service/unidade_medida_service.dart';
 
 class InsumoFormPage extends StatefulWidget {
   /// Quando null, é cadastro. Quando preenchido, é edição.
@@ -20,18 +22,16 @@ class InsumoFormPage extends StatefulWidget {
 class _InsumoFormPageState extends State<InsumoFormPage> {
   final _formKey = GlobalKey<FormState>();
   final _insumoService = InsumoService();
-  final _unidadeService = UnidadeMedidaServiceMock();
-
   late final TextEditingController _nomeController;
   late final TextEditingController _estoqueMinimoController;
 
   // Estado das unidades
-  List<UnidadeMedidaMock> _unidades = [];
+  List<UnidadeMedidaResponse> _unidades = [];
   bool _loadingUnidades = true;
   String? _erroCarregarUnidades;
 
   // Campos do form
-  int? _unidadePadraoId;
+  UnidadeMedidaResponse? _unidadeMedidaSelecionada;
   bool _ativo = true;
 
   // Estado de salvamento
@@ -50,9 +50,8 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
           ? _formatNumeroParaInput(insumo!.estoqueMinimo!)
           : '',
     );
-    _unidadePadraoId = insumo?.unidadePadraoId;
+    
     _ativo = insumo?.ativo ?? true;
-
     _carregarUnidades();
   }
 
@@ -68,25 +67,26 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
   // ---------------------------------------------------------------------------
 
   Future<void> _carregarUnidades() async {
-    if (mounted) {
-      setState(() {
-        _loadingUnidades = true;
-        _erroCarregarUnidades = null;
-      });
-    }
+    setState(() {
+      _loadingUnidades = true;
+      _erroCarregarUnidades = null;
+    });
+
     try {
-      final lista = await _unidadeService.listar();
-      if (!mounted) return;
+      final unidades = await listarUnidadesMedida();
       setState(() {
-        _unidades = lista;
+        _unidades = unidades
+            .where((unidade) => unidade.ativo == true)
+            .toList();
         _loadingUnidades = false;
       });
     } catch (e) {
-      if (!mounted) return;
       setState(() {
         _erroCarregarUnidades = e.toString();
         _loadingUnidades = false;
       });
+    } finally {
+      setState(() => _loadingUnidades = false);
     }
   }
 
@@ -119,7 +119,7 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
     return null;
   }
 
-  String? _validarUnidade(int? value) {
+  String? _validarUnidade(UnidadeMedidaResponse? value) {
     if (value == null) return 'Selecione uma unidade de medida';
     return null;
   }
@@ -158,7 +158,7 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
       if (_isEditing) {
         final request = InsumoUpdate(
           nome: nome,
-          unidadePadraoId: _unidadePadraoId,
+          unidadePadraoId: _unidadeMedidaSelecionada?.id,
           estoqueMinimo: estoqueMinimo,
           ativo: _ativo,
         );
@@ -166,7 +166,7 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
       } else {
         final request = InsumoCreateRequest(
           nome: nome,
-          unidadePadraoId: _unidadePadraoId,
+          unidadePadraoId: _unidadeMedidaSelecionada?.id,
           estoqueMinimo: estoqueMinimo,
         );
         await _insumoService.criar(request);
@@ -212,8 +212,15 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTema.fundo,
       appBar: AppBar(
-        title: Text(_isEditing ? 'Editar insumo' : 'Novo insumo'),
+        title: Text(_isEditing ? 'Editar insumo' : 'Novo insumo',
+          style: TextStyle(
+            color: AppTema.textoEscuro,
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
       body: SafeArea(
         child: Form(
@@ -246,10 +253,35 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
       enabled: !_saving,
       maxLength: 120,
       textCapitalization: TextCapitalization.sentences,
-      decoration: const InputDecoration(
+      decoration: InputDecoration(
         labelText: 'Nome',
+        floatingLabelStyle: const TextStyle(
+          color: AppTema.textoEscuro,
+        ),
         hintText: 'Ex: Tomate italiano',
-        border: OutlineInputBorder(),
+        
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: AppTema.primaria,
+            width: 1.5,
+          ),
+        ),
+
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: AppTema.primaria,
+            width: 2,
+          ),
+        ),
+
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Colors.red,
+          ),
+        ),
       ),
       validator: _validarNome,
     );
@@ -268,9 +300,33 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
 
   Widget _buildUnidadeLoading() {
     return InputDecorator(
-      decoration: const InputDecoration(
+      decoration: InputDecoration(
         labelText: 'Unidade de medida',
-        border: OutlineInputBorder(),
+        floatingLabelStyle: const TextStyle(
+          color: AppTema.textoEscuro,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: AppTema.primaria,
+            width: 1.5,
+          ),
+        ),
+
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: AppTema.primaria,
+            width: 2,
+          ),
+        ),
+
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Colors.red,
+          ),
+        ),
       ),
       child: Row(
         children: const [
@@ -290,7 +346,31 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
     return InputDecorator(
       decoration: InputDecoration(
         labelText: 'Unidade de medida',
-        border: const OutlineInputBorder(),
+        floatingLabelStyle: const TextStyle(
+          color: AppTema.textoEscuro,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: AppTema.primaria,
+            width: 1.5,
+          ),
+        ),
+
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: AppTema.primaria,
+            width: 2,
+          ),
+        ),
+
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Colors.red,
+          ),
+        ),
         errorText: 'Não foi possível carregar as unidades',
       ),
       child: Row(
@@ -313,27 +393,46 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
   }
 
   Widget _buildUnidadeDropdown() {
-    // Se o insumo veio com uma unidade que não está na lista atual (caso raro),
-    // o initialValue ainda funciona, mas o dropdown não exibe o item — limpa
-    // pra evitar warning de "value not in items".
-    final initialValid = _unidades.any((u) => u.id == _unidadePadraoId);
-    final initial = initialValid ? _unidadePadraoId : null;
-
-    return DropdownButtonFormField<int>(
-      initialValue: initial,
-      decoration: const InputDecoration(
+  
+    return DropdownButtonFormField<UnidadeMedidaResponse>(
+      initialValue: _unidadeMedidaSelecionada,
+      decoration: InputDecoration(
         labelText: 'Unidade de medida',
-        border: OutlineInputBorder(),
+        floatingLabelStyle: const TextStyle(
+          color: AppTema.textoEscuro,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: AppTema.primaria,
+            width: 1.5,
+          ),
+        ),
+
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: AppTema.primaria,
+            width: 2,
+          ),
+        ),
+
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Colors.red,
+          ),
+        ),
       ),
       items: _unidades.map((unidade) {
-        return DropdownMenuItem<int>(
-          value: unidade.id,
+        return DropdownMenuItem<UnidadeMedidaResponse>(
+          value: unidade,
           child: Text('${unidade.nome} (${unidade.simbolo})'),
         );
       }).toList(),
       onChanged: _saving
           ? null
-          : (value) => setState(() => _unidadePadraoId = value),
+          : (value) => setState(() => _unidadeMedidaSelecionada = value),
       validator: _validarUnidade,
     );
   }
@@ -346,11 +445,35 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
       ],
-      decoration: const InputDecoration(
+      decoration: InputDecoration(
         labelText: 'Estoque mínimo',
+        floatingLabelStyle: const TextStyle(
+          color: AppTema.textoEscuro,
+        ),
         hintText: 'Ex: 0,5',
         helperText: 'Quantidade na unidade selecionada',
-        border: OutlineInputBorder(),
+          enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: AppTema.primaria,
+            width: 1.5,
+          ),
+        ),
+
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: AppTema.primaria,
+            width: 2,
+          ),
+        ),
+
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Colors.red,
+          ),
+        ),
       ),
       validator: _validarEstoqueMinimo,
     );
@@ -381,13 +504,18 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
         _erroCarregarUnidades == null;
 
     return SizedBox(
-      width: double.infinity,
+      width: 150,
+      height: 50,
       child: ElevatedButton(
         onPressed: podeSalvar ? _salvar : null,
         style: ElevatedButton.styleFrom(
+          backgroundColor: AppTema.primaria,
+          foregroundColor: AppTema.bordaCampo,
+          minimumSize: const Size(140, 40),
+          maximumSize: const Size(140, 40),
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
         child: _saving
