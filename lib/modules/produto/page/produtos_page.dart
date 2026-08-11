@@ -546,11 +546,9 @@ class _ProdutosPageState extends State<ProdutosPage> {
               title: _screenTitle,
               subtitle: _screenSubtitle,
               hasCategoryFilter: _filters.categoriaId != null,
-              hasActiveFilter: _filters.hasActiveFilter || _search.isNotEmpty,
               onBackTap: _clearCategoryFilter,
-              onFilterTap: _openFilterSheet,
-              onClearFiltersTap: _clearSearchAndFilter,
             ),
+            const SizedBox(height: 8),
             ProdutoSearchField(
               controller: _searchController,
               search: _search,
@@ -559,6 +557,9 @@ class _ProdutosPageState extends State<ProdutosPage> {
                 _searchController.clear();
                 setState(() => _search = '');
               },
+              hasActiveFilter: _hasActiveFilter,
+              onFilterTap: _openFilterSheet,
+              onClearFiltersTap: _clearSearchAndFilter,
             ),
             const SizedBox(height: 10),
             _buildCategoryChips(),
