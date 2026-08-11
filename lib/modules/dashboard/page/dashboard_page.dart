@@ -18,6 +18,8 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   int _indiceSelecionado = 0;
 
+  final _fabKey = GlobalKey<AppExpandableFabState>();
+
   void funcaoExecutadaPeloBotao() {
     print("Função executada pelo botão presente em dashboard");
   }
@@ -42,22 +44,26 @@ class _DashboardPageState extends State<DashboardPage> {
     return Scaffold(
       body: minhasTelas[_indiceSelecionado],
       floatingActionButton: AppExpandableFab(
+        key: _fabKey,
         distance: 112.0,
         children: [
           AppActionButton(
             onPressed: () {
+              _fabKey.currentState?.fechar();
               widget.onNavegarParaAba?.call(2); 
             },
             icon: const Icon(Icons.shopping_bag_outlined),
           ),
           AppActionButton(
             onPressed: () {
+              _fabKey.currentState?.fechar();
               widget.onNavegarParaAba?.call(5); 
             },
             icon: const Icon(Icons.category_outlined),
           ),
           AppActionButton(
             onPressed: () {
+              _fabKey.currentState?.fechar();
               widget.onNavegarParaAba?.call(4); 
             },
             icon: const Icon(Icons.inventory_2_outlined),

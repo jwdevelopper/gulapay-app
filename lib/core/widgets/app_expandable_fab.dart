@@ -14,10 +14,10 @@ class AppExpandableFab extends StatefulWidget {
   });
 
   @override
-  State<AppExpandableFab> createState() => _AppExpandableFabState();
+  State<AppExpandableFab> createState() => AppExpandableFabState();
 }
 
-class _AppExpandableFabState extends State<AppExpandableFab> with SingleTickerProviderStateMixin {
+class AppExpandableFabState extends State<AppExpandableFab> with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _expandAnimation;
   bool _open = false;
@@ -53,6 +53,12 @@ class _AppExpandableFabState extends State<AppExpandableFab> with SingleTickerPr
         _controller.reverse();
       }
     });
+  }
+  
+  void fechar() {
+    if (_open) { 
+      _toggle(); 
+    }
   }
 
   @override
