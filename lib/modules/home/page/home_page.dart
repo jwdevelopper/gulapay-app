@@ -44,7 +44,6 @@ class _HomeState extends State<Home> {
   int _indiceSelecionado = 0;
   bool _ehAdministrador = false;
 
-  // Convertido em getter para injetar a troca de aba dentro do DashboardPage
   List<_AbaPrincipal> get _todasAbas => [
         _AbaPrincipal(
           tituloAppBar: 'Início',

@@ -129,6 +129,7 @@ class _AppExpandableFabState extends State<AppExpandableFab> with SingleTickerPr
           curve: const Interval(0.25, 1.0, curve: Curves.easeInOut),
           duration: const Duration(milliseconds: 250),
           child: FloatingActionButton(
+            shape: const CircleBorder(),
             onPressed: _toggle,
             backgroundColor: Colors.deepOrange, 
             

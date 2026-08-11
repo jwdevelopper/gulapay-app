@@ -46,21 +46,18 @@ class _DashboardPageState extends State<DashboardPage> {
         children: [
           AppActionButton(
             onPressed: () {
-              // Índice 2 = Produtos na lista _todasAbas
               widget.onNavegarParaAba?.call(2); 
             },
             icon: const Icon(Icons.shopping_bag_outlined),
           ),
           AppActionButton(
             onPressed: () {
-              // Índice 5 = Categorias na lista _todasAbas
               widget.onNavegarParaAba?.call(5); 
             },
             icon: const Icon(Icons.category_outlined),
           ),
           AppActionButton(
             onPressed: () {
-              // Índice 4 = Estoque na lista _todasAbas
               widget.onNavegarParaAba?.call(4); 
             },
             icon: const Icon(Icons.inventory_2_outlined),
