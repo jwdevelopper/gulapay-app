@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:my_app_teste/core/api_client.dart';
 import 'package:my_app_teste/core/auth_session.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
@@ -15,7 +16,6 @@ import 'package:my_app_teste/modules/unidade_medida/page/unidade_medida_page.dar
 import 'package:my_app_teste/modules/usuario/page/usuario_list_page.dart';
 import 'package:my_app_teste/modules/insumo/pages/insumos_list_page.dart';
 import 'package:my_app_teste/modules/lote/page/lotes_page.dart';
-import 'package:my_app_teste/shared/bottom_bar/bottom_bar.dart';
 
 class _AbaPrincipal {
   final String tituloAppBar;
@@ -41,7 +41,11 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  int _indiceSelecionado = 0;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  int _indiceSelecionado = 0; // Índice lógico da página atual
+  int _indiceVisualNavBar = 0; // Índice visual apenas para a NavBar (bolha)
+  
   bool _ehAdministrador = false;
 
   late final List<_AbaPrincipal> _todasAbas = [
@@ -148,20 +152,39 @@ class _HomeState extends State<Home> {
       if (_indiceSelecionado >= _abasVisiveis.length) {
         _indiceSelecionado = 0;
       }
+      _sincronizarNavBar();
     });
+  }
+
+  // Função central para alinhar a posição da bolha com a página que está aberta
+  void _sincronizarNavBar() {
+    final abaAtual = _abasVisiveis[_indiceSelecionado];
+    int navIndex = _abasNavBar.indexOf(abaAtual);
+    
+    if (navIndex == -1) {
+      // Se a página selecionada não estiver na NavBar, coloca a bolha no botão "Mais"
+      navIndex = _abasNavBar.length;
+    }
+    _indiceVisualNavBar = navIndex;
   }
 
   void _aoTocarAba(int indice) {
     final aba = _abasNavBar[indice];
     final indiceCompleto = _abasVisiveis.indexOf(aba);
     if (indiceCompleto >= 0) {
-      setState(() => _indiceSelecionado = indiceCompleto);
+      setState(() {
+        _indiceSelecionado = indiceCompleto;
+        _indiceVisualNavBar = indice;
+      });
     }
   }
 
   void _selecionarPeloMenu(int indice) {
     Navigator.pop(context);
-    setState(() => _indiceSelecionado = indice);
+    setState(() {
+      _indiceSelecionado = indice;
+      _sincronizarNavBar(); // Atualiza a posição da bolha baseado na nova seleção
+    });
   }
 
   Widget _construirMenuLateral(List<_AbaPrincipal> abas) {
@@ -272,11 +295,21 @@ class _HomeState extends State<Home> {
   Widget build(BuildContext context) {
     final abasDrawer = _abasVisiveis;
     final abasNavBar = _abasNavBar;
+
     final abaAtual = _indiceSelecionado < abasDrawer.length
         ? abasDrawer[_indiceSelecionado]
         : abasDrawer.first;
 
     return Scaffold(
+      key: _scaffoldKey, 
+      onDrawerChanged: (isOpened) {
+        // Se o usuário fechar o menu clicando fora, retornamos a bolha para o lugar correto
+        if (!isOpened) {
+          setState(() {
+            _sincronizarNavBar();
+          });
+        }
+      },
       backgroundColor: AppTema.fundo,
       drawer: _construirMenuLateral(abasDrawer),
       appBar: AppBar(
@@ -313,17 +346,43 @@ class _HomeState extends State<Home> {
         index: _indiceSelecionado.clamp(0, abasDrawer.length - 1),
         children: abasDrawer.map((a) => a.pagina).toList(),
       ),
-      bottomNavigationBar: BottomBar(
-        items: abasNavBar
-            .map((a) => BottomBarItem(label: a.rotuloInferior, icon: a.icone))
-            .toList(),
-        selectedIndex: abasNavBar.indexOf(abaAtual),
-        onTap: _aoTocarAba,
-        backgroundColor: AppTema.cartao,
-        borderColor: AppTema.bordaCampo,
-        activeColor: AppTema.primariaEscura,
-        inactiveColor: AppTema.textoSecundario,
-        activeIndicatorColor: AppTema.fundoDica,
+
+      bottomNavigationBar: CurvedNavigationBar(
+        height: 65, 
+        index: _indiceVisualNavBar, 
+        backgroundColor: AppTema.fundo,
+        color: Color.lerp(AppTema.fundo, Colors.black, 0.08)!,
+        buttonBackgroundColor: AppTema.primaria,
+        animationDuration: const Duration(milliseconds: 300),
+        animationCurve: Curves.easeInOut,
+
+        items: [
+          ...abasNavBar.map((aba) {
+            final bool isSelected = abasNavBar.indexOf(aba) == _indiceVisualNavBar;
+            return Icon(
+              aba.icone,
+              size: 30,
+              color: isSelected ? Colors.white : AppTema.textoSecundario,
+            );
+          }),
+          
+          Icon(
+            Icons.more_horiz,
+            size: 30,
+            color: _indiceVisualNavBar == abasNavBar.length ? Colors.white : AppTema.textoSecundario,
+          ),
+        ],
+        
+        onTap: (index) {
+          if (index < abasNavBar.length) {
+            _aoTocarAba(index);
+          } else {
+            setState(() {
+              _indiceVisualNavBar = index;
+            });
+            _scaffoldKey.currentState?.openDrawer();
+          }
+        },
       ),
     );
   }

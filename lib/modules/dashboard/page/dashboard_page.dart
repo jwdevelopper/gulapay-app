@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:my_app_teste/core/theme/app_tema.dart'; 
 import 'package:my_app_teste/core/widgets/app_botao_componente.dart';
 import 'package:my_app_teste/core/widgets/app_expandable_fab.dart';
 
@@ -35,13 +36,14 @@ class _DashboardPageState extends State<DashboardPage> {
           funcaoExecutada: funcaoExecutadaPeloBotao,
           icone: const Icon(Icons.dashboard),
           alinharIconeADireita: true,
-          corFundoBotao: Colors.deepOrange,
+          corFundoBotao: AppTema.primaria,
           foregroundColor: Colors.black,
         ),
       ),
     ];
 
     return Scaffold(
+      backgroundColor: AppTema.fundo, 
       body: minhasTelas[_indiceSelecionado],
       floatingActionButton: AppExpandableFab(
         key: _fabKey,

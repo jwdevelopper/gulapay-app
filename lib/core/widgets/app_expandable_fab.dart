@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
+import 'package:my_app_teste/core/theme/app_tema.dart';
+
 class AppExpandableFab extends StatefulWidget {
   final bool initialOpen;
   final double distance;
@@ -85,13 +87,14 @@ class AppExpandableFabState extends State<AppExpandableFab> with SingleTickerPro
           shape: const CircleBorder(),
           clipBehavior: Clip.antiAlias,
           elevation: 4.0,
+          color: AppTema.primaria,
           child: InkWell(
             onTap: _toggle,
             child: Padding(
               padding: const EdgeInsets.all(8.0),
               child: Icon(
-                Icons.close,
-                color: Theme.of(context).primaryColor,
+                Icons.expand_more,
+                color: Colors.white,
               ),
             ),
           ),
@@ -137,9 +140,9 @@ class AppExpandableFabState extends State<AppExpandableFab> with SingleTickerPro
           child: FloatingActionButton(
             shape: const CircleBorder(),
             onPressed: _toggle,
-            backgroundColor: Colors.deepOrange, 
+            backgroundColor: AppTema.primaria, 
             
-            child: const Icon(Icons.more_horiz, color: Colors.white),
+            child: const Icon(Icons.expand_less, color: Colors.white),
           ),
         ),
       ),
@@ -201,12 +204,12 @@ class AppActionButton extends StatelessWidget {
     return Material(
       shape: const CircleBorder(),
       clipBehavior: Clip.antiAlias,
-      color: Colors.white,
+      color: AppTema.fundo,
       elevation: 4.0,
       child: IconButton(
         onPressed: onPressed,
         icon: icon,
-        color: Colors.deepOrange,
+        color: AppTema.textoSecundario,
       ),
     );
   }
