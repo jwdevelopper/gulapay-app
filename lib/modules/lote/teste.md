@@ -1,62 +1,139 @@
-Testes dos Formatadores
+# Relatório de Testes QA — Módulo de Lotes
 
-Arquivo: test/lote/lote_formatadores_test.dart
 
-LoteFormatadores.formatarData - parses ISO date without timezone regression
-Objetivo: garantir que datas no formato ISO (YYYY-MM-DD) sejam convertidas sem sofrer regressao de dia por fuso horario UTC vs Local.
-Verifica: conversao correta de "2026-05-25" para "25/05/2026", garantindo que o dia mantem-se 25 em fuso de Brasil/UTC-3.
+**Data do Teste:** 12/08/2026
 
-LoteFormatadores.formatarData - handles null and invalid dates safely
-Objetivo: validar o comportamento defensivo do formatador ao receber strings nulas, vazias ou malformatadas.
-Verifica: retorno de hifen "-" para valores nulos/vazios e preservacao do texto original para formatos invalidos.
+**Escopo:** Homologação do Módulo de Lotes (Backend API & Frontend Flutter)
 
-LoteFormatadores.formatarQuantidade - formats integer and decimal numbers
-Objetivo: validar a formatacao de quantidades com precisao decimal e substituicao de separador.
-Verifica: inteiros sem casas decimais ("10"), substituicao de ponto por virgula em decimais ("10,5") e padrao "0" para nulo.
+**Status Geral:** Aprovado com Ressalvas no Frontend (Backend 100% Homologado / Frontend com Bugs Mapeados)
 
-Testes do Service
 
-Arquivo: test/lote/lote_service_test.dart
+---
 
-criar returns created lote data
-Objetivo: validar que o service envia o payload correto e retorna o lote criado.
-Mock: POST /lotes com resposta 201.
 
-listar returns list of lotes wrapped or unwrapped
-Objetivo: validar desserializacao segura de listas de lotes recebidas como array direto ou encapsuladas em objeto data, prevenindo TypeError.
-Mock: GET /lotes?insumoId=X com resposta 200 (array ou envelope data).
+## 1. Resumo da Execução
 
-buscarPorId returns single lote data
-Objetivo: validar retorno de um unico lote pelo identificador.
-Mock: GET /lotes/1 com resposta 200.
 
-alterarStatus patches lote active state
-Objetivo: validar a atualizacao parcial do status ativo/inativo do lote via patch.
-Mock: PATCH /lotes/1 com resposta 200.
+| Camada | Escopo Avaliado | Status | Observação |
+| :--- | :--- | :--- | :--- |
+| **Backend (API)** | Regras de Negócio, FEFO, Split, Validações e Banco | **APROVADO** | Todas as regras e respostas HTTP validadas via Swagger/Postman. |
+| **Frontend (UI)** | Interface de Usuário, Formulários e Mapeamento de Erros | **REPROVADO** | Identificados 5 bugs de validação visual e UX. |
 
-excluir completes deletion without content
-Objetivo: validar que o metodo de exclusao completa com sucesso em respostas sem corpo.
-Mock: DELETE /lotes/1 com resposta 204.
 
-throws ApiError on HTTP failure
-Objetivo: validar a captura de excecoes do Dio e a conversao para o tipo ApiError customizado.
-Mock: GET /lotes com resposta 400 ou 404.
+---
 
-Testes de Componentes e Widgets
 
-Arquivo: test/lote/lote_insumo_seletor_test.dart
+## 2. Homologação do Backend (API & Regras de Negócio)
 
-LoteInsumoSeletor - debounces search input and disposes controllers
-Objetivo: garantir que as buscas por digotacao aguardem o tempo de debounce antes de chamar a API e que os controllers sejam descartados corretamente.
-Verifica: prevencao de race conditions, cancelamento de requisicoes encadeadas e ausencia de vazamento de memoria (memory leak).
 
-Arquivo: test/lote/lote_card_test.dart
+Todas as funcionalidades do backend descritas no escopo do lote foram validadas com sucesso:
 
-LoteCard - renders status tag and safe null fallback
-Objetivo: validar a exibicao visual das tags de status (Vencido, Ativo, Inativo) e tratamento de campos zerados.
-Verifica: aplicacao de cores de status e renderizacao sem excecoes para valores nulos ou zerados.
 
-Observacoes
+- [x] **Integridade de FK (`Insumo`):** Requisições com `insumoId` inexistente retornam `HTTP 400 Bad Request` (`InvalidRequestException`).
 
-Os mocks utilizam isolamento do client Dio via injeção de dependência ou adaptadores de mock HTTP.
-Os testes priorizam a prevencao do bug critico de fuso horario e a estabilidade na desserializacao de tipos do JSON.
+- [x] **Regra de Negócio de Validade:** Lançamentos com data de validade no passado são bloqueados via API com `HTTP 422 Unprocessable Entity` (`BusinessException`).
+
+- [x] **Listagem e Ordenação FEFO:** O endpoint `GET /lotes?insumoId=X` retorna os lotes ordenados prioritariamente pelas datas de vencimento mais próximas.
+
+- [x] **Consumo e Split de Lotes:** O endpoint `POST /movimentacoes-estoque` realiza o abate sequencial (FEFO), consumindo o lote mais próximo de vencer e dividindo o saldo excedente no lote seguinte.
+
+- [x] **Estrutura de Banco de Dados:** Migrações da tabela e relacionamentos executados via Flyway V10.
+
+
+---
+
+
+## 3. Bugs Mapeados na Interface (Frontend Flutter)
+
+
+### [BUG-01] Permissão de Seleção de Data de Validade no Passado na UI
+
+
+* **Categoria:** Validação de Entrada / UX
+
+
+* **Severidade:** Média
+
+
+* **Comportamento Atual:** A interface permite que o usuário selecione e submeta datas de validade (dia/mês/ano) anteriores à data atual no campo de formulário.
+
+
+* **Comportamento Esperado:** O componente de calendário (`DatePicker`) e a validação do formulário no aplicativo devem bloquear a seleção/digitação de datas passadas antes de enviar a requisição ao backend.
+
+
+* **Nota de Integração:** O backend rejeita a chamada com `HTTP 422`, mas a validação deve ocorrer também no client-side para evitar requisições desnecessárias.
+
+
+---
+
+
+### [BUG-02] Campo "Código Opcional" Aceitando Caracteres Especiais
+
+
+* **Categoria:** Validação de Input
+
+
+* **Severidade:** Baixa
+
+
+* **Comportamento Atual:** O campo aceita a inserção de caracteres especiais (ex: `@, #, $, %, &`).
+
+
+* **Comportamento Esperado:** O campo deve possuir máscara de entrada ou `inputFormatter` permitindo apenas caracteres alfanuméricos (letras e números), visto que se trata de um código identificador.
+
+
+---
+
+
+### [BUG-03] Ausência de Limite Máximo de Caracteres no Campo "Quantidade Inicial"
+
+
+* **Categoria:** UX / Estabilidade de UI
+
+
+* **Severidade:** Baixa
+
+
+* **Comportamento Atual:** O campo aceita entradas de texto numérico com extensão ilimitada, gerando quebra visual no layout e potencial *overflow*.
+
+
+* **Comportamento Esperado:** Implementar limite máximo (`maxLength`) de 9 a 12 caracteres no campo numérico.
+
+
+---
+
+
+### [BUG-04] Ausência de Limite Máximo de Caracteres no Campo "Custo Unitário"
+
+
+* **Categoria:** UX / Estabilidade de UI
+
+
+* **Severidade:** Baixa
+
+
+* **Comportamento Atual:** O campo aceita entradas numéricas/monetárias sem restrição de tamanho de dígitos.
+
+
+* **Comportamento Esperado:** Aplicar máscara monetária/decimal apropriada e delimitar o tamanho máximo (`maxLength`) de 9 a 12 caracteres.
+
+
+---
+
+
+### [BUG-05] Inversão de Nomenclatura na Mensagem de Erro de Incompatibilidade de Unidade de Medida
+
+
+* **Categoria:** Mensagem de Erro / Tradução / UX
+
+
+* **Severidade:** Média
+
+
+* **Comportamento Atual:** Ao selecionar a unidade **"Litros"**, o alerta de erro exibe que a unidade **"mililitros"** é incompatível com o produto (e vice-versa ao selecionar "mililitros"). O mesmo comportamento trocado ocorre entre **"KG"** e **"G"**.
+
+
+* **Comportamento Esperado:** A mensagem de erro deve referenciar corretamente a unidade que foi selecionada pelo usuário na interface.
+
+
+* **Observação:** A unidade de medida **"Un"** (Unidade) comporta-se corretamente.
