@@ -1,4 +1,5 @@
 // lib/modules/cliente/page/cliente_detalhe_page.dart
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/core/api_error.dart';
@@ -10,6 +11,11 @@ import 'cliente_form_page.dart';
 
 class ClienteDetalhesPage extends StatelessWidget {
   final ClienteResponse cliente;
+
+  static final _mascaraTelefone = MaskTextInputFormatter(
+    mask: '(##) #####-####',
+    filter: {"#": RegExp(r'[0-9]')},
+  );
 
   const ClienteDetalhesPage({super.key, required this.cliente});
 
@@ -311,7 +317,7 @@ class ClienteDetalhesPage extends StatelessWidget {
     );
   }
 
-  Widget _buildCardContato() {
+Widget _buildCardContato() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -323,7 +329,9 @@ class ClienteDetalhesPage extends StatelessWidget {
           _buildLinha(
             icone: const FaIcon(FontAwesomeIcons.whatsapp, size: 16, color: Colors.green),
             rotulo: 'WhatsApp',
-            valor: cliente.telefone ?? 'Não informado',
+            valor: cliente.telefone != null && cliente.telefone!.isNotEmpty
+                ? _mascaraTelefone.maskText(cliente.telefone!)
+                : 'Não informado',
           ),
           if (cliente.email != null && cliente.email!.isNotEmpty) ...[
             Divider(height: 1, color: AppTema.bordaCampo),

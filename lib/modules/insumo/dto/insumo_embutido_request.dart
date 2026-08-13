@@ -10,10 +10,10 @@ class InsumoEmbutidoRequest {
     });
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['nome'] = this.nome;
-    data['unidadePadraoId'] = this.unidadePadraoId;
-    data['estoqueMinimo'] = this.estoqueMinimo;
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['nome'] = nome;
+    data['unidadePadraoId'] = unidadePadraoId;
+    data['estoqueMinimo'] = estoqueMinimo;
     return data;
   }
 }

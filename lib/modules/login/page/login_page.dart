@@ -17,10 +17,10 @@ class _LoginPageState extends State<LoginPage>
 
   final _formKey = GlobalKey<FormState>();
 
-  TextEditingController _emailControler = new TextEditingController();
-  TextEditingController _senhaControler = new TextEditingController();
+  final TextEditingController _emailControler = TextEditingController();
+  final TextEditingController _senhaControler = TextEditingController();
 
-  final _loginService = new LoginService();
+  final _loginService = LoginService();
 
   bool _isLoading = false;
 

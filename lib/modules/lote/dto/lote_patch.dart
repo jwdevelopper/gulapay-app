@@ -10,10 +10,10 @@ class LotePatch {
   });
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['codigo'] = this.codigo;
-    data['validade'] = this.validade;
-    data['ativo'] = this.ativo;
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['codigo'] = codigo;
+    data['validade'] = validade;
+    data['ativo'] = ativo;
     return data;
   }
 }

@@ -14,11 +14,11 @@ class entregador_responseDTO {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['id'] = this.id;
-    data['nome'] = this.nome;
-    data['telefone'] = this.telefone;
-    data['ativo'] = this.ativo;
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['id'] = id;
+    data['nome'] = nome;
+    data['telefone'] = telefone;
+    data['ativo'] = ativo;
     return data;
   }
 }

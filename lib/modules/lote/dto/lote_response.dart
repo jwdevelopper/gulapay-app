@@ -39,16 +39,16 @@ class LoteResponse {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['id'] = this.id;
-    data['insumoId'] = this.insumoId;
-    data['insumoNome'] = this.insumoNome;
-    data['codigo'] = this.codigo;
-    data['validade'] = this.validade;
-    data['quantidadeInicial'] = this.quantidadeInicial;
-    data['quantidadeRestante'] = this.quantidadeRestante;
-    data['custoUnitario'] = this.custoUnitario;
-    data['ativo'] = this.ativo;
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['id'] = id;
+    data['insumoId'] = insumoId;
+    data['insumoNome'] = insumoNome;
+    data['codigo'] = codigo;
+    data['validade'] = validade;
+    data['quantidadeInicial'] = quantidadeInicial;
+    data['quantidadeRestante'] = quantidadeRestante;
+    data['custoUnitario'] = custoUnitario;
+    data['ativo'] = ativo;
     return data;
   }
 }

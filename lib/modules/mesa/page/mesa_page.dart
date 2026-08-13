@@ -152,7 +152,7 @@ class _MesaPageState extends State<MesaPage> {
         final ButtonStyle? segmentedStyle = denseButtons
             ? ButtonStyle(
                 visualDensity: VisualDensity.compact,
-                padding: MaterialStateProperty.all(
+                padding: WidgetStateProperty.all(
                   const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 ),
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
