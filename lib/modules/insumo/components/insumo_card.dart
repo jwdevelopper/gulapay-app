@@ -14,7 +14,6 @@ class InsumoCard extends StatelessWidget {
   final double? percentVsMinimo;
 
   final VoidCallback onTap;
-  final VoidCallback onEdit;
   final Future<bool> Function() onConfirmDelete;
 
   const InsumoCard({
@@ -26,7 +25,6 @@ class InsumoCard extends StatelessWidget {
     required this.stockText,
     required this.percentVsMinimo,
     required this.onTap,
-    required this.onEdit,
     required this.onConfirmDelete,
   });
 

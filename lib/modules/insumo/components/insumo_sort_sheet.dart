@@ -52,7 +52,7 @@ class InsumoSortSheet extends StatelessWidget {
                   children: [
                     const Expanded(
                       child: Text(
-                        'Ordenar produtos',
+                        'Ordenar insumos',
                         style: TextStyle(
                           color: AppTema.textoEscuro,
                           fontSize: 18,

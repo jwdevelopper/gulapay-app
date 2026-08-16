@@ -38,11 +38,14 @@ class _InsumoFilterComponentState extends State<InsumoFilterComponent> {
   }
 
   void _applyFilters() {
-    Navigator.pop(context, InsumosFilters(
-      unidadePadraoId: widget.initialFilter.unidadePadraoId,
-      abaixoDoMinimo: _abaixoDoMinimo,
-      ativo: _ativo,
-    ));
+    Navigator.pop(context,
+      widget.initialFilter.copyWith(
+        abaixoDoMinimo: _abaixoDoMinimo,
+        clearAbaixoDoMinimo: _abaixoDoMinimo == null,
+        ativo: _ativo,
+        clearAtivo: _ativo == null,
+      ),
+    );  
   }
   
 

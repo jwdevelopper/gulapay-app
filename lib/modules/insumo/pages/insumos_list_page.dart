@@ -15,24 +15,39 @@ import 'package:my_app_teste/modules/unidade_medida/dto/unidade_medida_response.
 import 'package:my_app_teste/modules/insumo/components/insumo_chips.dart';
 import 'package:my_app_teste/modules/unidade_medida/service/unidade_medida_service.dart';
 
+enum _LoadStatus {loading, ready, error}
+
 class InsumosListPage extends StatefulWidget {
-  const InsumosListPage({super.key});
+  final InsumoService? insumoService;
+  final Future<List<UnidadeMedidaResponse>> Function()? listarUnidades;
+
+  const InsumosListPage({
+    super.key,
+    this.insumoService,
+    this.listarUnidades,
+  });
 
   @override
   State<InsumosListPage> createState() => _InsumosListPageState();
 }
 
 class _InsumosListPageState extends State<InsumosListPage> {
-  final InsumoService _insumoService = InsumoService();
+  late final InsumoService _insumoService =
+      widget.insumoService ?? InsumoService();
+  late final Future<List<UnidadeMedidaResponse>> Function() _listarUnidades =
+      widget.listarUnidades ?? listarUnidadesMedida;
   final TextEditingController _searchController = TextEditingController();
 
   List<InsumoResponse> _insumos = [];
   List<UnidadeMedidaResponse> unidadesMedidas = [];
   InsumosFilters _filter = InsumosFilters();
-  int? selectedUnidadeMedidaId;
-  bool _loading = false;
   String _search = '';
   String _sort = 'stock_asc';
+
+  _LoadStatus _insumosStatus = _LoadStatus.loading;
+  _LoadStatus _unidadeStatus = _LoadStatus.loading;
+  String? _erroInsumos;
+  String? _erroUnidades;
 
   @override
   void initState() {
@@ -100,33 +115,27 @@ class _InsumosListPageState extends State<InsumosListPage> {
   // ---------------------------------------------------------------------------
 
   Future<void> _load() async {
-    if (mounted) setState(() => _loading = true);
+    _setLoadingInsumo();
     try {
       final lista = await _insumoService.listar(apenasAtivos: false);
-      if (!mounted) return;
-      setState(() {
-        _insumos = lista;
-      });
+      _setReadyInsumo(lista);
     } catch (e) {
-      if (!mounted) return;
+      if(!mounted) return;
+      _setErrorInsumo(e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erro ao carregar insumos: $e')),
       );
-    } finally {
-      if (mounted) setState(() => _loading = false);
     }
   }
 
   Future<void> _loadUnidades() async {
+    _setLoadingUnidade();
     try {
-      final unidades = await listarUnidadesMedida();
-
-      if (!mounted) return;
-      setState(() {
-        unidadesMedidas = unidades;
-      });
+      final unidades = await _listarUnidades();
+      _setReadyUnidade(unidades);
     } catch (e) {
-      if (!mounted) return;
+      if(!mounted) return;
+      _setErrorUnidade(e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erro ao carregar unidades de medida: $e')),
       );
@@ -134,13 +143,18 @@ class _InsumosListPageState extends State<InsumosListPage> {
   }
 
   Future<void> _reload() async {
-    await _load();
+    await Future.wait([
+      _load(),
+      _loadUnidades(),
+    ]);
   }
 
   Future<void> _openCreate() async {
     final created = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (_) => const InsumoFormPage()),
+      MaterialPageRoute(builder: (_) => InsumoFormPage(
+        insumoService: widget.insumoService,
+        listarUnidades: widget.listarUnidades,)),
     );
     if (created == true) {
       await _reload();
@@ -150,7 +164,12 @@ class _InsumosListPageState extends State<InsumosListPage> {
   Future<void> _openEdit(InsumoResponse insumo) async {
     final updated = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (_) => InsumoFormPage(insumo: insumo)),
+      MaterialPageRoute(builder: (_) => InsumoFormPage(
+        insumo: insumo,
+        insumoId: insumo.id ,
+        insumoService: widget.insumoService,
+        listarUnidades: widget.listarUnidades,
+        )),
     );
     if (updated == true) {
       await _reload();
@@ -243,7 +262,6 @@ class _InsumosListPageState extends State<InsumosListPage> {
     );
     if (result == null) return;
     setState(() => _filter = result);
-    await _load();
   }
 
   void _clearSearch() {
@@ -252,7 +270,7 @@ class _InsumosListPageState extends State<InsumosListPage> {
   }
 
   // ---------------------------------------------------------------------------
-  // Helpers visuais
+  // Helpers
   // ---------------------------------------------------------------------------
 
   String _formatEstoque(double? valor, String? simbolo) {
@@ -316,6 +334,56 @@ class _InsumosListPageState extends State<InsumosListPage> {
       return Icons.rice_bowl_rounded;
     }
     return Icons.inventory_2_rounded;
+  }
+
+  void _setStatusInsumos(_LoadStatus estado, {String? erro}){
+    setState(() {
+      _insumosStatus = estado;
+      _erroInsumos = erro;
+    });
+  }
+
+  void _setStatusUnidades(_LoadStatus estado, {String? erro}){
+    setState(() {
+      _unidadeStatus = estado;
+      _erroUnidades = erro;
+    });
+  }
+
+  void _setLoadingInsumo() {
+    if(!mounted) return;
+    _setStatusInsumos(_LoadStatus.loading);
+  }
+
+  void _setErrorInsumo(String erro) {
+    if(!mounted) return;
+    _setStatusInsumos(_LoadStatus.error, erro: erro.toString());
+  }
+
+  void _setReadyInsumo(List<InsumoResponse> insumos) {
+    if(!mounted) return;
+    setState(() {
+      _insumos = insumos;
+      _insumosStatus = _LoadStatus.ready;
+    });
+  } 
+
+  void _setLoadingUnidade() {
+    if(!mounted) return;
+    _setStatusUnidades(_LoadStatus.loading);
+  }
+
+  void _setErrorUnidade(String erro) {
+    if(!mounted) return;
+    _setStatusUnidades(_LoadStatus.error, erro: erro.toString());
+  }
+
+  void _setReadyUnidade(List<UnidadeMedidaResponse> unidades) {
+    if(!mounted) return;
+    setState(() {
+      unidadesMedidas = unidades;
+      _unidadeStatus = _LoadStatus.ready;
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -418,19 +486,36 @@ class _InsumosListPageState extends State<InsumosListPage> {
       ),
       percentVsMinimo: _percentualVsMinimo(insumo),
       onTap: () => _openEdit(insumo),
-      onEdit: () => _openEdit(insumo),
       onConfirmDelete: () => _confirmarEExcluir(insumo),
     );
   }
 
   Widget _buildList() {
-    if (_loading) {
+    if (_insumosStatus == _LoadStatus.loading) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 28, 16, 140),
         children: const [
           SizedBox(height: 120),
           Center(child: CircularProgressIndicator()),
+        ],
+      );
+    }
+
+    if (_insumosStatus == _LoadStatus.error) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 140),
+        children: [
+          const SizedBox(height: 24),
+          EmptyStateCard(
+            title: 'Houve um erro no carregamento de insumos.',
+            subtitle:
+                'Por favor, tente novamente.',
+            icon: Icons.error_outline,
+            buttonLabel: 'Recarregar',
+            onPressed: _reload,
+          ),
         ],
       );
     }
@@ -532,7 +617,26 @@ class _InsumosListPageState extends State<InsumosListPage> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
-                  child: UnidadesMedidasChips(
+                  child: switch (_unidadeStatus) {
+                    
+                    _LoadStatus.loading => const SizedBox(
+                      height: 32,
+                      child: Center(
+                        child: SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    ),
+
+                    _LoadStatus.error => TextButton.icon(
+                      onPressed: _loadUnidades,
+                      icon: const Icon(Icons.refresh_rounded, size: 16),
+                      label: const Text('Recarregar unidades'),
+                    ),
+
+                    _LoadStatus.ready => UnidadesMedidasChips(
                     unidadesMedidas: unidadesMedidas,
                     selectedUnidadeMedidaId: _filter.unidadePadraoId,
                     onClear: () => setState(() {
@@ -542,7 +646,7 @@ class _InsumosListPageState extends State<InsumosListPage> {
                       _filter = _filter.copyWith(unidadePadraoId: unidade.id);
                     }),
                   ),
-              ),],
+              }),],
           ),
           const SizedBox(height: 4),
           _buildResultsHeader(),

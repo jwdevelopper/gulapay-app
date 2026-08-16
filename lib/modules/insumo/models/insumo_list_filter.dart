@@ -34,15 +34,17 @@ class InsumosFilters {
     double? estoqueMinimo,
     bool clearEstoqueMinimo = false,
     bool? abaixoDoMinimo,
+    bool clearAbaixoDoMinimo = false,
     bool? ativo,
+    bool clearAtivo = false,
   }) {
     return InsumosFilters(
       nome: nome ?? this.nome,
       unidadePadraoId: clearUnidadePadraoId ? null : (unidadePadraoId ?? this.unidadePadraoId),
       estoqueAtual: clearEstoqueAtual ? null : (estoqueAtual ?? this.estoqueAtual),
       estoqueMinimo: clearEstoqueMinimo ? null : (estoqueMinimo ?? this.estoqueMinimo),
-      abaixoDoMinimo: abaixoDoMinimo ?? this.abaixoDoMinimo,
-      ativo: ativo ?? this.ativo,
+      abaixoDoMinimo: clearAbaixoDoMinimo ? null : (abaixoDoMinimo ?? this.abaixoDoMinimo),
+      ativo: clearAtivo ? null : (ativo ?? this.ativo),
     );
   }
 
