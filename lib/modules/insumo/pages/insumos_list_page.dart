@@ -132,7 +132,8 @@ class _InsumosListPageState extends State<InsumosListPage> {
     _setLoadingUnidade();
     try {
       final unidades = await _listarUnidades();
-      _setReadyUnidade(unidades);
+      final ativas = unidades.where((u) => u.ativo == true).toList();
+      _setReadyUnidade(ativas);
     } catch (e) {
       if(!mounted) return;
       _setErrorUnidade(e.toString());

@@ -8,6 +8,7 @@ import 'package:my_app_teste/modules/insumo/dto/insumo_update.dart';
 import 'package:my_app_teste/modules/insumo/service/insumo_service.dart';
 import 'package:my_app_teste/modules/unidade_medida/dto/unidade_medida_response.dart';
 import 'package:my_app_teste/modules/unidade_medida/service/unidade_medida_service.dart';
+import 'package:my_app_teste/shared/overlay/busy_overlay.dart';
 
 enum _LoadStatus { loading, ready, error}
 
@@ -261,24 +262,30 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
       ),
       body: _status == _LoadStatus.error ? _buildErroCarregamento() :
         SafeArea(
-          child: Form(
-            key: _formKey,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-              children: [
-                _buildNomeField(),
-                const SizedBox(height: 16),
-                _buildUnidadeDropdown(),
-                const SizedBox(height: 16),
-                _buildEstoqueMinimoField(),
-                if (widget.isEditing) ...[
+          child: BusyOverlay(
+             isBusy: _status == _LoadStatus.loading || _saving,
+              message: _status == _LoadStatus.loading
+                  ? 'Carregando unidades...'
+                  : 'Salvando...',
+            child: Form(
+              key: _formKey,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                children: [
+                  _buildNomeField(),
                   const SizedBox(height: 16),
-                  _buildAtivoSwitch(),
+                  _buildUnidadeDropdown(),
+                  const SizedBox(height: 16),
+                  _buildEstoqueMinimoField(),
+                  if (widget.isEditing) ...[
+                    const SizedBox(height: 16),
+                    _buildAtivoSwitch(),
+                  ],
+                  const SizedBox(height: 32),
+                  _buildSaveButton(),
                 ],
-                const SizedBox(height: 32),
-                _buildSaveButton(),
-              ],
+              ),
             ),
           ),
         ),
@@ -292,6 +299,8 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
       maxLength: 120,
       textCapitalization: TextCapitalization.sentences,
       decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.white,
         labelText: 'Nome',
         floatingLabelStyle: const TextStyle(
           color: AppTema.textoEscuro,
@@ -352,6 +361,8 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
       key: ValueKey(_unidadeMedidaSelecionada?.id),
       initialValue: _unidadeMedidaSelecionada,
       decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.white,
         labelText: 'Unidade de medida',
         floatingLabelStyle: const TextStyle(
           color: AppTema.textoEscuro,
@@ -401,6 +412,8 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
         FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
       ],
       decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.white,
         labelText: 'Estoque mínimo',
         floatingLabelStyle: const TextStyle(
           color: AppTema.textoEscuro,
@@ -437,8 +450,9 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
   Widget _buildAtivoSwitch() {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: Theme.of(context).dividerColor),
-        borderRadius: BorderRadius.circular(4),
+        color: Colors.white,
+        border: Border.all(color: AppTema.primaria, width: 2),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: SwitchListTile(
         title: const Text('Ativo'),
@@ -449,6 +463,10 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
         ),
         value: _ativo,
         onChanged: _saving ? null : (v) => setState(() => _ativo = v),
+        activeThumbColor: AppTema.primaria,
+        activeTrackColor: AppTema.primaria.withValues(alpha: 0.4),
+        inactiveThumbColor: Colors.grey,
+        inactiveTrackColor: Colors.grey.shade300,
       ),
     );
   }
