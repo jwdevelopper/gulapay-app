@@ -42,6 +42,7 @@ dependencies:
   flutter_native_splash: ^2.4.7
   mask_text_input_formatter: ^2.9.0
   curved_navigation_bar: ^1.0.6
+  currency_text_input_formatter: ^2.3.1
 
 dev_dependencies:
   flutter_test:
