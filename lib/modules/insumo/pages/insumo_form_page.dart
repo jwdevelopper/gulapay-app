@@ -1,51 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:my_app_teste/core/api_error.dart';
-import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/modules/insumo/dto/insumo_create_request.dart';
 import 'package:my_app_teste/modules/insumo/dto/insumo_response.dart';
 import 'package:my_app_teste/modules/insumo/dto/insumo_update.dart';
 import 'package:my_app_teste/modules/insumo/service/insumo_service.dart';
-import 'package:my_app_teste/modules/unidade_medida/dto/unidade_medida_response.dart';
-import 'package:my_app_teste/modules/unidade_medida/service/unidade_medida_service.dart';
-import 'package:my_app_teste/shared/overlay/busy_overlay.dart';
-
-enum _LoadStatus { loading, ready, error}
+import 'package:my_app_teste/modules/insumo/components/unidade_medida_mock.dart';
 
 class InsumoFormPage extends StatefulWidget {
-  final int? insumoId;
+  /// Quando null, é cadastro. Quando preenchido, é edição.
   final InsumoResponse? insumo;
-  final InsumoService? insumoService;
-  final Future<List<UnidadeMedidaResponse>> Function()? listarUnidades;
 
-  const InsumoFormPage({super.key, this.insumoId, this.insumo, this.insumoService, this.listarUnidades});
+  const InsumoFormPage({super.key, this.insumo});
 
-  bool get isEditing => insumoId != null || insumo?.id != null;
   @override
   State<InsumoFormPage> createState() => _InsumoFormPageState();
 }
 
 class _InsumoFormPageState extends State<InsumoFormPage> {
   final _formKey = GlobalKey<FormState>();
-  late final InsumoService _insumoService =
-      widget.insumoService ?? InsumoService();
+  final _insumoService = InsumoService();
+  final _unidadeService = UnidadeMedidaServiceMock();
+
   late final TextEditingController _nomeController;
   late final TextEditingController _estoqueMinimoController;
 
- late final Future<List<UnidadeMedidaResponse>> Function() _listarUnidades =
-      widget.listarUnidades ?? listarUnidadesMedida;
-
   // Estado das unidades
-  _LoadStatus _status = _LoadStatus.loading;
-  List<UnidadeMedidaResponse> _unidades = [];
+  List<UnidadeMedidaMock> _unidades = [];
+  bool _loadingUnidades = true;
   String? _erroCarregarUnidades;
 
   // Campos do form
-  UnidadeMedidaResponse? _unidadeMedidaSelecionada;
+  int? _unidadePadraoId;
   bool _ativo = true;
 
   // Estado de salvamento
   bool _saving = false;
+
+  bool get _isEditing => widget.insumo != null;
 
   @override
   void initState() {
@@ -58,8 +50,9 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
           ? _formatNumeroParaInput(insumo!.estoqueMinimo!)
           : '',
     );
-    
+    _unidadePadraoId = insumo?.unidadePadraoId;
     _ativo = insumo?.ativo ?? true;
+
     _carregarUnidades();
   }
 
@@ -75,14 +68,25 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
   // ---------------------------------------------------------------------------
 
   Future<void> _carregarUnidades() async {
-    _setLoading();
+    if (mounted) {
+      setState(() {
+        _loadingUnidades = true;
+        _erroCarregarUnidades = null;
+      });
+    }
     try {
-      final unidades = await _listarUnidades();
-      final ativas = unidades.where((u) => u.ativo == true).toList();
-      final selecionadaAtual = _encontrarUnidadeAtual(ativas);
-      _setReady(unidades: ativas, selecionada: selecionadaAtual);
+      final lista = await _unidadeService.listar();
+      if (!mounted) return;
+      setState(() {
+        _unidades = lista;
+        _loadingUnidades = false;
+      });
     } catch (e) {
-      _setError(e.toString());
+      if (!mounted) return;
+      setState(() {
+        _erroCarregarUnidades = e.toString();
+        _loadingUnidades = false;
+      });
     }
   }
 
@@ -103,46 +107,6 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
     return double.tryParse(limpo);
   }
 
-  void _setStatus(_LoadStatus estado, {String? erro}){
-    setState(() {
-      _status = estado;
-      _erroCarregarUnidades = erro;
-    });
-  }
-
-  void _setLoading() {
-    if(!mounted) return;
-    _setStatus(_LoadStatus.loading);
-  }
-
-  void _setError(String erro) {
-    if(!mounted) return;
-    _setStatus(_LoadStatus.error, erro: erro);
-  }
-  
-  void _setReady({
-    required List<UnidadeMedidaResponse> unidades,
-    UnidadeMedidaResponse? selecionada,
-  }) {
-    if(!mounted) return;
-    setState(() {
-      _unidades = unidades;
-      _unidadeMedidaSelecionada = selecionada;
-      _status = _LoadStatus.ready;
-    });
-  }
-
-  UnidadeMedidaResponse? _encontrarUnidadeAtual(List<UnidadeMedidaResponse> unidades) {
-    final insumo = widget.insumo;
-    if(insumo == null) return null;
-
-    for(final u in unidades) {
-      if(u.id == insumo.unidadePadraoId) {
-        return u;
-      }
-    }
-    return null;
-  }
   // ---------------------------------------------------------------------------
   // Validações
   // ---------------------------------------------------------------------------
@@ -155,7 +119,7 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
     return null;
   }
 
-  String? _validarUnidade(UnidadeMedidaResponse? value) {
+  String? _validarUnidade(int? value) {
     if (value == null) return 'Selecione uma unidade de medida';
     return null;
   }
@@ -174,7 +138,7 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
   // ---------------------------------------------------------------------------
 
   Future<void> _salvar() async {
-    if (_status != _LoadStatus.ready) {
+    if (_loadingUnidades || _erroCarregarUnidades != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Aguarde as unidades carregarem para salvar.'),
@@ -191,22 +155,18 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
       final nome = _nomeController.text.trim();
       final estoqueMinimo = _parseEstoqueMinimo(_estoqueMinimoController.text)!;
 
-      if (widget.isEditing) {
+      if (_isEditing) {
         final request = InsumoUpdate(
           nome: nome,
-          unidadePadraoId: _unidadeMedidaSelecionada?.id,
+          unidadePadraoId: _unidadePadraoId,
           estoqueMinimo: estoqueMinimo,
           ativo: _ativo,
         );
-        final id = widget.insumoId ?? widget.insumo?.id;
-        if(id == null) {
-          return;
-        }
-        await _insumoService.atualizar(id, request);
+        await _insumoService.atualizar(widget.insumo!.id!, request);
       } else {
         final request = InsumoCreateRequest(
           nome: nome,
-          unidadePadraoId: _unidadeMedidaSelecionada?.id,
+          unidadePadraoId: _unidadePadraoId,
           estoqueMinimo: estoqueMinimo,
         );
         await _insumoService.criar(request);
@@ -216,7 +176,7 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            widget.isEditing
+            _isEditing
                 ? 'Insumo atualizado com sucesso.'
                 : 'Insumo cadastrado com sucesso.',
           ),
@@ -240,6 +200,8 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
           backgroundColor: Colors.red,
         ),
       );
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -250,45 +212,31 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTema.fundo,
       appBar: AppBar(
-        title: Text(widget.isEditing ? 'Editar insumo' : 'Novo insumo',
-          style: TextStyle(
-            color: AppTema.textoEscuro,
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
+        title: Text(_isEditing ? 'Editar insumo' : 'Novo insumo'),
+      ),
+      body: SafeArea(
+        child: Form(
+          key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+            children: [
+              _buildNomeField(),
+              const SizedBox(height: 16),
+              _buildUnidadeSection(),
+              const SizedBox(height: 16),
+              _buildEstoqueMinimoField(),
+              if (_isEditing) ...[
+                const SizedBox(height: 16),
+                _buildAtivoSwitch(),
+              ],
+              const SizedBox(height: 32),
+              _buildSaveButton(),
+            ],
           ),
         ),
       ),
-      body: _status == _LoadStatus.error ? _buildErroCarregamento() :
-        SafeArea(
-          child: BusyOverlay(
-             isBusy: _status == _LoadStatus.loading || _saving,
-              message: _status == _LoadStatus.loading
-                  ? 'Carregando unidades...'
-                  : 'Salvando...',
-            child: Form(
-              key: _formKey,
-              autovalidateMode: AutovalidateMode.onUserInteraction,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                children: [
-                  _buildNomeField(),
-                  const SizedBox(height: 16),
-                  _buildUnidadeDropdown(),
-                  const SizedBox(height: 16),
-                  _buildEstoqueMinimoField(),
-                  if (widget.isEditing) ...[
-                    const SizedBox(height: 16),
-                    _buildAtivoSwitch(),
-                  ],
-                  const SizedBox(height: 32),
-                  _buildSaveButton(),
-                ],
-              ),
-            ),
-          ),
-        ),
     );
   }
 
@@ -298,107 +246,94 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
       enabled: !_saving,
       maxLength: 120,
       textCapitalization: TextCapitalization.sentences,
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: Colors.white,
+      decoration: const InputDecoration(
         labelText: 'Nome',
-        floatingLabelStyle: const TextStyle(
-          color: AppTema.textoEscuro,
-        ),
         hintText: 'Ex: Tomate italiano',
-        
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: AppTema.primaria,
-            width: 1.5,
-          ),
-        ),
-
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: AppTema.primaria,
-            width: 2,
-          ),
-        ),
-
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: Colors.red,
-          ),
-        ),
+        border: OutlineInputBorder(),
       ),
       validator: _validarNome,
     );
   }
 
   /// Renderiza um de três estados: carregando, erro, ou o dropdown pronto.
-  Widget _buildErroCarregamento() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-            const SizedBox(height: 12),
-            Text(_erroCarregarUnidades ?? 'Erro ao carregar as unidades.'),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(onPressed: _carregarUnidades, icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Tentar novamente'),
-              ),
-          ],
-        ),
-        ),
+  Widget _buildUnidadeSection() {
+    if (_loadingUnidades) {
+      return _buildUnidadeLoading();
+    }
+    if (_erroCarregarUnidades != null) {
+      return _buildUnidadeErro();
+    }
+    return _buildUnidadeDropdown();
+  }
+
+  Widget _buildUnidadeLoading() {
+    return InputDecorator(
+      decoration: const InputDecoration(
+        labelText: 'Unidade de medida',
+        border: OutlineInputBorder(),
+      ),
+      child: Row(
+        children: const [
+          SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          SizedBox(width: 12),
+          Text('Carregando unidades...'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUnidadeErro() {
+    return InputDecorator(
+      decoration: InputDecoration(
+        labelText: 'Unidade de medida',
+        border: const OutlineInputBorder(),
+        errorText: 'Não foi possível carregar as unidades',
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Expanded(
+            child: Text(
+              'Tente novamente para listar as unidades.',
+              style: TextStyle(fontSize: 13),
+            ),
+          ),
+          TextButton.icon(
+            onPressed: _carregarUnidades,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('Recarregar'),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildUnidadeDropdown() {
-  
-    return DropdownButtonFormField<UnidadeMedidaResponse>(
-      key: ValueKey(_unidadeMedidaSelecionada?.id),
-      initialValue: _unidadeMedidaSelecionada,
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: Colors.white,
+    // Se o insumo veio com uma unidade que não está na lista atual (caso raro),
+    // o initialValue ainda funciona, mas o dropdown não exibe o item — limpa
+    // pra evitar warning de "value not in items".
+    final initialValid = _unidades.any((u) => u.id == _unidadePadraoId);
+    final initial = initialValid ? _unidadePadraoId : null;
+
+    return DropdownButtonFormField<int>(
+      initialValue: initial,
+      decoration: const InputDecoration(
         labelText: 'Unidade de medida',
-        floatingLabelStyle: const TextStyle(
-          color: AppTema.textoEscuro,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: AppTema.primaria,
-            width: 1.5,
-          ),
-        ),
-
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: AppTema.primaria,
-            width: 2,
-          ),
-        ),
-
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: Colors.red,
-          ),
-        ),
+        border: OutlineInputBorder(),
       ),
       items: _unidades.map((unidade) {
-        return DropdownMenuItem<UnidadeMedidaResponse>(
-          value: unidade,
+        return DropdownMenuItem<int>(
+          value: unidade.id,
           child: Text('${unidade.nome} (${unidade.simbolo})'),
         );
       }).toList(),
       onChanged: _saving
           ? null
-          : (value) => setState(() => _unidadeMedidaSelecionada = value),
+          : (value) => setState(() => _unidadePadraoId = value),
       validator: _validarUnidade,
     );
   }
@@ -411,37 +346,11 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
       ],
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: Colors.white,
+      decoration: const InputDecoration(
         labelText: 'Estoque mínimo',
-        floatingLabelStyle: const TextStyle(
-          color: AppTema.textoEscuro,
-        ),
         hintText: 'Ex: 0,5',
         helperText: 'Quantidade na unidade selecionada',
-          enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: AppTema.primaria,
-            width: 1.5,
-          ),
-        ),
-
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: AppTema.primaria,
-            width: 2,
-          ),
-        ),
-
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: Colors.red,
-          ),
-        ),
+        border: OutlineInputBorder(),
       ),
       validator: _validarEstoqueMinimo,
     );
@@ -450,9 +359,8 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
   Widget _buildAtivoSwitch() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppTema.primaria, width: 2),
-        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Theme.of(context).dividerColor),
+        borderRadius: BorderRadius.circular(4),
       ),
       child: SwitchListTile(
         title: const Text('Ativo'),
@@ -463,32 +371,23 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
         ),
         value: _ativo,
         onChanged: _saving ? null : (v) => setState(() => _ativo = v),
-        activeThumbColor: AppTema.primaria,
-        activeTrackColor: AppTema.primaria.withValues(alpha: 0.4),
-        inactiveThumbColor: Colors.grey,
-        inactiveTrackColor: Colors.grey.shade300,
       ),
     );
   }
 
   Widget _buildSaveButton() {
     final podeSalvar = !_saving &&
-        _status == _LoadStatus.ready &&
+        !_loadingUnidades &&
         _erroCarregarUnidades == null;
 
     return SizedBox(
-      width: 150,
-      height: 50,
+      width: double.infinity,
       child: ElevatedButton(
         onPressed: podeSalvar ? _salvar : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppTema.primaria,
-          foregroundColor: AppTema.bordaCampo,
-          minimumSize: const Size(140, 40),
-          maximumSize: const Size(140, 40),
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
         child: _saving
@@ -500,7 +399,7 @@ class _InsumoFormPageState extends State<InsumoFormPage> {
                   color: Colors.white,
                 ),
               )
-            : Text(widget.isEditing ? 'Salvar alterações' : 'Cadastrar insumo'),
+            : Text(_isEditing ? 'Salvar alterações' : 'Cadastrar insumo'),
       ),
     );
   }
