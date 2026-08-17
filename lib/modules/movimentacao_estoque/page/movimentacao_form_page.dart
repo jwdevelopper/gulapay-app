@@ -5,6 +5,7 @@ import 'package:my_app_teste/modules/movimentacao_estoque/dto/lote.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/dto/unidade_medida.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/service/movimentacao_estoque_service.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/widgets/estoque_palette.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 
 class _ChoiceOption {
   final String label;
@@ -35,6 +36,12 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
   final _codigoLote = TextEditingController();
   final _justificativa = TextEditingController();
   final _validade = TextEditingController();
+
+  final _dataMaskFormatter = MaskTextInputFormatter(
+    mask: '##/##/####', 
+    filter: { "#": RegExp(r'[0-9]') },
+    type: MaskAutoCompletionType.lazy,
+  );
 
   List<Insumo> _insumos = [];
   List<Lote> _lotes = [];
@@ -490,14 +497,35 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
       }),
     ]);
   }
-
-  Widget _buildStep2() {
+Widget _buildStep2() {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       if (!_isEntrada) ...[_buildLoteSelector(), const SizedBox(height: 16)],
       if (_isEntrada) ...[
         const Text('Validade *', style: TextStyle(color: EstoquePalette.text, fontSize: 13, fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),
-        _buildTextField(controller: _validade, hint: '2026-12-31', onChanged: (_) {}, keyboardType: TextInputType.datetime),
+        
+        TextFormField(
+          controller: _validade,
+          keyboardType: TextInputType.number, 
+          inputFormatters: [_dataMaskFormatter], 
+          style: const TextStyle(color: EstoquePalette.text, fontSize: 15),
+          decoration: InputDecoration(
+            hintText: 'DD/MM/AAAA',
+            hintStyle: const TextStyle(color: EstoquePalette.textMuted, fontSize: 15),
+            filled: true,
+            fillColor: EstoquePalette.surfaceAlt, 
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: EstoquePalette.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: EstoquePalette.primary, width: 1.5),
+            ),
+          ),
+        ),
+
         const SizedBox(height: 16),
         const Text('Custo unitário *', style: TextStyle(color: EstoquePalette.text, fontSize: 13, fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),
