@@ -12,6 +12,7 @@ import '../dto/cliente_endereco.dart';
 import '../dto/cliente_response.dart';
 import '../dto/cliente_update_request.dart';
 import '../service/cliente_service.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 
 class ClienteFormPage extends StatefulWidget {
   final ClienteResponse? cliente;
@@ -37,6 +38,15 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
   final _controleBairro = TextEditingController();
   final _controleCidade = TextEditingController();
   final _controleUf = TextEditingController();
+  final _mascaraTelefone = MaskTextInputFormatter(
+    mask: '(##) #####-####', 
+    filter: { "#": RegExp(r'[0-9]') },
+  );
+
+  final _mascaraCep = MaskTextInputFormatter(
+    mask: '#####-###', 
+    filter: { "#": RegExp(r'[0-9]') },
+  );
 
   bool _carregando = false;
 
@@ -180,13 +190,15 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
                       const SizedBox(height: 6),
                       AppCampoTexto(
                         controle: _controleTelefone,
-                        dica: 'Ex.: 11999990000',
+                        dica: 'Ex.: (11) 99999-0000', 
                         tipoTeclado: TextInputType.phone,
-                        tamanhoMax: 20,
+                        tamanhoMax: 15, 
+                        formatadores: [_mascaraTelefone],
                         validador: (v) {
                           if (v == null || v.trim().isEmpty) {
                             return 'Informe o telefone';
                           }
+                          if (v.length < 14) return 'Telefone incompleto'; 
                           return null;
                         },
                       ),
@@ -221,6 +233,7 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
                         dica: 'Ex.: 01310-100',
                         tipoTeclado: TextInputType.number,
                         tamanhoMax: 9,
+                        formatadores: [_mascaraCep],
                       ),
                       const SizedBox(height: 14),
                       const AppRotulo('Logradouro *'),

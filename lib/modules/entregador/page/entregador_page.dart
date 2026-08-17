@@ -112,7 +112,7 @@ class _EntregadorPageState extends State<EntregadorPage> {
                           icon: const FaIcon(
                             FontAwesomeIcons.xmark,
                             size: 16.0,
-                            color: const Color.fromARGB(255, 248, 151, 40),
+                            color: Color.fromARGB(255, 248, 151, 40),
                           ),
                         ),
                       ),
@@ -140,7 +140,7 @@ class _EntregadorPageState extends State<EntregadorPage> {
                           icon: const FaIcon(
                             FontAwesomeIcons.xmark,
                             size: 16.0,
-                            color: const Color.fromARGB(255, 248, 151, 40),
+                            color: Color.fromARGB(255, 248, 151, 40),
                           ),
                         ),
                       ),

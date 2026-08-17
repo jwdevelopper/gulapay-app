@@ -10,10 +10,10 @@ class AppCampoTexto extends StatelessWidget {
   final Widget? sufixo;
   final Widget? prefixo;
   final TextInputType? tipoTeclado;
-  final List<TextInputFormatter>? formatadores;
   final String? Function(String?)? validador;
   final void Function(String)? aoMudar;
   final bool habilitado;
+  final List<TextInputFormatter>? formatadores; 
 
   const AppCampoTexto({
     super.key,
@@ -24,10 +24,10 @@ class AppCampoTexto extends StatelessWidget {
     this.sufixo,
     this.prefixo,
     this.tipoTeclado,
-    this.formatadores,
     this.validador,
     this.aoMudar,
     this.habilitado = true,
+    this.formatadores,
   });
 
   @override

@@ -41,17 +41,17 @@ class ResponseLogin {
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
-    data['accessToken'] = this.token;
-    data['tokenType'] = this.tokenType;
-    data['expiresInMinutes'] = this.expiresIn;
-    data['message'] = this.message;
-    data['error'] = this.error;
-    data['statusCode'] = this.statusCode;
-    data['detail'] = this.detail;
-    data['usuarioId'] = this.usuarioId;
-    data['login'] = this.login;
-    data['nome'] = this.nome;
-    data['perfil'] = this.perfil;
+    data['accessToken'] = token;
+    data['tokenType'] = tokenType;
+    data['expiresInMinutes'] = expiresIn;
+    data['message'] = message;
+    data['error'] = error;
+    data['statusCode'] = statusCode;
+    data['detail'] = detail;
+    data['usuarioId'] = usuarioId;
+    data['login'] = login;
+    data['nome'] = nome;
+    data['perfil'] = perfil;
     return data;
   }
 }
