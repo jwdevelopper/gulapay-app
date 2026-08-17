@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/widgets/app_campo_busca.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/dto/insumo.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/dto/lote.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/dto/unidade_medida.dart';
@@ -191,61 +192,34 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
     }
   }
 
-  void _openInsumoSelector() {
-    showModalBottomSheet<void>(
-      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
-      builder: (ctx) => FractionallySizedBox(
-        heightFactor: 0.72,
-        child: Container(
-          decoration: const BoxDecoration(color: EstoquePalette.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-          child: SafeArea(top: false, child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: EstoquePalette.borderSoft, borderRadius: BorderRadius.circular(999)))),
-              const SizedBox(height: 18),
-              Row(children: [
-                const Expanded(child: Text('Escolher insumo', style: TextStyle(color: EstoquePalette.text, fontSize: 18, fontWeight: FontWeight.w700))),
-                IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close_rounded), color: EstoquePalette.text),
-              ]),
-              const SizedBox(height: 8),
-              Expanded(child: _insumos.isEmpty
-                ? const Center(child: Text('Sem insumos cadastrados', style: TextStyle(color: EstoquePalette.text, fontSize: 16, fontWeight: FontWeight.w700)))
-                : ListView.separated(
-                    itemCount: _insumos.length, separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final insumo = _insumos[index];
-                      final selected = insumo.id == _selectedInsumo?.id;
-                      return InkWell(
-                        onTap: () { setState(() { _selectedInsumo = insumo; _insumoError = false; _validationMessage = null;
-                          if (insumo.unidadePadraoId != null) {
-                            for (final u in _unidades) { if (u.id == insumo.unidadePadraoId) { _selectedUnidade = u; break; } }
-                          }
-                        }); Navigator.pop(ctx); },
-                        borderRadius: BorderRadius.circular(18),
-                        child: Container(padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: selected ? EstoquePalette.warningBg : EstoquePalette.surfaceAlt,
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: selected ? EstoquePalette.primary : EstoquePalette.border)),
-                          child: Row(children: [
-                            Container(width: 40, height: 40,
-                              decoration: BoxDecoration(color: selected ? EstoquePalette.primary : EstoquePalette.inputFill, borderRadius: BorderRadius.circular(14)),
-                              child: Icon(Icons.inventory_2_rounded, color: selected ? Colors.white : EstoquePalette.primary, size: 20)),
-                            const SizedBox(width: 14),
-                            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text(insumo.nome, style: const TextStyle(color: EstoquePalette.text, fontSize: 15, fontWeight: FontWeight.w700)),
-                              const SizedBox(height: 2),
-                              Text('Saldo atual: ${insumo.estoqueAtual?.toStringAsFixed(1) ?? '0'} ${insumo.unidadePadraoSimbolo ?? ''}',
-                                style: const TextStyle(color: EstoquePalette.textMuted, fontSize: 12)),
-                            ])),
-                            if (selected) const Icon(Icons.check_rounded, color: EstoquePalette.primary) else const SizedBox(width: 18),
-                          ])));
-                    })),
-            ]),
-          )),
-        ),
+  
+  void _openInsumoSelector() async {
+    final Insumo? insumoEscolhido = await showModalBottomSheet<Insumo>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => InsumoSelectorModal(
+        insumos: _insumos,
+        insumoSelecionado: _selectedInsumo,
       ),
     );
+
+    if (insumoEscolhido != null) {
+      setState(() {
+        _selectedInsumo = insumoEscolhido;
+        _insumoError = false;
+        _validationMessage = null;
+        
+        if (insumoEscolhido.unidadePadraoId != null) {
+          for (final u in _unidades) {
+            if (u.id == insumoEscolhido.unidadePadraoId) {
+              _selectedUnidade = u;
+              break;
+            }
+          }
+        }
+      });
+    }
   }
 
   String? get _insumoTipoMedida {
@@ -691,3 +665,152 @@ class _SummaryRow extends StatelessWidget {
   }
 }
 
+class InsumoSelectorModal extends StatefulWidget {
+  final List<Insumo> insumos;
+  final Insumo? insumoSelecionado;
+
+  const InsumoSelectorModal({
+    super.key,
+    required this.insumos,
+    this.insumoSelecionado,
+  });
+
+  @override
+  State<InsumoSelectorModal> createState() => _InsumoSelectorModalState();
+}
+
+class _InsumoSelectorModalState extends State<InsumoSelectorModal> {
+  final TextEditingController _buscaController = TextEditingController();
+  
+  // Nova variável para guardar apenas a lista que vai aparecer na tela
+  List<Insumo> _insumosFiltrados = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _insumosFiltrados = widget.insumos;
+  }
+
+  @override
+  void dispose() {
+    _buscaController.dispose();
+    super.dispose();
+  }
+
+  String _removerAcentos(String texto) {
+    const comAcento = 'ÀÁÂÃÄÅàáâãäåÒÓÔÕÕÖØòóôõöøÈÉÊËèéêëðÇçÐÌÍÎÏìíîïÙÚÛÜùúûüÑñ';
+    const semAcento = 'AAAAAAaaaaaaOOOOOOOooooooEEEEeeeeecCdIIIIiiiiUUUUuuuuNn';
+    String resultado = texto;
+    for (int i = 0; i < comAcento.length; i++) {
+      resultado = resultado.replaceAll(comAcento[i], semAcento[i]);
+    }
+    return resultado;
+  }
+
+  void _filtrarInsumos(String query) {
+    final queryLimpa = _removerAcentos(query.trim().toLowerCase());
+    
+    setState(() {
+      if (queryLimpa.isEmpty) {
+        _insumosFiltrados = widget.insumos;
+      } else {
+        _insumosFiltrados = widget.insumos.where((insumo) {
+          final nomeLimpo = _removerAcentos(insumo.nome.toLowerCase());
+          return nomeLimpo.contains(queryLimpa);
+        }).toList();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FractionallySizedBox(
+      heightFactor: 0.85,
+      child: Container(
+        decoration: const BoxDecoration(
+          color: EstoquePalette.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(20, 10, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40, height: 4,
+                    decoration: BoxDecoration(color: EstoquePalette.borderSoft, borderRadius: BorderRadius.circular(999)),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    const Expanded(child: Text('Escolher insumo', style: TextStyle(color: EstoquePalette.text, fontSize: 18, fontWeight: FontWeight.w700))),
+                    IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded), color: EstoquePalette.text),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                
+                AppCampoBusca(
+                  controle: _buscaController,
+                  dica: 'Buscar por nome do insumo...',
+                  aoMudar: _filtrarInsumos, 
+                ),
+                const SizedBox(height: 16),
+                
+                Expanded(
+                  child: _insumosFiltrados.isEmpty
+                      ? const Center(child: Text('Nenhum insumo encontrado', style: TextStyle(color: EstoquePalette.text, fontSize: 16, fontWeight: FontWeight.w700)))
+                      : ListView.separated(
+                          itemCount: _insumosFiltrados.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final insumo = _insumosFiltrados[index];
+                            final selected = insumo.id == widget.insumoSelecionado?.id;
+                            
+                            return InkWell(
+                              onTap: () => Navigator.pop(context, insumo),
+                              borderRadius: BorderRadius.circular(18),
+                              child: Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: selected ? EstoquePalette.warningBg : EstoquePalette.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(color: selected ? EstoquePalette.primary : EstoquePalette.border),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 40, height: 40,
+                                      decoration: BoxDecoration(color: selected ? EstoquePalette.primary : EstoquePalette.inputFill, borderRadius: BorderRadius.circular(14)),
+                                      child: Icon(Icons.inventory_2_rounded, color: selected ? Colors.white : EstoquePalette.primary, size: 20),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(insumo.nome, style: const TextStyle(color: EstoquePalette.text, fontSize: 15, fontWeight: FontWeight.w700)),
+                                          const SizedBox(height: 2),
+                                          Text('Saldo atual: ${insumo.estoqueAtual?.toStringAsFixed(1) ?? '0'} ${insumo.unidadePadraoSimbolo ?? ''}', style: const TextStyle(color: EstoquePalette.textMuted, fontSize: 12)),
+                                        ],
+                                      ),
+                                    ),
+                                    if (selected) const Icon(Icons.check_rounded, color: EstoquePalette.primary) else const SizedBox(width: 18),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
