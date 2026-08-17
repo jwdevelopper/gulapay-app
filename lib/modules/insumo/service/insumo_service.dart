@@ -23,7 +23,7 @@ class InsumoService {
     }
   }
 
-  Future<List<InsumoResponse>> listar({bool apenasAtivos = true, String? pesquisa}) async {
+  Future<List<InsumoResponse>> listar({bool apenasAtivos = false, String? pesquisa}) async {
     try {
       final queryParameters = <String, dynamic>{'apenasAtivos': apenasAtivos};
       if (pesquisa != null && pesquisa.trim().isNotEmpty) {

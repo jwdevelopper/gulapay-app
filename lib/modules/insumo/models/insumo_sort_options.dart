@@ -33,8 +33,8 @@ final List<InsumoSortOption> insumoSortOptions = [
     comparator: (a, b) => (a.nome ?? '').toLowerCase().compareTo((b.nome ?? '').toLowerCase()),
     grouper: (i) => i.abaixoDoMinimo == true ? 'Abaixo do mínimo' : 'Estoque padrão',
     groupOrder: (a, b) {
-      if (a == 'ABAIXO DO MÍNIMO') return -1;
-      if (b == 'ABAIXO DO MÍNIMO') return 1;
+      if (a == 'Abaixo do mínimo') return -1;
+      if (b == 'Abaixo do mínimo') return 1;
       return 0;
     }
   ),
