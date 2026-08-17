@@ -750,39 +750,39 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
     );
   }
 
-  Widget _buildStep0() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Tipo de movimentação *',
-          style: TextStyle(
-            color: EstoquePalette.text,
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 8),
-        GridView.count(
-          crossAxisCount: 2,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: 1.25,
-          children: _tipoOptions.map(_buildTypeOption).toList(),
-        ),
-        if (_selectedTipo == 'SAIDA_PERDA_VALIDADE') ...[
-          const SizedBox(height: 16),
-          _buildInfoCard(
-            'Perda por validade exige que você selecione qual lote venceu na próxima etapa.',
-          ),
-        ],
+ Widget _buildStep0() {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Text('Tipo de movimentação *', style: TextStyle(color: EstoquePalette.text, fontSize: 13, fontWeight: FontWeight.w700)),
+      const SizedBox(height: 8),
+      
+      LayoutBuilder(
+        builder: (context, constraints) {
+          final crossAxisCount = constraints.maxWidth > 600 ? 4 : 2;
+          const spacing = 10.0;
+          
+          final itemWidth = (constraints.maxWidth - (spacing * (crossAxisCount - 1))) / crossAxisCount;
+
+          return Wrap(
+            spacing: spacing,
+            runSpacing: spacing, 
+            children: _tipoOptions.map((option) {
+              return SizedBox(
+                width: itemWidth,
+                child: _buildTypeOption(option), 
+              );
+            }).toList(),
+          );
+        },
+      ),
+
+      if (_selectedTipo == 'SAIDA_PERDA_VALIDADE') ...[
         const SizedBox(height: 16),
-        if (_tipoError) ...[const SizedBox(height: 4)],
-        _buildErrorBanner(),
+        _buildInfoCard('Perda por validade exige que você selecione qual lote venceu na próxima etapa.'),
       ],
-    );
+      const SizedBox(height: 16),
+      if (_tipoError) ...[const SizedBox(height: 4)],
+      _buildErrorBanner(),
+    ]);
   }
 
   Widget _buildInsumoSelector() {
