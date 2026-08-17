@@ -36,7 +36,7 @@ class _DashboardPageState extends State<DashboardPage> {
           funcaoExecutada: funcaoExecutadaPeloBotao,
           icone: const Icon(Icons.dashboard),
           alinharIconeADireita: true,
-          corFundoBotao: AppTema.primaria,
+          corFundoBotao: Colors.deepOrange,
           foregroundColor: Colors.black,
         ),
       ),
