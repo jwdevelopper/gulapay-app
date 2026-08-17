@@ -14,7 +14,6 @@ class InsumoCard extends StatelessWidget {
   final double? percentVsMinimo;
 
   final VoidCallback onTap;
-  final VoidCallback onEdit;
   final Future<bool> Function() onConfirmDelete;
 
   const InsumoCard({
@@ -26,7 +25,6 @@ class InsumoCard extends StatelessWidget {
     required this.stockText,
     required this.percentVsMinimo,
     required this.onTap,
-    required this.onEdit,
     required this.onConfirmDelete,
   });
 
@@ -240,7 +238,8 @@ class InsumoCard extends StatelessWidget {
   Widget _buildDismissBackground() {
     return Container(
       alignment: Alignment.centerRight,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.only(right: 16),
+      margin: const EdgeInsets.symmetric(vertical: 1),
       decoration: BoxDecoration(
         color: Colors.red.shade500,
         borderRadius: BorderRadius.circular(14),

@@ -23,6 +23,14 @@ class InsumoResponse {
     this.ativo
   });
 
+  static double? _parseDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is double) return v;
+    if (v is int) return v.toDouble();
+    if (v is String) return double.tryParse(v.replaceAll(',', '.'));
+    return null;
+  }
+
   factory InsumoResponse.fromJson(Map<String, dynamic> json) {
     return InsumoResponse(
       id: json['id'],
@@ -31,8 +39,8 @@ class InsumoResponse {
       unidadePadraoSimbolo: json['unidadePadraoSimbolo'],
       unidadePadraoNome: json['unidadePadraoNome'],
       unidadePadrao: json['unidadePadrao'],
-      estoqueMinimo: json['estoqueMinimo'],
-      estoqueAtual: json['estoqueAtual'],
+      estoqueMinimo: _parseDouble(json['estoqueMinimo']),
+      estoqueAtual: _parseDouble(json['estoqueAtual']),
       abaixoDoMinimo: json['abaixoDoMinimo'],
       ativo: json['ativo'],
     );
