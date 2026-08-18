@@ -36,7 +36,7 @@ class InsumoSearchField extends StatelessWidget {
           prefixIcon: Icon(
             Icons.search_rounded,
             size: 20,
-            color: theme.textTheme.bodySmall?.color,
+            color: AppTema.textoSecundario,
           ),
           suffixIcon: hasText
               ? IconButton(

@@ -65,6 +65,7 @@ class InsumoCard extends StatelessWidget {
       child: Material(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
           onTap: onTap,
@@ -128,7 +129,7 @@ class InsumoCard extends StatelessWidget {
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w700,
-            color: theme.textTheme.bodyLarge?.color,
+            color: AppTema.textoEscuro,
           ),
         ),
         if (subtitle.isNotEmpty) ...[
@@ -139,7 +140,7 @@ class InsumoCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 12,
-              color: theme.textTheme.bodySmall?.color,
+              color: AppTema.textoSecundario,
             ),
           ),
         ],
@@ -239,7 +240,7 @@ class InsumoCard extends StatelessWidget {
     return Container(
       alignment: Alignment.centerRight,
       padding: const EdgeInsets.only(right: 16),
-      margin: const EdgeInsets.symmetric(vertical: 1),
+      margin: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
         color: Colors.red.shade500,
         borderRadius: BorderRadius.circular(14),

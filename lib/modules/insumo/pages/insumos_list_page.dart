@@ -437,19 +437,6 @@ class _InsumosListPageState extends State<InsumosListPage> {
     );
   }
 
-  Widget _buildSummaryStrip() {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-      child: Text(
-        '$_totalAtivos ativos · $_abaixoDoMinimoCount abaixo do mínimo',
-        style: TextStyle(
-          fontSize: 13,
-          color: theme.textTheme.bodySmall?.color,
-        ),
-      ),
-    );
-  }
 
   Widget _buildResultsHeader() {
     return Padding(
@@ -587,15 +574,12 @@ class _InsumosListPageState extends State<InsumosListPage> {
         onPressed: _openCreate,
         foregroundColor: Colors.white,
         backgroundColor: AppTema.primaria,
-        shape: const CircleBorder(),
         child: const Icon(Icons.add_rounded),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: Column(
         children: [
           const SizedBox(height: 12),
-          _buildSummaryStrip(),
-          const SizedBox(height: 4),
           Row(
             children: [
             Expanded(
@@ -606,14 +590,19 @@ class _InsumosListPageState extends State<InsumosListPage> {
                 onClear: _clearSearch,
               ),
             ),
-            IconButton(
-              onPressed: _openFilterSheet,
-              icon: const Icon(Icons.filter_alt_outlined),
-              iconSize: 35,
-            ),
+            Padding(
+              padding: const EdgeInsetsGeometry.only(right: 16),
+              child: IconButton(
+                onPressed: _openFilterSheet,
+                icon: const Icon(Icons.filter_alt_outlined),
+                iconSize: 25,
+                color: AppTema.textoSecundario,
+                padding: EdgeInsets.all(4),
+              ),
+            )
             ]
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
