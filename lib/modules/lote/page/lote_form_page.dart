@@ -393,6 +393,9 @@ class _LoteFormPageState extends State<LoteFormPage> {
           controle: _codigo,
           dica: 'Ex.: L0241',
           tamanhoMax: 60,
+          formatadores: [
+            FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
+          ],
         ),
       ],
     );
