@@ -1,235 +1,391 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:my_app_teste/core/api_error.dart';
+import 'package:my_app_teste/modules/entregador/dto/entregador_response.dart';
+import 'package:my_app_teste/modules/entregador/service/entregador_service.dart';
+import 'package:my_app_teste/modules/entregador/widgets/entregador_active_count.dart';
+import 'package:my_app_teste/modules/entregador/widgets/entregador_card.dart';
+import 'package:my_app_teste/modules/entregador/widgets/entregador_empty_state.dart';
+import 'package:my_app_teste/modules/entregador/widgets/entregador_results_header.dart';
+import 'package:my_app_teste/modules/entregador/widgets/entregador_search_field.dart';
+import 'package:my_app_teste/modules/entregador/widgets/entregadores_palette.dart';
+
+import 'entregador_form_page.dart';
 
 class EntregadorPage extends StatefulWidget {
-  const EntregadorPage({super.key});
+  final EntregadorService? service;
+
+  const EntregadorPage({super.key, this.service});
 
   @override
   State<EntregadorPage> createState() => _EntregadorPageState();
 }
 
 class _EntregadorPageState extends State<EntregadorPage> {
-  final _formKey = GlobalKey<FormState>();
-  final TextEditingController _nomeController = TextEditingController();
-  final TextEditingController _telefoneController = TextEditingController();
-  bool _ativo = true;
-  bool _isLoading = false;
+  // Estes campos sao anulaveis de proposito. Em Flutter Web, um hot reload que
+  // adiciona campos a um State ja montado pode preservar a instancia antiga
+  // com propriedades `undefined`. Os getters e o reassemble recuperam esse
+  // estado sem derrubar a arvore de widgets.
+  TextEditingController? _searchController = TextEditingController();
+  EntregadorService? _service;
+  List<EntregadorResponse>? _entregadores = <EntregadorResponse>[];
+  bool? _loading = true;
+  bool? _ascending = true;
+  String? _search = '';
+  String? _loadError;
+
+  TextEditingController get _resolvedSearchController =>
+      _searchController ??= TextEditingController();
+
+  EntregadorService get _resolvedService =>
+      _service ??= widget.service ?? EntregadorService();
+
+  List<EntregadorResponse> get _items =>
+      _entregadores ??= <EntregadorResponse>[];
+
+  bool get _isLoading => _loading ?? true;
+  bool get _isAscending => _ascending ?? true;
+  String get _searchValue => _search ?? '';
+
+  @override
+  void initState() {
+    super.initState();
+    _ensureInitialized();
+    _load();
+  }
+
+  @override
+  void reassemble() {
+    super.reassemble();
+    _ensureInitialized();
+    _load();
+  }
+
+  void _ensureInitialized() {
+    _searchController ??= TextEditingController();
+    _service ??= widget.service ?? EntregadorService();
+    _entregadores ??= <EntregadorResponse>[];
+    _loading ??= true;
+    _ascending ??= true;
+    _search ??= '';
+  }
 
   @override
   void dispose() {
-    _nomeController.dispose();
-    _telefoneController.dispose();
+    _searchController?.dispose();
+    _searchController = null;
     super.dispose();
   }
 
-  Future<void> _salvarEntregador() async {
-    if (!_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor, verifique os campos do formulário.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
+  List<EntregadorResponse> get _filtered {
+    final query = _searchValue.trim().toLowerCase();
+    final result = _items.where((entregador) {
+      if (query.isEmpty) return true;
+      return entregador.nome.toLowerCase().contains(query) ||
+          entregador.telefone.toLowerCase().contains(query);
+    }).toList();
 
-    setState(() {
-      _isLoading = true;
+    result.sort((a, b) {
+      final comparison = a.nome.toLowerCase().compareTo(b.nome.toLowerCase());
+      return _isAscending ? comparison : -comparison;
     });
+    return result;
+  }
+
+  String get _activeCountLabel {
+    if (_isLoading) return 'Carregando entregadores...';
+    if (_loadError != null) return 'Entregadores ativos indisponíveis';
+    final label = _items.length == 1
+        ? 'entregador ativo'
+        : 'entregadores ativos';
+    return '${_items.length} $label';
+  }
+
+  Future<void> _load() async {
+    if (mounted) {
+      setState(() {
+        _loading = true;
+        _loadError = null;
+      });
+    }
 
     try {
-      await Future.delayed(const Duration(seconds: 1));
+      final entregadores = await _resolvedService.listar(apenasAtivos: true);
       if (!mounted) return;
+      setState(() => _entregadores = entregadores);
+    } on ApiError catch (e) {
+      if (!mounted) return;
+      setState(() => _loadError = e.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadError = 'Erro inesperado ao consultar a API.');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
+  Future<void> _openCreate() async {
+    final created = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EntregadorFormPage(service: _resolvedService),
+      ),
+    );
+    if (created != true || !mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Entregador cadastrado com sucesso.'),
+        backgroundColor: EntregadoresPalette.success,
+      ),
+    );
+    await _load();
+  }
+
+  Future<void> _openEdit(EntregadorResponse entregador) async {
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EntregadorFormPage(
+          entregador: entregador,
+          service: _resolvedService,
+        ),
+      ),
+    );
+    if (changed != true || !mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Entregador atualizado com sucesso.'),
+        backgroundColor: EntregadoresPalette.success,
+      ),
+    );
+    await _load();
+  }
+
+  Future<bool> _confirmDelete(EntregadorResponse entregador) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Row(
+          children: [
+            FaIcon(
+              FontAwesomeIcons.triangleExclamation,
+              color: EntregadoresPalette.primary,
+              size: 20,
+            ),
+            SizedBox(width: 10),
+            Text(
+              'Excluir entregador',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: EntregadoresPalette.text,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Deseja excluir "${entregador.nome}"? O entregador será inativado e sairá desta lista.',
+          style: const TextStyle(color: EntregadoresPalette.text),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            style: TextButton.styleFrom(
+              foregroundColor: EntregadoresPalette.textMuted,
+            ),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    return confirmed ?? false;
+  }
+
+  Future<bool> _delete(EntregadorResponse entregador) async {
+    if (entregador.id == null) return false;
+
+    try {
+      await _resolvedService.inativar(entregador.id!);
+      if (!mounted) return false;
+      setState(() {
+        _items.removeWhere((item) => item.id == entregador.id);
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Entregador "${_nomeController.text}" salvo com sucesso!'),
-          backgroundColor: Colors.green,
+          content: Text('Entregador "${entregador.nome}" excluído.'),
+          backgroundColor: EntregadoresPalette.success,
         ),
       );
-
-      Navigator.of(context).pop();
-    } catch (e) {
-      if (!mounted) return;
+      return true;
+    } on ApiError catch (e) {
+      if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Falha ao salvar entregador: $e'),
+          content: Text('Erro ao excluir: ${e.message}'),
           backgroundColor: Colors.red,
         ),
       );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      return false;
+    } catch (_) {
+      if (!mounted) return false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Erro inesperado ao excluir o entregador.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return false;
     }
+  }
+
+  Future<bool> _confirmAndDelete(EntregadorResponse entregador) async {
+    if (!await _confirmDelete(entregador)) return false;
+    return _delete(entregador);
+  }
+
+  void _clearSearch() {
+    _resolvedSearchController.clear();
+    setState(() => _search = '');
+  }
+
+  Widget _buildList() {
+    if (_isLoading) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 28, 16, 96),
+        children: const [
+          SizedBox(height: 120),
+          Center(
+            child: CircularProgressIndicator(
+              color: EntregadoresPalette.primary,
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (_loadError != null) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 22, 16, 96),
+        children: [
+          EntregadorEmptyState(
+            title: 'Não foi possível carregar',
+            subtitle: _loadError!,
+            icon: Icons.cloud_off_rounded,
+            buttonLabel: 'Tentar novamente',
+            buttonIcon: Icons.refresh_rounded,
+            onPressed: _load,
+            secondary: true,
+          ),
+        ],
+      );
+    }
+
+    if (_items.isEmpty) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 22, 16, 96),
+        children: [
+          EntregadorEmptyState(
+            title: 'Sem entregadores por aqui',
+            subtitle:
+                'Cadastre o primeiro entregador para organizar as entregas dos pedidos.',
+            icon: Icons.delivery_dining_rounded,
+            buttonLabel: 'Cadastrar entregador',
+            buttonIcon: Icons.add_rounded,
+            onPressed: _openCreate,
+          ),
+        ],
+      );
+    }
+
+    if (_filtered.isEmpty) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 22, 16, 96),
+        children: [
+          EntregadorEmptyState(
+            title: 'Nenhum entregador encontrado',
+            subtitle: 'Tente buscar por outro nome ou telefone.',
+            icon: Icons.search_off_rounded,
+            buttonLabel: 'Limpar busca',
+            buttonIcon: Icons.close_rounded,
+            onPressed: _clearSearch,
+            secondary: true,
+          ),
+        ],
+      );
+    }
+
+    return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
+      itemCount: _filtered.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final entregador = _filtered[index];
+        return EntregadorCard(
+          entregador: entregador,
+          onTap: () => _openEdit(entregador),
+          onEdit: () => _openEdit(entregador),
+          onConfirmDelete: () => _confirmAndDelete(entregador),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Entregador', style: TextStyle(color: Colors.white)),
-        backgroundColor: const Color.fromARGB(255, 205, 105, 40),
-        foregroundColor: const Color.fromARGB(255, 206, 127, 53),
-        centerTitle: true,
+      backgroundColor: EntregadoresPalette.background,
+      floatingActionButton: FloatingActionButton(
+        tooltip: 'Cadastrar entregador',
+        onPressed: _openCreate,
+        backgroundColor: EntregadoresPalette.primary,
+        foregroundColor: Colors.white,
+        shape: const CircleBorder(),
+        child: const Icon(Icons.add_rounded),
       ),
-      body: Container(
-        padding: const EdgeInsets.all(24.0),
-        color: const Color.fromARGB(255, 242, 236, 226),
-        child: Center(
-          child: SingleChildScrollView(
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                    Row(
-                      children: const [
-                        FaIcon(FontAwesomeIcons.truckFast, size: 26.0),
-                        SizedBox(width: 12.0),
-                        Text(
-                          'Cadastro de Entregador',
-                          style: TextStyle(
-                            fontSize: 24.0,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20.0),
-                    TextFormField(
-                      controller: _nomeController,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(30.0),
-                        ),
-                        labelText: 'Nome',
-                        prefixIcon: const Icon(Icons.person),
-                        suffixIcon: IconButton(
-                          onPressed: () => _nomeController.clear(),
-                          icon: const FaIcon(
-                            FontAwesomeIcons.xmark,
-                            size: 16.0,
-                            color: const Color.fromARGB(255, 248, 151, 40),
-                          ),
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Informe o nome do entregador.';
-                        } else if (value.length < 3) {
-                          return 'O nome deve ter ao menos 3 caracteres.';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 20.0),
-                    TextFormField(
-                      controller: _telefoneController,
-                      keyboardType: TextInputType.phone,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(30.0),
-                        ),
-                        labelText: 'Telefone',
-                        prefixIcon: const Icon(Icons.phone),
-                        suffixIcon: IconButton(
-                          onPressed: () => _telefoneController.clear(),
-                          icon: const FaIcon(
-                            FontAwesomeIcons.xmark,
-                            size: 16.0,
-                            color: const Color.fromARGB(255, 248, 151, 40),
-                          ),
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Informe o telefone do entregador.';
-                        } else if (value.length < 10) {
-                          return 'Telefone inválido. Use DDD + número.';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 20.0),
-                    SwitchListTile(
-                      value: _ativo,
-                      onChanged: (value) => setState(() => _ativo = value),
-                      title: const Text('Status'),
-                      subtitle: Text(_ativo ? 'Ativo' : 'Inativo'),
-                      secondary: FaIcon(
-                        _ativo ? FontAwesomeIcons.circleCheck : FontAwesomeIcons.circleXmark,
-                        color: _ativo ? Colors.green : Colors.red,
-                      ),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    const SizedBox(height: 24.0),
-                    Card(
-                      color: Colors.grey.shade100,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(14.0),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('Resumo', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  const SizedBox(height: 8.0),
-                                  Text('Nome: ${_nomeController.text.isEmpty ? '—' : _nomeController.text}'),
-                                  const SizedBox(height: 4.0),
-                                  Text('Telefone: ${_telefoneController.text.isEmpty ? '—' : _telefoneController.text}'),
-                                  const SizedBox(height: 4.0),
-                                  Text('Status: ${_ativo ? 'Ativo' : 'Inativo'}'),
-                                ],
-                              ),
-                            ),
-                            const FaIcon(FontAwesomeIcons.infoCircle, size: 20.0),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24.0),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56.0,
-                      child: ElevatedButton.icon(
-                        icon: _isLoading
-                            ? const SizedBox(
-                                width: 20.0,
-                                height: 20.0,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2.4,
-                                ),
-                              )
-                            : const FaIcon(FontAwesomeIcons.paperPlane, size: 18.0),
-                        label: Text(
-                          _isLoading ? 'Salvando...' : 'Salvar Entregador',
-                          style: const TextStyle(fontSize: 18.0, fontWeight: FontWeight.w600),
-                        ),
-                        onPressed: _isLoading ? null : _salvarEntregador,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color.fromARGB(255, 236, 133, 80),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30.0),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            EntregadorActiveCount(label: _activeCountLabel),
+            EntregadorSearchField(
+              controller: _resolvedSearchController,
+              search: _searchValue,
+              onChanged: (value) => setState(() => _search = value),
+              onClear: _clearSearch,
+            ),
+            EntregadorResultsHeader(
+              resultCount: _filtered.length,
+              ascending: _isAscending,
+              onSortTap: () => setState(() => _ascending = !_isAscending),
+            ),
+            Expanded(
+              child: RefreshIndicator(
+                color: EntregadoresPalette.primary,
+                onRefresh: _load,
+                child: _buildList(),
               ),
             ),
-          ),
+          ],
         ),
-      );
-    
+      ),
+    );
   }
 }

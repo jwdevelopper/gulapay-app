@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
+import 'package:my_app_teste/core/utils/telefone_formatter.dart';
 import 'package:my_app_teste/core/widgets/app_campo_busca.dart';
 import 'package:my_app_teste/core/widgets/app_estado_vazio.dart';
 import 'package:my_app_teste/core/widgets/app_tag.dart';
@@ -61,10 +62,12 @@ class _ClientePageState extends State<ClientePage> {
   List<ClienteResponse> get _filtrados {
     final termo = _busca.trim().toLowerCase();
     return _todos.where((c) {
-      final casaStatus = _filtroStatus == 'TODOS' ||
+      final casaStatus =
+          _filtroStatus == 'TODOS' ||
           (_filtroStatus == 'ATIVOS' && (c.ativo ?? true)) ||
           (_filtroStatus == 'INATIVOS' && !(c.ativo ?? true));
-      final casaBusca = termo.isEmpty ||
+      final casaBusca =
+          termo.isEmpty ||
           (c.nome ?? '').toLowerCase().contains(termo) ||
           (c.telefone ?? '').contains(termo);
       return casaStatus && casaBusca;
@@ -87,12 +90,19 @@ class _ClientePageState extends State<ClientePage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         title: const Row(
           children: [
-            FaIcon(FontAwesomeIcons.triangleExclamation,
-                color: AppTema.primaria, size: 20),
+            FaIcon(
+              FontAwesomeIcons.triangleExclamation,
+              color: AppTema.primaria,
+              size: 20,
+            ),
             SizedBox(width: 10),
-            Text('Inativar cliente',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold, color: AppTema.textoEscuro)),
+            Text(
+              'Inativar cliente',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppTema.textoEscuro,
+              ),
+            ),
           ],
         ),
         content: Text(
@@ -103,8 +113,9 @@ class _ClientePageState extends State<ClientePage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            style:
-                TextButton.styleFrom(foregroundColor: AppTema.textoSecundario),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTema.textoSecundario,
+            ),
             child: const Text('Cancelar'),
           ),
           ElevatedButton(
@@ -113,7 +124,8 @@ class _ClientePageState extends State<ClientePage> {
               backgroundColor: Colors.red.shade600,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             child: const Text('Inativar'),
           ),
@@ -131,12 +143,19 @@ class _ClientePageState extends State<ClientePage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         title: const Row(
           children: [
-            FaIcon(FontAwesomeIcons.userCheck,
-                color: AppTema.primaria, size: 20),
+            FaIcon(
+              FontAwesomeIcons.userCheck,
+              color: AppTema.primaria,
+              size: 20,
+            ),
             SizedBox(width: 10),
-            Text('Ativar cliente',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold, color: AppTema.textoEscuro)),
+            Text(
+              'Ativar cliente',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppTema.textoEscuro,
+              ),
+            ),
           ],
         ),
         content: Text(
@@ -146,8 +165,9 @@ class _ClientePageState extends State<ClientePage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            style:
-                TextButton.styleFrom(foregroundColor: AppTema.textoSecundario),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTema.textoSecundario,
+            ),
             child: const Text('Cancelar'),
           ),
           ElevatedButton(
@@ -156,7 +176,8 @@ class _ClientePageState extends State<ClientePage> {
               backgroundColor: const Color(0xFF2E8B57),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             child: const Text('Ativar'),
           ),
@@ -230,28 +251,25 @@ class _ClientePageState extends State<ClientePage> {
           Expanded(
             child: _carregando
                 ? const Center(
-                    child:
-                        CircularProgressIndicator(color: AppTema.primaria))
+                    child: CircularProgressIndicator(color: AppTema.primaria),
+                  )
                 : _filtrados.isEmpty
-                    ? AppEstadoVazio(
-                        icone: Icons.people_outline,
-                        mensagem: _busca.isEmpty && _filtroStatus == 'TODOS'
-                            ? 'Nenhum cliente cadastrado'
-                            : 'Nenhum resultado para a busca',
-                      )
-                    : RefreshIndicator(
-                        color: AppTema.primaria,
-                        onRefresh: _carregar,
-                        child: ListView.separated(
-                          padding:
-                              const EdgeInsets.fromLTRB(16, 8, 16, 90),
-                          itemCount: _filtrados.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 8),
-                          itemBuilder: (_, i) =>
-                              _construirCartao(_filtrados[i]),
-                        ),
-                      ),
+                ? AppEstadoVazio(
+                    icone: Icons.people_outline,
+                    mensagem: _busca.isEmpty && _filtroStatus == 'TODOS'
+                        ? 'Nenhum cliente cadastrado'
+                        : 'Nenhum resultado para a busca',
+                  )
+                : RefreshIndicator(
+                    color: AppTema.primaria,
+                    onRefresh: _carregar,
+                    child: ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
+                      itemCount: _filtrados.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (_, i) => _construirCartao(_filtrados[i]),
+                    ),
+                  ),
           ),
         ],
       ),
@@ -313,11 +331,14 @@ class _ClientePageState extends State<ClientePage> {
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            Text('Inativar',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15)),
+            Text(
+              'Inativar',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+              ),
+            ),
             SizedBox(width: 8),
             FaIcon(FontAwesomeIcons.userSlash, color: Colors.white, size: 18),
           ],
@@ -338,7 +359,8 @@ class _ClientePageState extends State<ClientePage> {
             final result = await Navigator.push<bool>(
               context,
               MaterialPageRoute(
-                  builder: (_) => ClienteDetalhesPage(cliente: c)),
+                builder: (_) => ClienteDetalhesPage(cliente: c),
+              ),
             );
             if (result == true && mounted) _carregar();
           },
@@ -378,9 +400,13 @@ class _ClientePageState extends State<ClientePage> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        c.telefone ?? 'Telefone não informado',
+                        c.telefone?.isNotEmpty == true
+                            ? TelefoneFormatter.formatar(c.telefone)
+                            : 'Telefone não informado',
                         style: const TextStyle(
-                            color: AppTema.textoSecundario, fontSize: 13),
+                          color: AppTema.textoSecundario,
+                          fontSize: 13,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Row(
@@ -401,11 +427,15 @@ class _ClientePageState extends State<ClientePage> {
                   ),
                 ),
                 PopupMenuButton<String>(
-                  icon: const FaIcon(FontAwesomeIcons.ellipsisVertical,
-                      size: 16, color: AppTema.primariaEscura),
+                  icon: const FaIcon(
+                    FontAwesomeIcons.ellipsisVertical,
+                    size: 16,
+                    color: AppTema.primariaEscura,
+                  ),
                   color: Colors.white,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   onSelected: (opcao) async {
                     if (opcao == 'editar') {
                       await _abrirFormulario(cliente: c);
@@ -428,11 +458,16 @@ class _ClientePageState extends State<ClientePage> {
                       value: 'editar',
                       child: Row(
                         children: [
-                          FaIcon(FontAwesomeIcons.penToSquare,
-                              size: 14, color: AppTema.primariaEscura),
+                          FaIcon(
+                            FontAwesomeIcons.penToSquare,
+                            size: 14,
+                            color: AppTema.primariaEscura,
+                          ),
                           SizedBox(width: 10),
-                          Text('Editar',
-                              style: TextStyle(color: AppTema.textoEscuro)),
+                          Text(
+                            'Editar',
+                            style: TextStyle(color: AppTema.textoEscuro),
+                          ),
                         ],
                       ),
                     ),
@@ -441,12 +476,16 @@ class _ClientePageState extends State<ClientePage> {
                         value: 'inativar',
                         child: Row(
                           children: [
-                            FaIcon(FontAwesomeIcons.userSlash,
-                                size: 14, color: Colors.red.shade600),
+                            FaIcon(
+                              FontAwesomeIcons.userSlash,
+                              size: 14,
+                              color: Colors.red.shade600,
+                            ),
                             const SizedBox(width: 10),
-                            Text('Inativar',
-                                style:
-                                    TextStyle(color: Colors.red.shade600)),
+                            Text(
+                              'Inativar',
+                              style: TextStyle(color: Colors.red.shade600),
+                            ),
                           ],
                         ),
                       )
@@ -455,12 +494,16 @@ class _ClientePageState extends State<ClientePage> {
                         value: 'ativar',
                         child: Row(
                           children: [
-                            FaIcon(FontAwesomeIcons.userCheck,
-                                size: 14, color: Colors.green.shade700),
+                            FaIcon(
+                              FontAwesomeIcons.userCheck,
+                              size: 14,
+                              color: Colors.green.shade700,
+                            ),
                             const SizedBox(width: 10),
-                            Text('Ativar',
-                                style: TextStyle(
-                                    color: Colors.green.shade700)),
+                            Text(
+                              'Ativar',
+                              style: TextStyle(color: Colors.green.shade700),
+                            ),
                           ],
                         ),
                       ),
