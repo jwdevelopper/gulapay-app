@@ -114,10 +114,15 @@ class _LoteFormPageState extends State<LoteFormPage> {
 
   Future<void> _selecionarValidade() async {
     final hoje = DateTime.now();
+    final hojeData = DateTime(hoje.year, hoje.month, hoje.day);
+    // initialDate must be >= firstDate; if existing date is in the past, start from today
+    final inicial = (_validade != null && !_validade!.isBefore(hojeData))
+        ? _validade!
+        : hojeData;
     final selecionada = await showDatePicker(
       context: context,
-      initialDate: _validade ?? hoje,
-      firstDate: DateTime(hoje.year - 5),
+      initialDate: inicial,
+      firstDate: hojeData,
       lastDate: DateTime(hoje.year + 10),
       helpText: 'Selecione a validade',
     );
@@ -143,6 +148,10 @@ class _LoteFormPageState extends State<LoteFormPage> {
     }
     if (_validade == null) {
       return 'Informe a validade.';
+    }
+    final hoje = DateTime.now();
+    if (_validade!.isBefore(DateTime(hoje.year, hoje.month, hoje.day))) {
+      return 'A data de validade não pode ser anterior à data de hoje.';
     }
     if (!widget.ehEdicao) {
       final qtd = _parseNumero(_quantidade.text);
