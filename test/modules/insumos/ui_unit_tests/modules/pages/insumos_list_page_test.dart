@@ -84,14 +84,6 @@ void main() {
       verify(() => service.listar(apenasAtivos: false)).called(1);
     });
 
-    testWidgets('resume o total de ativos e de itens abaixo do mínimo',
-        (tester) async {
-      stubListar();
-      await pumpLista(tester);
-
-      expect(find.text('2 ativos · 1 abaixo do mínimo'), findsOneWidget);
-    });
-
     testWidgets('exibe o empty state quando não há nenhum insumo',
         (tester) async {
       stubListar([]);

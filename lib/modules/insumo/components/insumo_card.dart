@@ -89,7 +89,7 @@ class InsumoCard extends StatelessWidget {
     );
 
     return AppCartaoDeslizavel(
-      chave: 'insumo_${insumo.id}',
+      chave: 'insumo-${insumo.id}',
       aoConfirmarExclusao: onConfirmDelete,
       child: card,
     );

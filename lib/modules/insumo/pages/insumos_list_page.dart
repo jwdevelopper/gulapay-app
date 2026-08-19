@@ -73,10 +73,7 @@ class _InsumosListPageState extends State<InsumosListPage> {
 
   String get _sortLabel => _currentSortOption.label;
   bool get _hasActiveSearch => _search.trim().isNotEmpty;
-  int get _totalAtivos => _insumos.where((i) => i.ativo == true).length;
-  int get _abaixoDoMinimoCount =>
-      _insumos.where((i) => i.abaixoDoMinimo == true).length;
-
+  
   List<InsumoResponse> get _filtered {
     var list = List<InsumoResponse>.from(_insumos);
 
@@ -591,7 +588,7 @@ class _InsumosListPageState extends State<InsumosListPage> {
               ),
             ),
             Padding(
-              padding: const EdgeInsetsGeometry.only(right: 16),
+              padding: const EdgeInsets.only(right: 16),
               child: IconButton(
                 onPressed: _openFilterSheet,
                 icon: const Icon(Icons.filter_alt_outlined),
@@ -599,8 +596,8 @@ class _InsumosListPageState extends State<InsumosListPage> {
                 color: AppTema.textoSecundario,
                 padding: EdgeInsets.all(4),
               ),
-            )
-            ]
+            ),
+            ],
           ),
           const SizedBox(height: 6),
           Row(
