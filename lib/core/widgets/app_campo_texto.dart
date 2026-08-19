@@ -14,6 +14,8 @@ class AppCampoTexto extends StatelessWidget {
   final String? Function(String?)? validador;
   final void Function(String)? aoMudar;
   final bool habilitado;
+  final int maxLinhas;
+  final int? minLinhas;
 
   const AppCampoTexto({
     super.key,
@@ -28,6 +30,8 @@ class AppCampoTexto extends StatelessWidget {
     this.validador,
     this.aoMudar,
     this.habilitado = true,
+    this.maxLinhas = 1,
+    this.minLinhas,
   });
 
   @override
@@ -36,6 +40,8 @@ class AppCampoTexto extends StatelessWidget {
       controller: controle,
       obscureText: ocultar,
       maxLength: tamanhoMax,
+      maxLines: maxLinhas,
+      minLines: minLinhas,
       keyboardType: tipoTeclado,
       inputFormatters: formatadores,
       validator: validador,
@@ -48,8 +54,10 @@ class AppCampoTexto extends StatelessWidget {
         fillColor: AppTema.cartao,
         hintText: dica,
         hintStyle: const TextStyle(color: Color(0xFFB7A98A)),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
         prefixIcon: prefixo,
         suffixIcon: sufixo,
         enabledBorder: OutlineInputBorder(
