@@ -15,7 +15,7 @@
 | `lib/modules/categoria/widgets/categoria_card.dart` | Coordena as ações do item. |
 | `lib/modules/categoria/widgets/categoria_card_conteudo.dart` | Estrutura visual do cartão. |
 | `lib/modules/categoria/widgets/categoria_menu_acoes.dart` | Menu de editar/inativar/reativar. |
-| `lib/modules/categoria/widgets/categoria_gesto_status.dart` | Gesto de deslizar e seu limiar. |
+| `lib/core/utils/cartao_deslizavel/` | Gesto de deslizar, animação e painel configurável compartilhados. |
 | `lib/modules/categoria/widgets/categoria_dialogo_status.dart` | Confirmação de alteração de status. |
 | `lib/modules/categoria/widgets/categoria_form_campos.dart` | Campos e dica do formulário. |
 
@@ -50,18 +50,18 @@ AppCampoTexto(
 
 ### Ação por movimento
 
-O gesto foi isolado para manter o mesmo fluxo para inativar e reativar:
+O gesto agora usa o mesmo componente compartilhado de Entregadores:
 
 ```dart
-Dismissible(
-  direction: DismissDirection.endToStart,
-  background: const SizedBox.expand(),
-  secondaryBackground: acaoDeStatus,
-  dismissThresholds: const {
-    DismissDirection.endToStart: 0.5,
-  },
-  confirmDismiss: (_) => aoConfirmar(),
-  onDismissed: (_) => aoConcluir(),
+AppCartaoDeslizavel(
+  chave: 'categoria_${categoria.id}',
+  acao: AppCartaoDeslizavelAcao(
+    rotulo: ativa ? 'Inativar' : 'Reativar',
+    icone: ativa ? Icons.block : Icons.restart_alt,
+    cor: corDaAcao,
+  ),
+  aoConfirmarAcao: aoAlternarStatus,
+  aoConcluir: aoStatusAlterado,
   child: child,
 )
 ```

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/core/widgets/app_cartao_deslizavel.dart';
+import 'package:my_app_teste/core/utils/cartao_deslizavel/app_cartao_deslizavel.dart';
 
 import 'produtos_palette.dart';
 
@@ -66,7 +66,7 @@ class ProdutoCardContainer extends StatelessWidget {
 
     return AppCartaoDeslizavel(
       chave: 'produto_$dismissibleKey',
-      aoConfirmarExclusao: onConfirmDelete!,
+      aoConfirmarAcao: onConfirmDelete!,
       child: card,
     );
   }

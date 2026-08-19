@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:my_app_teste/core/widgets/app_cartao_deslizavel.dart';
+import 'package:my_app_teste/core/utils/cartao_deslizavel/app_cartao_deslizavel.dart';
 
 void main() {
   Widget criarCenario({required Future<bool> Function() aoExcluir}) {
@@ -13,7 +13,7 @@ void main() {
             height: 92,
             child: AppCartaoDeslizavel(
               chave: 'item_1',
-              aoConfirmarExclusao: aoExcluir,
+              aoConfirmarAcao: aoExcluir,
               child: const ColoredBox(
                 color: Colors.white,
                 child: SizedBox.expand(),
@@ -66,7 +66,7 @@ void main() {
     (tester) async {
       await tester.pumpWidget(criarCenario(aoExcluir: () async => false));
 
-      final painel = find.byKey(const ValueKey('app_cartao_painel_exclusao'));
+      final painel = find.byKey(const ValueKey('app_cartao_painel_item_1'));
       expect(tester.getSize(painel), const Size(320, 92));
 
       final gesto = await tester.startGesture(
@@ -76,13 +76,15 @@ void main() {
       await tester.pump();
 
       final primeiroPlano = tester.widget<DecoratedBox>(
-        find.byKey(const ValueKey('app_cartao_primeiro_plano')),
+        find.byKey(const ValueKey('app_cartao_primeiro_plano_item_1')),
       );
       final decoracao = primeiroPlano.decoration as BoxDecoration;
 
       expect(tester.getSize(painel), const Size(320, 92));
       expect(
-        tester.getSize(find.byKey(const ValueKey('app_cartao_primeiro_plano'))),
+        tester.getSize(
+          find.byKey(const ValueKey('app_cartao_primeiro_plano_item_1')),
+        ),
         const Size(320, 92),
       );
       expect(decoracao.boxShadow!.single.color.a, greaterThan(0));

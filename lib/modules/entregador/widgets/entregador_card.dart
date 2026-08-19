@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:my_app_teste/core/utils/telefone_formatter.dart';
-import 'package:my_app_teste/core/widgets/app_cartao_deslizavel.dart';
+import 'package:my_app_teste/core/utils/cartao_deslizavel/app_cartao_deslizavel.dart';
 import 'package:my_app_teste/core/widgets/app_menu_acoes.dart';
 import 'package:my_app_teste/modules/entregador/dto/entregador_response.dart';
 
@@ -136,7 +136,7 @@ class EntregadorCard extends StatelessWidget {
 
     return AppCartaoDeslizavel(
       chave: 'entregador_${entregador.id ?? entregador.telefone}',
-      aoConfirmarExclusao: onConfirmDelete,
+      aoConfirmarAcao: onConfirmDelete,
       child: card,
     );
   }

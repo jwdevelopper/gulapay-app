@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:my_app_teste/core/utils/cartao_deslizavel/app_cartao_deslizavel.dart';
+import 'package:my_app_teste/core/utils/cartao_deslizavel/app_cartao_deslizavel_acao.dart';
 import 'package:my_app_teste/modules/categoria/widgets/categoria_form_campos.dart';
-import 'package:my_app_teste/modules/categoria/widgets/categoria_gesto_status.dart';
 
 void main() {
   testWidgets('configura a descrição da categoria como área de texto', (
@@ -40,17 +41,21 @@ void main() {
     tester,
   ) async {
     var confirmacoes = 0;
-    const chaveGesto = ValueKey('categoria_categoria-inativa');
+    const chaveGesto = ValueKey('categoria-inativa');
 
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: SizedBox(
             width: 300,
-            child: CategoriaGestoStatus(
+            child: AppCartaoDeslizavel(
               chave: 'categoria-inativa',
-              ativa: false,
-              aoConfirmar: () async {
+              acao: const AppCartaoDeslizavelAcao(
+                rotulo: 'Reativar',
+                icone: Icons.restart_alt,
+                cor: Color(0xFF2E8B57),
+              ),
+              aoConfirmarAcao: () async {
                 confirmacoes++;
                 return false;
               },
@@ -62,8 +67,15 @@ void main() {
       ),
     );
 
+    final gesto = await tester.startGesture(
+      tester.getCenter(find.byKey(chaveGesto)),
+    );
     final largura = tester.getSize(find.byKey(chaveGesto)).width;
-    await tester.drag(find.byKey(chaveGesto), Offset(-(largura * 0.51), 0));
+    await gesto.moveBy(Offset(-(largura * 0.51), 0));
+    await tester.pump(const Duration(milliseconds: 150));
+
+    expect(find.text('Reativar'), findsOneWidget);
+    await gesto.up();
     await tester.pumpAndSettle();
 
     expect(confirmacoes, 1);
