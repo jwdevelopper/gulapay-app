@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
+import 'package:my_app_teste/core/utils/telefone_formatter.dart';
 import 'package:my_app_teste/core/widgets/app_tag.dart';
 import 'package:my_app_teste/modules/cliente/service/cliente_service.dart';
 import '../dto/cliente_response.dart';
@@ -21,12 +22,19 @@ class ClienteDetalhesPage extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         title: const Row(
           children: [
-            FaIcon(FontAwesomeIcons.triangleExclamation,
-                color: AppTema.primaria, size: 20),
+            FaIcon(
+              FontAwesomeIcons.triangleExclamation,
+              color: AppTema.primaria,
+              size: 20,
+            ),
             SizedBox(width: 10),
-            Text('Inativar cliente',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold, color: AppTema.textoEscuro)),
+            Text(
+              'Inativar cliente',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppTema.textoEscuro,
+              ),
+            ),
           ],
         ),
         content: const Text(
@@ -37,8 +45,9 @@ class ClienteDetalhesPage extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            style:
-                TextButton.styleFrom(foregroundColor: AppTema.textoSecundario),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTema.textoSecundario,
+            ),
             child: const Text('Cancelar'),
           ),
           ElevatedButton(
@@ -46,7 +55,8 @@ class ClienteDetalhesPage extends StatelessWidget {
               backgroundColor: Colors.red.shade600,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             onPressed: () async {
               try {
@@ -57,7 +67,8 @@ class ClienteDetalhesPage extends StatelessWidget {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                        'Cliente "${cliente.nome ?? ''}" inativado com sucesso.'),
+                      'Cliente "${cliente.nome ?? ''}" inativado com sucesso.',
+                    ),
                     backgroundColor: const Color(0xFF2E8B57),
                   ),
                 );
@@ -89,12 +100,19 @@ class ClienteDetalhesPage extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         title: const Row(
           children: [
-            FaIcon(FontAwesomeIcons.userCheck,
-                color: AppTema.primaria, size: 20),
+            FaIcon(
+              FontAwesomeIcons.userCheck,
+              color: AppTema.primaria,
+              size: 20,
+            ),
             SizedBox(width: 10),
-            Text('Ativar cliente',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold, color: AppTema.textoEscuro)),
+            Text(
+              'Ativar cliente',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppTema.textoEscuro,
+              ),
+            ),
           ],
         ),
         content: Text(
@@ -104,8 +122,9 @@ class ClienteDetalhesPage extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            style:
-                TextButton.styleFrom(foregroundColor: AppTema.textoSecundario),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTema.textoSecundario,
+            ),
             child: const Text('Cancelar'),
           ),
           ElevatedButton(
@@ -113,7 +132,8 @@ class ClienteDetalhesPage extends StatelessWidget {
               backgroundColor: const Color(0xFF2E8B57),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             onPressed: () async {
               try {
@@ -124,7 +144,8 @@ class ClienteDetalhesPage extends StatelessWidget {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                        'Cliente "${cliente.nome ?? ''}" reativado com sucesso.'),
+                      'Cliente "${cliente.nome ?? ''}" reativado com sucesso.',
+                    ),
                     backgroundColor: const Color(0xFF2E8B57),
                   ),
                 );
@@ -172,15 +193,20 @@ class ClienteDetalhesPage extends StatelessWidget {
             ),
             Text(
               isAtivo ? 'Cadastro · Ativo' : 'Cadastro · Inativo',
-              style:
-                  const TextStyle(fontSize: 12, color: AppTema.textoSecundario),
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppTema.textoSecundario,
+              ),
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const FaIcon(FontAwesomeIcons.penToSquare,
-                size: 18, color: AppTema.primariaEscura),
+            icon: const FaIcon(
+              FontAwesomeIcons.penToSquare,
+              size: 18,
+              color: AppTema.primariaEscura,
+            ),
             onPressed: () async {
               final result = await Navigator.push<bool>(
                 context,
@@ -215,11 +241,14 @@ class ClienteDetalhesPage extends StatelessWidget {
                   side: BorderSide(color: Colors.red.shade600),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 icon: const FaIcon(FontAwesomeIcons.userSlash, size: 16),
-                label: const Text('Inativar cliente',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
+                label: const Text(
+                  'Inativar cliente',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
                 onPressed: () => _confirmarInativacao(context),
               )
             else
@@ -229,11 +258,14 @@ class ClienteDetalhesPage extends StatelessWidget {
                   side: const BorderSide(color: Color(0xFF2E8B57)),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 icon: const FaIcon(FontAwesomeIcons.userCheck, size: 16),
-                label: const Text('Ativar cliente',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
+                label: const Text(
+                  'Ativar cliente',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
                 onPressed: () => _confirmarReativacao(context),
               ),
           ],
@@ -284,7 +316,9 @@ class ClienteDetalhesPage extends StatelessWidget {
                 Text(
                   cliente.email ?? 'E-mail não informado',
                   style: const TextStyle(
-                      fontSize: 13, color: AppTema.textoSecundario),
+                    fontSize: 13,
+                    color: AppTema.textoSecundario,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Row(
@@ -321,14 +355,24 @@ class ClienteDetalhesPage extends StatelessWidget {
       child: Column(
         children: [
           _buildLinha(
-            icone: const FaIcon(FontAwesomeIcons.whatsapp, size: 16, color: Colors.green),
+            icone: const FaIcon(
+              FontAwesomeIcons.whatsapp,
+              size: 16,
+              color: Colors.green,
+            ),
             rotulo: 'WhatsApp',
-            valor: cliente.telefone ?? 'Não informado',
+            valor: cliente.telefone?.isNotEmpty == true
+                ? TelefoneFormatter.formatar(cliente.telefone)
+                : 'Não informado',
           ),
           if (cliente.email != null && cliente.email!.isNotEmpty) ...[
             Divider(height: 1, color: AppTema.bordaCampo),
             _buildLinha(
-              icone: const FaIcon(FontAwesomeIcons.envelope, size: 16, color: AppTema.primariaEscura),
+              icone: const FaIcon(
+                FontAwesomeIcons.envelope,
+                size: 16,
+                color: AppTema.primariaEscura,
+              ),
               rotulo: 'E-mail',
               valor: cliente.email!,
             ),
@@ -362,19 +406,30 @@ class ClienteDetalhesPage extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const FaIcon(FontAwesomeIcons.locationDot,
-              size: 16, color: AppTema.primariaEscura),
+          const FaIcon(
+            FontAwesomeIcons.locationDot,
+            size: 16,
+            color: AppTema.primariaEscura,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Endereço',
-                    style: TextStyle(
-                        fontSize: 12, color: AppTema.textoSecundario)),
+                const Text(
+                  'Endereço',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTema.textoSecundario,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                ...linhas.map((l) => Text(l,
-                    style: const TextStyle(color: AppTema.textoEscuro))),
+                ...linhas.map(
+                  (l) => Text(
+                    l,
+                    style: const TextStyle(color: AppTema.textoEscuro),
+                  ),
+                ),
               ],
             ),
           ),
@@ -398,14 +453,21 @@ class ClienteDetalhesPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(rotulo,
-                    style: const TextStyle(
-                        fontSize: 11, color: AppTema.textoSecundario)),
+                Text(
+                  rotulo,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppTema.textoSecundario,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(valor,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: AppTema.textoEscuro)),
+                Text(
+                  valor,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppTema.textoEscuro,
+                  ),
+                ),
               ],
             ),
           ),
