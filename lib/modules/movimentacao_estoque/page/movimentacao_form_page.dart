@@ -251,14 +251,27 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
       'unidadeId': _selectedUnidade?.id,
       'quantidade': _parseQty(),
     };
+
     if (_selectedLote != null) payload['loteId'] = _selectedLote!.id;
     if (_parseCusto() > 0) payload['custoUnitario'] = _parseCusto();
-    if (_validade.text.trim().isNotEmpty)
-      payload['validade'] = _validade.text.trim();
-    if (_codigoLote.text.trim().isNotEmpty)
+
+    if (_validade.text.trim().isNotEmpty) {
+      final textoData = _validade.text.trim(); 
+      final partes = textoData.split('/'); 
+
+      if (partes.length == 3) {
+        payload['validade'] = '${partes[2]}-${partes[1]}-${partes[0]}';
+      } else {
+        payload['validade'] = textoData;
+      }
+    }
+
+    if (_codigoLote.text.trim().isNotEmpty) {
       payload['codigoLote'] = _codigoLote.text.trim();
-    if (_justificativa.text.trim().isNotEmpty)
+    }
+    if (_justificativa.text.trim().isNotEmpty) {
       payload['justificativa'] = _justificativa.text.trim();
+    }
 
     try {
       await _service.criarMovimentacao(payload);
@@ -750,39 +763,53 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
     );
   }
 
- Widget _buildStep0() {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('Tipo de movimentação *', style: TextStyle(color: EstoquePalette.text, fontSize: 13, fontWeight: FontWeight.w700)),
-      const SizedBox(height: 8),
-      
-      LayoutBuilder(
-        builder: (context, constraints) {
-          final crossAxisCount = constraints.maxWidth > 600 ? 4 : 2;
-          const spacing = 10.0;
-          
-          final itemWidth = (constraints.maxWidth - (spacing * (crossAxisCount - 1))) / crossAxisCount;
+  Widget _buildStep0() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Tipo de movimentação *',
+          style: TextStyle(
+            color: EstoquePalette.text,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 8),
 
-          return Wrap(
-            spacing: spacing,
-            runSpacing: spacing, 
-            children: _tipoOptions.map((option) {
-              return SizedBox(
-                width: itemWidth,
-                child: _buildTypeOption(option), 
-              );
-            }).toList(),
-          );
-        },
-      ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final crossAxisCount = constraints.maxWidth > 600 ? 4 : 2;
+            const spacing = 10.0;
 
-      if (_selectedTipo == 'SAIDA_PERDA_VALIDADE') ...[
+            final itemWidth =
+                (constraints.maxWidth - (spacing * (crossAxisCount - 1))) /
+                crossAxisCount;
+
+            return Wrap(
+              spacing: spacing,
+              runSpacing: spacing,
+              children: _tipoOptions.map((option) {
+                return SizedBox(
+                  width: itemWidth,
+                  child: _buildTypeOption(option),
+                );
+              }).toList(),
+            );
+          },
+        ),
+
+        if (_selectedTipo == 'SAIDA_PERDA_VALIDADE') ...[
+          const SizedBox(height: 16),
+          _buildInfoCard(
+            'Perda por validade exige que você selecione qual lote venceu na próxima etapa.',
+          ),
+        ],
         const SizedBox(height: 16),
-        _buildInfoCard('Perda por validade exige que você selecione qual lote venceu na próxima etapa.'),
+        if (_tipoError) ...[const SizedBox(height: 4)],
+        _buildErrorBanner(),
       ],
-      const SizedBox(height: 16),
-      if (_tipoError) ...[const SizedBox(height: 4)],
-      _buildErrorBanner(),
-    ]);
+    );
   }
 
   Widget _buildInsumoSelector() {
@@ -1148,11 +1175,10 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
           ),
           const SizedBox(height: 8),
 
-          // NOVO CAMPO SUBSTITUÍDO
           TextFormField(
             controller: _custoUnitario,
             keyboardType: TextInputType.number,
-            inputFormatters: [_moedaFormatter], // Usa o formatador que criamos
+            inputFormatters: [_moedaFormatter],
             style: const TextStyle(
               color: EstoquePalette.text,
               fontSize: 15,
@@ -1231,7 +1257,7 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
   Widget _buildSummary() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: EstoquePalette.surface,
         borderRadius: BorderRadius.circular(18),
@@ -1247,34 +1273,48 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'RESUMO',
-            style: TextStyle(
-              color: EstoquePalette.textMuted,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.4,
-            ),
+          Row(
+            children: [
+              const Icon(
+                Icons.receipt_long_rounded,
+                color: EstoquePalette.primary,
+                size: 22,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'RESUMO DA OPERAÇÃO',
+                style: const TextStyle(
+                  color: EstoquePalette.text, 
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800, 
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
+          const Divider(height: 1, color: EstoquePalette.borderSoft),
+          const SizedBox(height: 16),
+          // ---------------------------------
+
           _SummaryRow(label: 'Tipo', value: _tipoLabel),
-          const Divider(height: 18, color: EstoquePalette.borderSoft),
+          const SizedBox(height: 12),
           _SummaryRow(label: 'Insumo', value: _selectedInsumo?.nome ?? '-'),
-          const Divider(height: 18, color: EstoquePalette.borderSoft),
+          const SizedBox(height: 12),
           _SummaryRow(
             label: 'Quantidade',
             value:
                 '${_quantidade.text.isEmpty ? '0' : _quantidade.text} ${_selectedUnidade?.simbolo ?? ''}',
           ),
           if (_selectedLote != null) ...[
-            const Divider(height: 18, color: EstoquePalette.borderSoft),
+            const SizedBox(height: 12),
             _SummaryRow(
               label: 'Lote',
               value: _selectedLote!.codigo ?? '#${_selectedLote!.id}',
             ),
           ],
           if (_parseCusto() > 0) ...[
-            const Divider(height: 18, color: EstoquePalette.borderSoft),
+            const SizedBox(height: 12),
             _SummaryRow(
               label: 'Custo unitário',
               value:
