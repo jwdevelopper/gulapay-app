@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:my_app_teste/modules/insumo/dto/insumo_response.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
+import 'package:my_app_teste/core/widgets/app_cartao_deslizavel.dart';
 
 class InsumoCard extends StatelessWidget {
   final InsumoResponse insumo;
@@ -57,41 +58,40 @@ class InsumoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Dismissible(
-      key: ValueKey('insumo-${insumo.id}'),
-      direction: DismissDirection.endToStart,
-      background: _buildDismissBackground(),
-      confirmDismiss: (_) => onConfirmDelete(),
-      child: Material(
+      final card = Material(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
-        clipBehavior: Clip.antiAlias,
         child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: onTap,
-          child: Container(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: AppTema.bordaCampo,
-                width: 1,
-              ),
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: AppTema.bordaCampo,
+              width: 1,
             ),
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                _buildIconBox(theme),
-                const SizedBox(width: 12),
-                Expanded(child: _buildInfo(theme)),
-                const SizedBox(width: 8),
-                _buildStockArea(theme),
-              ],
-            ),
+          ),
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _buildIconBox(theme),
+              const SizedBox(width: 12),
+              Expanded(child: _buildInfo(theme)),
+              const SizedBox(width: 8),
+              _buildStockArea(theme),
+            ],
           ),
         ),
       ),
+    );
+
+    return AppCartaoDeslizavel(
+      chave: 'insumo_${insumo.id}',
+      aoConfirmarExclusao: onConfirmDelete,
+      child: card,
     );
   }
 
@@ -236,29 +236,4 @@ class InsumoCard extends StatelessWidget {
     );
   }
 
-  Widget _buildDismissBackground() {
-    return Container(
-      alignment: Alignment.centerRight,
-      padding: const EdgeInsets.only(right: 16),
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.red.shade500,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: const Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          Icon(Icons.delete_outline_rounded, color: Colors.white),
-          SizedBox(width: 6),
-          Text(
-            'Excluir',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

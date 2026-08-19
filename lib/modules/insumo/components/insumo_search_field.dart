@@ -51,7 +51,7 @@ class InsumoSearchField extends StatelessWidget {
             vertical: 12,
           ),
           filled: true,
-          fillColor: theme.colorScheme.surface,
+          fillColor: Colors.white,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(

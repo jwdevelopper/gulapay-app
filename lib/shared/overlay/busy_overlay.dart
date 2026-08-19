@@ -22,7 +22,7 @@ class BusyOverlay extends StatelessWidget {
          child: IgnorePointer(
           ignoring: !isBusy,
           child: Container(
-            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.7),
+            color: Colors.black.withValues(alpha: 0.8),
             child: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
