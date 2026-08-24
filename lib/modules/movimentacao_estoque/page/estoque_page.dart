@@ -237,7 +237,6 @@ class _EstoquePageState extends State<EstoquePage>
       initialDate: initial,
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
-      // --- INÍCIO DA CUSTOMIZAÇÃO DE CORES ---
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -256,9 +255,8 @@ class _EstoquePageState extends State<EstoquePage>
           child: child!,
         );
       },
-      // --- FIM DA CUSTOMIZAÇÃO DE CORES ---
-    );
-    
+  );
+        
     if (picked != null) {
       setSheet(() {
         if (isFrom) {

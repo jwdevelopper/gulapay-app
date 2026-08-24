@@ -256,8 +256,8 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
     if (_parseCusto() > 0) payload['custoUnitario'] = _parseCusto();
 
     if (_validade.text.trim().isNotEmpty) {
-      final textoData = _validade.text.trim(); 
-      final partes = textoData.split('/'); 
+      final textoData = _validade.text.trim();
+      final partes = textoData.split('/');
 
       if (partes.length == 3) {
         payload['validade'] = '${partes[2]}-${partes[1]}-${partes[0]}';
@@ -302,6 +302,8 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
     if (insumoEscolhido != null) {
       setState(() {
         _selectedInsumo = insumoEscolhido;
+        _selectedLote = null;
+        _lotes = [];
         _insumoError = false;
         _validationMessage = null;
 
@@ -1284,9 +1286,9 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
               Text(
                 'RESUMO DA OPERAÇÃO',
                 style: const TextStyle(
-                  color: EstoquePalette.text, 
+                  color: EstoquePalette.text,
                   fontSize: 14,
-                  fontWeight: FontWeight.w800, 
+                  fontWeight: FontWeight.w800,
                   letterSpacing: 0.5,
                 ),
               ),
@@ -1295,8 +1297,8 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
           const SizedBox(height: 16),
           const Divider(height: 1, color: EstoquePalette.borderSoft),
           const SizedBox(height: 16),
-          // ---------------------------------
 
+          // ---------------------------------
           _SummaryRow(label: 'Tipo', value: _tipoLabel),
           const SizedBox(height: 12),
           _SummaryRow(label: 'Insumo', value: _selectedInsumo?.nome ?? '-'),
