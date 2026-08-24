@@ -13,6 +13,7 @@ import '../dto/cliente_response.dart';
 import '../dto/cliente_update_request.dart';
 import '../service/cliente_service.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import 'package:flutter/services.dart';
 
 class ClienteFormPage extends StatefulWidget {
   final ClienteResponse? cliente;
@@ -56,10 +57,10 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
     final c = widget.cliente;
     if (c != null) {
       _controleNome.text = c.nome ?? '';
-      _controleTelefone.text = c.telefone ?? '';
+      _controleTelefone.text = _mascaraTelefone.maskText(c.telefone ?? '');
       _controleEmail.text = c.email ?? '';
       if (c.endereco != null) {
-        _controleCep.text = c.endereco!.cep ?? '';
+        _controleCep.text = _mascaraCep.maskText(c.endereco!.cep ?? '');
         _controleLogradouro.text = c.endereco!.logradouro ?? '';
         _controleNumero.text = c.endereco!.numero ?? '';
         _controleComplemento.text = c.endereco!.complemento ?? '';
@@ -103,7 +104,7 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
       if (widget.ehEdicao) {
         final dto = ClienteUpdateRequest(
           nome: _controleNome.text.trim(),
-          telefone: _controleTelefone.text.trim(),
+          telefone: _mascaraTelefone.getUnmaskedText(),
           email: _controleEmail.text.trim(),
           endereco: endereco,
           ativo: widget.cliente!.ativo ?? true,
@@ -112,7 +113,7 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
       } else {
         final dto = ClienteCreateRequest(
           nome: _controleNome.text.trim(),
-          telefone: _controleTelefone.text.trim(),
+          telefone: _mascaraTelefone.getUnmaskedText(),
           email: _controleEmail.text.trim(),
           endereco: endereco,
         );
@@ -178,6 +179,9 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
                         controle: _controleNome,
                         dica: 'Ex.: João da Silva',
                         tamanhoMax: 120,
+                        formatadores: [
+                          FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZÀ-ÿ\s]')),
+                        ],
                         validador: (v) {
                           final t = v?.trim() ?? '';
                           if (t.isEmpty) return 'Informe o nome';
@@ -242,6 +246,9 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
                         controle: _controleLogradouro,
                         dica: 'Ex.: Av. Paulista',
                         tamanhoMax: 150,
+                        formatadores: [
+                          FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZÀ-ÿ0-9\s.\-]')),
+                        ],
                       ),
                       const SizedBox(height: 14),
                       Row(
@@ -257,6 +264,8 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
                                   controle: _controleNumero,
                                   dica: 'Ex.: 1578',
                                   tamanhoMax: 10,
+                                  tipoTeclado: TextInputType.number,
+                                  formatadores: [FilteringTextInputFormatter.digitsOnly],
                                 ),
                               ],
                             ),
@@ -273,6 +282,9 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
                                   controle: _controleComplemento,
                                   dica: 'Ex.: Apto 42',
                                   tamanhoMax: 60,
+                                  formatadores: [
+                                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZÀ-ÿ0-9\s,.\-/nº]')),
+                                  ],
                                 ),
                               ],
                             ),
@@ -286,6 +298,9 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
                         controle: _controleBairro,
                         dica: 'Ex.: Bela Vista',
                         tamanhoMax: 80,
+                        formatadores: [
+                          FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZÀ-ÿ0-9\s]')),
+                        ],
                       ),
                       const SizedBox(height: 14),
                       Row(
@@ -301,6 +316,9 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
                                   controle: _controleCidade,
                                   dica: 'Ex.: São Paulo',
                                   tamanhoMax: 80,
+                                  formatadores: [
+                                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZÀ-ÿ\s]')),
+                                  ],
                                 ),
                               ],
                             ),
@@ -317,6 +335,15 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
                                   controle: _controleUf,
                                   dica: 'SP',
                                   tamanhoMax: 2,
+                                  tipoTeclado: TextInputType.text,
+                                  formatadores: [
+                                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZÀ-ÿ]')),
+                                    TextInputFormatter.withFunction(
+                                      (oldValue, newValue) => newValue.copyWith(
+                                        text: newValue.text.toUpperCase(),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
