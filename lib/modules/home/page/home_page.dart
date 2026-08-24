@@ -9,7 +9,7 @@ import 'package:my_app_teste/modules/entregador/page/entregador_page.dart';
 import 'package:my_app_teste/modules/login/page/login_page.dart';
 import 'package:my_app_teste/modules/mesa/page/mesa_page.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/page/estoque_page.dart';
-import 'package:my_app_teste/modules/pedidos/page/pedidos_page.dart';
+import 'package:my_app_teste/modules/comanda/page/comandas_page.dart';
 import 'package:my_app_teste/modules/produto/page/produto_page.dart';
 import 'package:my_app_teste/modules/unidade_medida/page/unidade_medida_page.dart';
 import 'package:my_app_teste/modules/usuario/page/usuario_list_page.dart';
@@ -61,10 +61,10 @@ class _HomeState extends State<Home> {
       pagina: ProdutoPage(),
     ),
     _AbaPrincipal(
-      tituloAppBar: 'Pedidos',
-      rotuloInferior: 'Pedidos',
+      tituloAppBar: 'Comandas',
+      rotuloInferior: 'Comandas',
       icone: Icons.receipt_long_outlined,
-      pagina: PedidosPagina(),
+      pagina: ComandasPage(),
     ),
     _AbaPrincipal(
       tituloAppBar: 'Estoque',
