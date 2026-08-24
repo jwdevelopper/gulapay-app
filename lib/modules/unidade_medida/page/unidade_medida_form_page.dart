@@ -25,6 +25,26 @@ class UnidadeMedidaFormPage extends StatefulWidget {
 }
 
 class _UnidadeMedidaFormPageState extends State<UnidadeMedidaFormPage> {
+  static const int _limiteNome = 60;
+  static const int _limiteSimbolo = 8;
+
+  /// Unidades básicas recomendadas pela documentação — usadas como
+  /// atalho no cadastro de novas unidades.
+  static const List<_SugestaoUnidade> _sugestoes = [
+    _SugestaoUnidade(
+        nome: 'Grama', simbolo: 'g', tipo: 'MASSA', fator: 1),
+    _SugestaoUnidade(
+        nome: 'Quilograma', simbolo: 'kg', tipo: 'MASSA', fator: 1000),
+    _SugestaoUnidade(
+        nome: 'Mililitro', simbolo: 'mL', tipo: 'VOLUME', fator: 1),
+    _SugestaoUnidade(
+        nome: 'Litro', simbolo: 'L', tipo: 'VOLUME', fator: 1000),
+    _SugestaoUnidade(
+        nome: 'Unidade', simbolo: 'un', tipo: 'UNIDADE', fator: 1),
+    _SugestaoUnidade(
+        nome: 'Dúzia', simbolo: 'dz', tipo: 'UNIDADE', fator: 12),
+  ];
+
   final _chaveFormulario = GlobalKey<FormState>();
   final _controleNome = TextEditingController();
   final _controleSimbolo = TextEditingController();
@@ -186,12 +206,21 @@ class _UnidadeMedidaFormPageState extends State<UnidadeMedidaFormPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const AppRotulo('Nome *'),
+                      if (!widget.ehEdicao) ...[
+                        _construirSugestoesRapidas(),
+                        const SizedBox(height: 18),
+                      ],
+                      AppRotulo(
+                        'Nome *',
+                        contador:
+                            '${_controleNome.text.length}/$_limiteNome',
+                      ),
                       const SizedBox(height: 6),
                       AppCampoTexto(
                         controle: _controleNome,
                         dica: 'Ex.: Quilograma',
-                        tamanhoMax: 60,
+                        tamanhoMax: _limiteNome,
+                        aoMudar: (_) => setState(() {}),
                         validador: (v) {
                           final t = v?.trim() ?? '';
                           if (t.isEmpty) return 'Informe o nome';
@@ -200,12 +229,17 @@ class _UnidadeMedidaFormPageState extends State<UnidadeMedidaFormPage> {
                         },
                       ),
                       const SizedBox(height: 14),
-                      const AppRotulo('Símbolo *'),
+                      AppRotulo(
+                        'Símbolo *',
+                        contador:
+                            '${_controleSimbolo.text.length}/$_limiteSimbolo',
+                      ),
                       const SizedBox(height: 6),
                       AppCampoTexto(
                         controle: _controleSimbolo,
                         dica: 'Ex.: kg, mL, csp',
-                        tamanhoMax: 8,
+                        tamanhoMax: _limiteSimbolo,
+                        aoMudar: (_) => setState(() {}),
                         validador: (v) {
                           if (v == null || v.trim().isEmpty) {
                             return 'Informe o símbolo';
@@ -217,16 +251,22 @@ class _UnidadeMedidaFormPageState extends State<UnidadeMedidaFormPage> {
                       const Divider(color: AppTema.bordaCampo),
                       const SizedBox(height: 12),
                       Row(
-                        children: const [
-                          Icon(Icons.straighten,
+                        children: [
+                          const Icon(Icons.straighten,
                               size: 16, color: AppTema.primariaEscura),
-                          SizedBox(width: 8),
-                          Text(
+                          const SizedBox(width: 8),
+                          const Text(
                             'Tipo de medida *',
                             style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: AppTema.textoEscuro),
                           ),
+                          if (widget.ehEdicao) ...[
+                            const SizedBox(width: 6),
+                            const Icon(Icons.lock_outline,
+                                size: 14,
+                                color: AppTema.textoSecundario),
+                          ],
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -298,41 +338,57 @@ class _UnidadeMedidaFormPageState extends State<UnidadeMedidaFormPage> {
                       const Divider(color: AppTema.bordaCampo),
                       const SizedBox(height: 12),
                       Row(
-                        children: const [
-                          Icon(Icons.calculate_outlined,
+                        children: [
+                          const Icon(Icons.calculate_outlined,
                               size: 16, color: AppTema.primariaEscura),
-                          SizedBox(width: 8),
-                          Text(
+                          const SizedBox(width: 8),
+                          const Text(
                             'Fator para a base *',
                             style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: AppTema.textoEscuro),
                           ),
+                          if (widget.ehEdicao) ...[
+                            const SizedBox(width: 6),
+                            const Icon(Icons.lock_outline,
+                                size: 14,
+                                color: AppTema.textoSecundario),
+                          ],
                         ],
                       ),
                       const SizedBox(height: 8),
-                      AppCampoTexto(
-                        controle: _controleFator,
-                        dica: 'Ex.: 1000',
-                        tipoTeclado: const TextInputType.numberWithOptions(
-                            decimal: true),
-                        formatadores: [
-                          FilteringTextInputFormatter.allow(
-                              RegExp(r'[0-9.,]')),
-                        ],
-                        habilitado: !widget.ehEdicao,
-                        validador: widget.ehEdicao
-                            ? null
-                            : (v) {
-                                final t = v?.trim().replaceAll(',', '.') ??
-                                    '';
-                                if (t.isEmpty) return 'Informe o fator';
-                                final n = double.tryParse(t);
-                                if (n == null || n <= 0) {
-                                  return 'Fator deve ser maior que zero';
-                                }
-                                return null;
-                              },
+                      IgnorePointer(
+                        ignoring: widget.ehEdicao,
+                        child: Opacity(
+                          opacity: widget.ehEdicao ? 0.5 : 1.0,
+                          child: AppCampoTexto(
+                            controle: _controleFator,
+                            dica: 'Ex.: 1000',
+                            tipoTeclado:
+                                const TextInputType.numberWithOptions(
+                                    decimal: true),
+                            formatadores: [
+                              FilteringTextInputFormatter.allow(
+                                  RegExp(r'[0-9.,]')),
+                            ],
+                            habilitado: !widget.ehEdicao,
+                            validador: widget.ehEdicao
+                                ? null
+                                : (v) {
+                                    final t =
+                                        v?.trim().replaceAll(',', '.') ??
+                                            '';
+                                    if (t.isEmpty) {
+                                      return 'Informe o fator';
+                                    }
+                                    final n = double.tryParse(t);
+                                    if (n == null || n <= 0) {
+                                      return 'Fator deve ser maior que zero';
+                                    }
+                                    return null;
+                                  },
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 12),
                       AppDica(
@@ -359,4 +415,86 @@ class _UnidadeMedidaFormPageState extends State<UnidadeMedidaFormPage> {
       ),
     );
   }
+
+  Widget _construirSugestoesRapidas() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: const [
+            Icon(Icons.bolt_outlined,
+                size: 16, color: AppTema.primariaEscura),
+            SizedBox(width: 8),
+            Text(
+              'Sugestões rápidas',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: AppTema.textoEscuro),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _sugestoes.map((s) {
+            final cor = _tipoColor(s.tipo);
+            return ActionChip(
+              onPressed: () => _aplicarSugestao(s),
+              backgroundColor: Colors.white,
+              side: BorderSide(color: cor.withValues(alpha: 0.4)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              label: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(_tipoIconData(s.tipo), size: 14, color: cor),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${s.simbolo} · ${s.nome}',
+                    style: TextStyle(
+                      color: AppTema.textoEscuro,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'Toque em uma sugestão para preencher os campos automaticamente.',
+          style:
+              TextStyle(color: AppTema.textoSecundario, fontSize: 12),
+        ),
+      ],
+    );
+  }
+
+  void _aplicarSugestao(_SugestaoUnidade s) {
+    setState(() {
+      _controleNome.text = s.nome;
+      _controleSimbolo.text = s.simbolo;
+      _tipoSelecionado = s.tipo;
+      _controleFator.text = s.fator == s.fator.truncate()
+          ? s.fator.toInt().toString()
+          : s.fator.toString();
+    });
+  }
+}
+
+class _SugestaoUnidade {
+  final String nome;
+  final String simbolo;
+  final String tipo;
+  final double fator;
+
+  const _SugestaoUnidade({
+    required this.nome,
+    required this.simbolo,
+    required this.tipo,
+    required this.fator,
+  });
 }
