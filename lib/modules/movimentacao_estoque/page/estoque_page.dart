@@ -230,24 +230,45 @@ class _EstoquePageState extends State<EstoquePage>
             return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
           }
 
-          Future<void> pickDate(bool isFrom) async {
-            final initial = isFrom ? (tempFrom ?? DateTime.now()) : (tempTo ?? DateTime.now());
-            final picked = await showDatePicker(
-              context: ctx,
-              initialDate: initial,
-              firstDate: DateTime(2020),
-              lastDate: DateTime(2100),
-            );
-            if (picked != null) {
-              setSheet(() {
-                if (isFrom) {
-                  tempFrom = DateTime(picked.year, picked.month, picked.day);
-                } else {
-                  tempTo = DateTime(picked.year, picked.month, picked.day, 23, 59, 59);
-                }
-              });
-            }
-          }
+        Future<void> pickDate(bool isFrom) async {
+    final initial = isFrom ? (tempFrom ?? DateTime.now()) : (tempTo ?? DateTime.now());
+    final picked = await showDatePicker(
+      context: ctx,
+      initialDate: initial,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+      // --- INÍCIO DA CUSTOMIZAÇÃO DE CORES ---
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: EstoquePalette.primary, // Cor do cabeçalho e do dia selecionado
+              onPrimary: Colors.white, // Cor do texto dentro da cor primária
+              onSurface: EstoquePalette.text, // Cor dos números dos dias
+              surface: EstoquePalette.surface, // Cor de fundo do calendário
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: EstoquePalette.primary,
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+      // --- FIM DA CUSTOMIZAÇÃO DE CORES ---
+    );
+    
+    if (picked != null) {
+      setSheet(() {
+        if (isFrom) {
+          tempFrom = DateTime(picked.year, picked.month, picked.day);
+        } else {
+          tempTo = DateTime(picked.year, picked.month, picked.day, 23, 59, 59);
+        }
+      });
+    }
+  }
 
           Widget tipoChip(String value, String label) {
             final selected = tempFilter == value;
