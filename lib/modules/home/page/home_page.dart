@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:curved_navigation_bar/curved_navigation_bar.dart';
+import 'package:my_app_teste/core/acoes_criacao.dart';
 import 'package:my_app_teste/core/api_client.dart';
 import 'package:my_app_teste/core/auth_session.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
+import 'package:my_app_teste/core/widgets/barra_navegacao_curvada.dart';
 import 'package:my_app_teste/modules/categoria/page/categoria_page.dart';
 import 'package:my_app_teste/modules/cliente/page/cliente_page.dart';
 import 'package:my_app_teste/modules/dashboard/page/dashboard_page.dart';
@@ -44,8 +45,7 @@ class _HomeState extends State<Home> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   int _indiceSelecionado = 0; // Índice lógico da página atual
-  int _indiceVisualNavBar = 0; // Índice visual apenas para a NavBar (bolha)
-  
+
   bool _ehAdministrador = false;
 
   late final List<_AbaPrincipal> _todasAbas = [
@@ -131,12 +131,40 @@ class _HomeState extends State<Home> {
   List<_AbaPrincipal> get _abasVisiveis =>
       _todasAbas.where((aba) => !aba.apenasAdmin || _ehAdministrador).toList();
 
-  List<_AbaPrincipal> get _abasNavBar => _abasVisiveis.where((aba) {
+  List<_AbaPrincipal> get _abasFixasNavBar => _abasVisiveis.where((aba) {
     return aba.rotuloInferior == 'Início' ||
         aba.rotuloInferior == 'Mesas' ||
         aba.rotuloInferior == 'Pedidos' ||
         aba.rotuloInferior == 'Clientes';
   }).toList();
+
+  _AbaPrincipal get _abaAtual {
+    final abas = _abasVisiveis;
+    return abas[_indiceSelecionado.clamp(0, abas.length - 1)];
+  }
+
+  /// Menu dinâmico:
+  ///
+  /// - Tela SEM cadastro (Início, Mesas, Pedidos): abas fixas nas posições
+  ///   naturais, bolha na aba tocada.
+  /// - Tela COM cadastro ("+" visível): o item atual — aba fixa ou página
+  ///   vinda do drawer — vai para o CENTRO da barra com a bolha, e o "+"
+  ///   ocupa o canto direito. A curva acompanha os dois: bolha no centro,
+  ///   "+" elevado no canto.
+  List<_AbaPrincipal> get _itensNavBar {
+    final fixas = _abasFixasNavBar;
+    final atual = _abaAtual;
+    final temCriacao = AcoesCriacao.de(atual.tituloAppBar) != null;
+
+    if (!temCriacao) {
+      if (fixas.contains(atual)) return fixas;
+      return List<_AbaPrincipal>.of(fixas)..insert(fixas.length ~/ 2, atual);
+    }
+
+    final itens = List<_AbaPrincipal>.of(fixas)..remove(atual);
+    itens.insert((itens.length + 1) ~/ 2, atual);
+    return itens;
+  }
 
   @override
   void initState() {
@@ -152,39 +180,22 @@ class _HomeState extends State<Home> {
       if (_indiceSelecionado >= _abasVisiveis.length) {
         _indiceSelecionado = 0;
       }
-      _sincronizarNavBar();
     });
   }
 
-  // Função central para alinhar a posição da bolha com a página que está aberta
-  void _sincronizarNavBar() {
-    final abaAtual = _abasVisiveis[_indiceSelecionado];
-    int navIndex = _abasNavBar.indexOf(abaAtual);
-    
-    if (navIndex == -1) {
-      // Se a página selecionada não estiver na NavBar, coloca a bolha no botão "Mais"
-      navIndex = _abasNavBar.length;
-    }
-    _indiceVisualNavBar = navIndex;
-  }
+  void _aoTocarNavBar(int indice) {
+    final itens = _itensNavBar;
+    if (indice >= itens.length) return;
 
-  void _aoTocarAba(int indice) {
-    final aba = _abasNavBar[indice];
-    final indiceCompleto = _abasVisiveis.indexOf(aba);
+    final indiceCompleto = _abasVisiveis.indexOf(itens[indice]);
     if (indiceCompleto >= 0) {
-      setState(() {
-        _indiceSelecionado = indiceCompleto;
-        _indiceVisualNavBar = indice;
-      });
+      setState(() => _indiceSelecionado = indiceCompleto);
     }
   }
 
   void _selecionarPeloMenu(int indice) {
     Navigator.pop(context);
-    setState(() {
-      _indiceSelecionado = indice;
-      _sincronizarNavBar(); // Atualiza a posição da bolha baseado na nova seleção
-    });
+    setState(() => _indiceSelecionado = indice);
   }
 
   Widget _construirMenuLateral(List<_AbaPrincipal> abas) {
@@ -294,22 +305,11 @@ class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     final abasDrawer = _abasVisiveis;
-    final abasNavBar = _abasNavBar;
-
-    final abaAtual = _indiceSelecionado < abasDrawer.length
-        ? abasDrawer[_indiceSelecionado]
-        : abasDrawer.first;
+    final itensNavBar = _itensNavBar;
+    final abaAtual = _abaAtual;
 
     return Scaffold(
-      key: _scaffoldKey, 
-      onDrawerChanged: (isOpened) {
-        // Se o usuário fechar o menu clicando fora, retornamos a bolha para o lugar correto
-        if (!isOpened) {
-          setState(() {
-            _sincronizarNavBar();
-          });
-        }
-      },
+      key: _scaffoldKey,
       backgroundColor: AppTema.fundo,
       drawer: _construirMenuLateral(abasDrawer),
       appBar: AppBar(
@@ -347,42 +347,26 @@ class _HomeState extends State<Home> {
         children: abasDrawer.map((a) => a.pagina).toList(),
       ),
 
-      bottomNavigationBar: CurvedNavigationBar(
-        height: 65, 
-        index: _indiceVisualNavBar, 
-        backgroundColor: AppTema.fundo,
-        color: Color.lerp(AppTema.fundo, Colors.black, 0.08)!,
-        buttonBackgroundColor: AppTema.primaria,
-        animationDuration: const Duration(milliseconds: 300),
-        animationCurve: Curves.easeInOut,
-
-        items: [
-          ...abasNavBar.map((aba) {
-            final bool isSelected = abasNavBar.indexOf(aba) == _indiceVisualNavBar;
-            return Icon(
+      // Menu dinâmico: quando a tela atual tem cadastro (FAB "+"), o item
+      // dela é remanejado para o CENTRO da barra (_itensNavBar); nas demais,
+      // as abas ficam nas posições naturais. A bolha anima normalmente.
+      bottomNavigationBar: BarraNavegacaoCurvada(
+        altura: 65,
+        indice: itensNavBar.indexOf(abaAtual),
+        corFundo: AppTema.fundo,
+        cor: Color.lerp(AppTema.fundo, Colors.black, 0.08)!,
+        corBotao: AppTema.primaria,
+        duracaoAnimacao: const Duration(milliseconds: 300),
+        curvaAnimacao: Curves.easeInOut,
+        itens: [
+          for (final aba in itensNavBar)
+            Icon(
               aba.icone,
               size: 30,
-              color: isSelected ? Colors.white : AppTema.textoSecundario,
-            );
-          }),
-          
-          Icon(
-            Icons.more_horiz,
-            size: 30,
-            color: _indiceVisualNavBar == abasNavBar.length ? Colors.white : AppTema.textoSecundario,
-          ),
+              color: aba == abaAtual ? Colors.white : AppTema.textoSecundario,
+            ),
         ],
-        
-        onTap: (index) {
-          if (index < abasNavBar.length) {
-            _aoTocarAba(index);
-          } else {
-            setState(() {
-              _indiceVisualNavBar = index;
-            });
-            _scaffoldKey.currentState?.openDrawer();
-          }
-        },
+        aoTocar: _aoTocarNavBar,
       ),
     );
   }
