@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/dto/insumo.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/dto/lote.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/dto/unidade_medida.dart';
@@ -11,6 +12,54 @@ class _ChoiceOption {
   final String value;
   final IconData icon;
   const _ChoiceOption({required this.label, required this.description, required this.value, required this.icon});
+}
+
+class CurrencyInputFormatter extends TextInputFormatter {
+  final int? maxDigits;
+  CurrencyInputFormatter({this.maxDigits});
+
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    var text = newValue.text;
+    if (text.isEmpty) return newValue;
+
+    // keep only digits and separators
+    text = text.replaceAll(RegExp('[^0-9,\.]'), '');
+
+    // find separator
+    final firstComma = text.indexOf(',');
+    final firstDot = text.indexOf('.');
+    int sepIndex = -1;
+    if (firstComma >= 0 && (firstDot == -1 || firstComma < firstDot)) { sepIndex = firstComma; }
+    else if (firstDot >= 0) { sepIndex = firstDot; }
+
+    String integerPart = '';
+    String fraction = '';
+
+    if (sepIndex >= 0) {
+      integerPart = text.substring(0, sepIndex).replaceAll(RegExp('[^0-9]'), '');
+      fraction = text.substring(sepIndex + 1).replaceAll(RegExp('[^0-9]'), '');
+    } else {
+      integerPart = text.replaceAll(RegExp('[^0-9]'), '');
+    }
+
+    // enforce max digits on integer part only
+    if (maxDigits != null && integerPart.length > maxDigits!) {
+      integerPart = integerPart.substring(0, maxDigits);
+    }
+
+    if (fraction.length > 2) fraction = fraction.substring(0, 2);
+
+    // build display text: if there's fraction or user typed separator, include comma
+    if (fraction.isNotEmpty || sepIndex >= 0) {
+      // ensure at least '00' when empty fraction on blur is handled elsewhere
+      text = fraction.isEmpty ? '$integerPart,' : '$integerPart,$fraction';
+    } else {
+      text = integerPart;
+    }
+
+    return TextEditingValue(text: text, selection: TextSelection.collapsed(offset: text.length));
+  }
 }
 
 const List<_ChoiceOption> _tipoOptions = [
@@ -31,6 +80,7 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
   final _service = MovimentacaoEstoqueService();
   final _quantidade = TextEditingController();
   final _custoUnitario = TextEditingController();
+  final _custoFocus = FocusNode();
   final _codigoLote = TextEditingController();
   final _justificativa = TextEditingController();
   final _validade = TextEditingController();
@@ -56,12 +106,43 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
     super.initState();
     _loadInsumos();
     _loadUnidades();
+    _custoFocus.addListener(() {
+      if (!_custoFocus.hasFocus) {
+        _formatCustoFinalize();
+      }
+    });
+  }
+
+  void _formatCustoFinalize() {
+    final t = _custoUnitario.text.trim();
+    if (t.isEmpty) return;
+    var text = t.replaceAll('.', ',');
+    final firstComma = text.indexOf(',');
+    String integer = '';
+    String fraction = '';
+    if (firstComma >= 0) {
+      integer = text.substring(0, firstComma).replaceAll(RegExp('[^0-9]'), '');
+      fraction = text.substring(firstComma + 1).replaceAll(RegExp('[^0-9]'), '');
+    } else {
+      integer = text.replaceAll(RegExp('[^0-9]'), '');
+    }
+
+    if (integer.isEmpty) integer = '0';
+    if (integer.length > 12) integer = integer.substring(0, 12);
+
+    if (fraction.length == 0) fraction = '00';
+    if (fraction.length == 1) fraction = fraction + '0';
+    if (fraction.length > 2) fraction = fraction.substring(0, 2);
+
+    final out = '$integer,${fraction.substring(0, 2)}';
+    _custoUnitario.value = TextEditingValue(text: out, selection: TextSelection.collapsed(offset: out.length));
   }
 
   @override
   void dispose() {
     _quantidade.dispose();
     _custoUnitario.dispose();
+    _custoFocus.dispose();
     _codigoLote.dispose();
     _justificativa.dispose();
     _validade.dispose();
@@ -348,19 +429,26 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
   }
 
   Widget _buildTextField({required TextEditingController controller, required String hint, required ValueChanged<String> onChanged,
-    int maxLines = 1, TextInputType keyboardType = TextInputType.text, bool error = false, bool price = false, bool largeText = false, String? suffix}) {
-    final big = price || largeText;
+    int maxLines = 1, TextInputType keyboardType = TextInputType.text, bool error = false, bool price = false, bool largeText = false, String? suffix,
+    int? maxLength, List<TextInputFormatter>? inputFormatters, FocusNode? focusNode, VoidCallback? onEditingComplete, ValueChanged<String>? onSubmitted}) {
+    final big = largeText;
+    final double finalFontSize = big ? 20 : 15;
     return Container(
       decoration: BoxDecoration(color: EstoquePalette.surfaceAlt, borderRadius: BorderRadius.circular(16),
         border: Border.all(color: error ? EstoquePalette.error : EstoquePalette.border),
         boxShadow: const [BoxShadow(color: Color(0x0F9C5A1E), blurRadius: 12, offset: Offset(0, 4))]),
       child: TextField(controller: controller, onChanged: onChanged, maxLines: maxLines, keyboardType: keyboardType,
-        style: TextStyle(color: EstoquePalette.text, fontSize: big ? 28 : 15, fontWeight: big ? FontWeight.w700 : FontWeight.w500),
+        focusNode: focusNode,
+        onEditingComplete: onEditingComplete,
+        onSubmitted: onSubmitted,
+        textAlignVertical: TextAlignVertical.center,
+        style: TextStyle(color: EstoquePalette.text, fontSize: finalFontSize, fontWeight: big ? FontWeight.w700 : FontWeight.w500),
+        inputFormatters: inputFormatters,
+        maxLength: maxLength,
         decoration: InputDecoration(hintText: hint, hintStyle: const TextStyle(color: EstoquePalette.textMuted),
-          prefixText: price ? 'R\$ ' : null,
-          prefixStyle: const TextStyle(color: EstoquePalette.textMuted, fontSize: 20, fontWeight: FontWeight.w700),
+          prefix: price ? Text('R\$ ', style: TextStyle(color: EstoquePalette.textMuted, fontSize: finalFontSize, fontWeight: FontWeight.w700)) : null,
           suffixText: suffix, suffixStyle: const TextStyle(color: EstoquePalette.textMuted, fontSize: 14, fontWeight: FontWeight.w600),
-          border: InputBorder.none, contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: big ? 20 : 16))));
+          border: InputBorder.none, contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: big ? 14 : 12))));
   }
 
   Widget _buildErrorBanner() {
@@ -528,7 +616,9 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
         const Text('Custo unitário *', style: TextStyle(color: EstoquePalette.text, fontSize: 13, fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),
         _buildTextField(controller: _custoUnitario, hint: '0,00', onChanged: (_) {},
-          keyboardType: const TextInputType.numberWithOptions(decimal: true), price: true),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true), price: true,
+          inputFormatters: [CurrencyInputFormatter(maxDigits: 12)], focusNode: _custoFocus,
+          onEditingComplete: _formatCustoFinalize, onSubmitted: (_) => _formatCustoFinalize()),
         const SizedBox(height: 16),
         const Text('Código do lote', style: TextStyle(color: EstoquePalette.text, fontSize: 13, fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),
