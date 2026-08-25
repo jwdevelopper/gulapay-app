@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
+import 'package:my_app_teste/core/utils/telefone_formatter.dart';
 import 'package:my_app_teste/core/widgets/app_barra_acoes.dart';
 import 'package:my_app_teste/core/widgets/app_campo_texto.dart';
 import 'package:my_app_teste/core/widgets/app_dica.dart';
@@ -46,7 +47,7 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
     final c = widget.cliente;
     if (c != null) {
       _controleNome.text = c.nome ?? '';
-      _controleTelefone.text = c.telefone ?? '';
+      _controleTelefone.text = TelefoneFormatter.formatar(c.telefone);
       _controleEmail.text = c.email ?? '';
       if (c.endereco != null) {
         _controleCep.text = c.endereco!.cep ?? '';
@@ -146,7 +147,9 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
             Text(
               widget.ehEdicao ? 'Cadastro · Edição' : 'Cadastro · Novo',
               style: const TextStyle(
-                  fontSize: 12, color: AppTema.textoSecundario),
+                fontSize: 12,
+                color: AppTema.textoSecundario,
+              ),
             ),
           ],
         ),
@@ -180,9 +183,10 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
                       const SizedBox(height: 6),
                       AppCampoTexto(
                         controle: _controleTelefone,
-                        dica: 'Ex.: 11999990000',
+                        dica: 'Ex.: (11) 99999-0000',
                         tipoTeclado: TextInputType.phone,
-                        tamanhoMax: 20,
+                        tamanhoMax: TelefoneFormatter.maxCaracteresFormatados,
+                        formatadores: const [TelefoneFormatter()],
                         validador: (v) {
                           if (v == null || v.trim().isEmpty) {
                             return 'Informe o telefone';
@@ -204,13 +208,19 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
                       const SizedBox(height: 8),
                       Row(
                         children: const [
-                          FaIcon(FontAwesomeIcons.locationDot,
-                              size: 14, color: AppTema.primariaEscura),
+                          FaIcon(
+                            FontAwesomeIcons.locationDot,
+                            size: 14,
+                            color: AppTema.primariaEscura,
+                          ),
                           SizedBox(width: 8),
-                          Text('Endereço',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTema.textoEscuro)),
+                          Text(
+                            'Endereço',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: AppTema.textoEscuro,
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 14),
@@ -321,8 +331,10 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
             ),
             AppBarraAcoes(
               textoConfirmar: widget.ehEdicao ? 'Atualizar' : 'Salvar',
-              iconeConfirmar:
-                  const FaIcon(FontAwesomeIcons.chevronRight, size: 14),
+              iconeConfirmar: const FaIcon(
+                FontAwesomeIcons.chevronRight,
+                size: 14,
+              ),
               carregando: _carregando,
               aoCancelar: () => Navigator.pop(context),
               aoConfirmar: _salvar,
