@@ -46,4 +46,5 @@ final class ConstantsApi {
   static const urlProdutos = "/produtos";
   static const urlMesas = "/mesas";
   static const urlComandas = "/comandas";
+  static const urlItensComanda = "/itens-comanda";
 }
