@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/auth_session.dart';
 import 'package:my_app_teste/core/widgets/app_tag.dart';
@@ -12,6 +14,8 @@ import '../dto/item_comanda_create_request.dart';
 import '../dto/item_comanda_update_request.dart';
 import '../service/comanda_service.dart';
 import '../service/item_comanda_service.dart';
+import 'comanda_edit_page.dart';
+import '../widgets/comanda_search_selector.dart';
 
 const _motivosCancelamento = <String, String>{
   'LANCAMENTO_INCORRETO': 'Lançamento incorreto',
@@ -78,6 +82,7 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
   bool get _garcomDono =>
       _garcom && _usuarioId != null && _comanda?.garcomId != null && _usuarioId == _comanda!.garcomId;
   bool get _podeMutarItens => _caixa || _garcomDono;
+  bool get _podeEditarComanda => _caixa || _garcomDono;
 
   String _money(double value) => 'R\$ ${value.toStringAsFixed(2).replaceAll('.', ',')}';
 
@@ -142,6 +147,18 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
     } finally {
       if (mounted) setState(() => _actionLoading = false);
     }
+  }
+
+  Future<void> _editarComanda() async {
+    final comanda = _comanda;
+    if (comanda == null) return;
+    final alterada = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ComandaEditPage(comanda: comanda, perfil: _perfil),
+      ),
+    );
+    if (alterada == true) await _load();
   }
 
   Future<void> _runItemMutation(Future<void> Function() call) async {
@@ -219,7 +236,12 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
       backgroundColor: EstoquePalette.background,
       body: SafeArea(
         child: Column(children: [
-          _pageHeader(comanda.codigo.isEmpty ? 'Comanda #${comanda.id}' : comanda.codigo),
+            _pageHeader(
+              comanda.codigo.isEmpty
+                  ? 'Comanda #${comanda.id}'
+                  : comanda.codigo,
+              mostrarEditar: _podeEditarComanda,
+            ),
           Expanded(
             child: RefreshIndicator(
               color: EstoquePalette.primary,
@@ -252,7 +274,7 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
     );
   }
 
-  Widget _pageHeader(String title) => Padding(
+  Widget _pageHeader(String title, {bool mostrarEditar = false}) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Material(
@@ -280,6 +302,29 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
               const Text('Detalhes da venda', style: TextStyle(color: EstoquePalette.textMuted, fontSize: 12)),
             ]),
           ),
+        if (mostrarEditar) ...[
+          const SizedBox(width: 8),
+          Material(
+            color: EstoquePalette.surface,
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              onTap: _editarComanda,
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: EstoquePalette.border),
+                ),
+                child: const Icon(
+                  Icons.edit_outlined,
+                  color: EstoquePalette.text,
+                ),
+              ),
+            ),
+          ),
+        ],
         ]),
       );
 
@@ -311,13 +356,112 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
           if (c.linkWhatsApp?.isNotEmpty == true) ...[
             const SizedBox(height: 12),
             TextButton.icon(
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: c.linkWhatsApp!));
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link do WhatsApp copiado.')));
+            onPressed: () async {
+              // Prioritize clienteTelefone; fallback to linkWhatsApp if absent
+              final telefoneRaw = c.clienteTelefone?.trim();
+              final linkRaw = c.linkWhatsApp?.trim();
+              String? link;
+              if (telefoneRaw != null && telefoneRaw.isNotEmpty) {
+                final digits = telefoneRaw.replaceAll(RegExp(r'\D'), '');
+                final cleaned = digits.isEmpty
+                    ? null
+                    : (digits.length <= 11 ? '55$digits' : digits);
+                if (cleaned != null) link = 'https://wa.me/$cleaned';
+              }
+              if (link == null && linkRaw != null && linkRaw.isNotEmpty) {
+                // If linkRaw is a phone, normalize; otherwise use as-is
+                if (!linkRaw.startsWith('http') &&
+                    !linkRaw.contains('wa.me') &&
+                    !linkRaw.startsWith('whatsapp:')) {
+                  final digits = linkRaw.replaceAll(RegExp(r'\D'), '');
+                  final cleaned = digits.isEmpty
+                      ? null
+                      : (digits.length <= 11 ? '55$digits' : digits);
+                  if (cleaned != null) link = 'https://wa.me/$cleaned';
+                } else {
+                  link = linkRaw;
+                }
+              }
+
+              if (link == null) {
+                if (mounted)
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Telefone do cliente não disponível.'),
+                    ),
+                  );
+                return;
+              }
+
+              try {
+                final uri = Uri.parse(link);
+                debugPrint('Tentando abrir WhatsApp: $uri');
+                if (await canLaunchUrl(uri)) {
+                  final launched = await launchUrl(
+                    uri,
+                    mode: LaunchMode.externalApplication,
+                  );
+                  if (launched != true) {
+                    debugPrint('launchUrl returned false for $uri');
+                    if (mounted)
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Não foi possível abrir o WhatsApp.'),
+                        ),
+                      );
+                  }
+                  return;
+                } else {
+                  debugPrint('canLaunchUrl returned false for $uri');
+                }
+
+                // Try opening fallback web URL
+                final webUri = uri;
+                if (await canLaunchUrl(webUri)) {
+                  final launchedWeb = await launchUrl(
+                    webUri,
+                    mode: LaunchMode.externalApplication,
+                  );
+                  if (launchedWeb != true) {
+                    debugPrint('launchUrl (web) returned false for $webUri');
+                    if (mounted)
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Não foi possível abrir o WhatsApp.'),
+                        ),
+                      );
+                  }
+                  return;
+                } else {
+                  debugPrint('canLaunchUrl (web) returned false for $webUri');
+                }
+
+                if (mounted)
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Não foi possível abrir o WhatsApp. Verifique se o app está instalado.',
+                      ),
+                    ),
+                  );
+              } catch (e, st) {
+                debugPrint('Erro ao abrir WhatsApp para link="$link": $e\n$st');
+                if (mounted)
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Erro ao abrir o WhatsApp. Veja o log para detalhes.',
+                      ),
+                    ),
+                  );
+              }
               },
-              style: TextButton.styleFrom(foregroundColor: EstoquePalette.primary, padding: EdgeInsets.zero),
+            style: TextButton.styleFrom(
+              foregroundColor: EstoquePalette.primary,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
               icon: const Icon(Icons.chat_outlined, size: 18),
-              label: const Text('Copiar link WhatsApp'),
+            label: const Text('Abrir no WhatsApp'),
             ),
           ],
           const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Divider(height: 1, color: EstoquePalette.borderSoft)),
@@ -890,6 +1034,21 @@ class _ItemFormSheetState extends State<_ItemFormSheet> {
     }
   }
 
+  Future<void> _abrirProduto() async {
+    final produto = await abrirSeletorComBusca<Produto>(
+      context: context,
+      titulo: 'Escolher produto',
+      itens: _produtos.where((item) => item.id != null).toList(),
+      tituloItem: (item) => item.nome,
+      subtituloItem: (item) => item.preco == null
+          ? ''
+          : 'R\$ ${item.preco!.toStringAsFixed(2).replaceAll('.', ',')}',
+      icone: Icons.restaurant_rounded,
+      selecionado: _produto,
+    );
+    if (produto != null && mounted) setState(() => _produto = produto);
+  }
+
   void _salvar() {
     final qtd = _parseDecimal(_qtdCtrl.text);
     if (!widget.edicao && (_produto?.id == null)) {
@@ -942,15 +1101,14 @@ class _ItemFormSheetState extends State<_ItemFormSheet> {
             _produtoCard()
           else ...[
             _fieldLabel('Produto', subtitle: 'Obrigatório'),
-            DropdownButtonFormField<int>(
-              isExpanded: true,
-              decoration: _decoration('Selecione um produto'),
-              dropdownColor: EstoquePalette.surface,
-              items: _produtos
-                  .where((p) => p.id != null)
-                  .map((p) => DropdownMenuItem(value: p.id, child: Text(p.nome, style: const TextStyle(color: EstoquePalette.text))))
-                  .toList(),
-              onChanged: (id) => setState(() => _produto = _produtos.firstWhere((p) => p.id == id)),
+              CampoSeletorComanda(
+                rotulo: 'Produto *',
+                valor: _produto?.nome ?? '',
+                detalhe: _produto?.preco == null
+                    ? null
+                    : 'R\$ ${_produto!.preco!.toStringAsFixed(2).replaceAll('.', ',')}',
+                icone: Icons.restaurant_rounded,
+                aoTocar: _abrirProduto,
             ),
           ],
           const SizedBox(height: 20),

@@ -9,6 +9,7 @@ import 'package:my_app_teste/modules/usuario/dto/usuario_response.dart';
 import 'package:my_app_teste/modules/usuario/service/usuario_service.dart';
 import '../dto/comanda_create_request.dart';
 import '../service/comanda_service.dart';
+import '../widgets/comanda_search_selector.dart';
 
 class ComandaFormPage extends StatefulWidget {
   const ComandaFormPage({super.key});
@@ -126,18 +127,16 @@ class _ComandaFormPageState extends State<ComandaFormPage> {
 
   Widget _dadosStep() => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _title(_tipo == 'MESA' ? 'Configure a mesa' : 'Informe os dados', 'Preencha as informações necessárias para esta comanda.'), const SizedBox(height: 18),
-        if (_tipo == 'MESA') ...[_label('Mesa'), _dropdownMesa(), const SizedBox(height: 18), _label('Garçom responsável'), _dropdownGarcom(), const SizedBox(height: 18), _label('Tipo de comanda'), _dropdownEscopo()],
-        if (_tipo == 'DELIVERY') ...[_label('Cliente'), _dropdownCliente(), const SizedBox(height: 10), _addressCard()],
-        if (_tipo == 'BALCAO') ...[_label('Cliente (opcional)'), _dropdownCliente(optional: true)],
+        if (_tipo == 'MESA') ...[_seletorMesa(), const SizedBox(height: 18), _seletorGarcom(), const SizedBox(height: 18), _seletorEscopo()],
+        if (_tipo == 'DELIVERY') ...[_clientCard(), const SizedBox(height: 10), _addressCard()],
+        if (_tipo == 'BALCAO') _clientCard(),
         if (_validationMessage != null) ...[const SizedBox(height: 14), _errorBanner()],
       ]);
 
   Widget _clienteStep() => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _title('Quem está fazendo o pedido?', 'Selecione o cliente vinculado a esta comanda.'),
         const SizedBox(height: 18),
-        _label('Cliente *'),
-        const SizedBox(height: 8),
-        _dropdownCliente(),
+        _seletorCliente(),
         const SizedBox(height: 14),
         if (_cliente != null) _clientCard(),
         if (_validationMessage != null) ...[const SizedBox(height: 14), _errorBanner()],
@@ -147,17 +146,34 @@ class _ComandaFormPageState extends State<ComandaFormPage> {
 
   Widget _revisaoStep() => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [_title('Revise sua comanda', 'Confira os dados antes de abrir a venda.'), const SizedBox(height: 18), _summaryCard(), const SizedBox(height: 18), _label('Observação (opcional)'), const SizedBox(height: 8), _textField(_observacao, 'Ex.: sem cebola, separar bebidas', maxLines: 4)]);
 
-  Widget _dropdownMesa() => DropdownButtonFormField<int>(initialValue: _mesaId, isExpanded: true, decoration: _decoration('Selecione uma mesa'), items: _mesas.where((m) => m.id != null).map((m) => DropdownMenuItem(value: m.id, child: Text('Mesa ${m.numero ?? m.id}'))).toList(), onChanged: (value) => setState(() { _mesaId = value; _validationMessage = null; }));
-  Widget _dropdownGarcom() => DropdownButtonFormField<int>(initialValue: _garcomId, isExpanded: true, decoration: _decoration('Selecione o garçom'), items: _garcons.map((usuario) => DropdownMenuItem(value: usuario.id, child: Text(usuario.nome ?? usuario.login ?? 'Garçom ${usuario.id}'))).toList(), onChanged: (value) => setState(() { _garcomId = value; _validationMessage = null; }));
-  Widget _dropdownEscopo() => DropdownButtonFormField<String>(initialValue: _escopo, isExpanded: true, decoration: _decoration('Selecione o tipo'), items: const [DropdownMenuItem(value: 'INDIVIDUAL', child: Text('Individual')), DropdownMenuItem(value: 'COMPARTILHADA', child: Text('Compartilhada'))], onChanged: (value) => setState(() => _escopo = value!));
-  Widget _dropdownCliente({bool optional = false}) => DropdownButtonFormField<int>(initialValue: _cliente?.id, isExpanded: true, decoration: _decoration(optional ? 'Selecione um cliente ou deixe vazio' : 'Selecione um cliente'), items: _clientes.where((c) => c.id != null).map((c) => DropdownMenuItem(value: c.id, child: Text(c.nome ?? 'Cliente ${c.id}'))).toList(), onChanged: (value) => setState(() { _cliente = _clientes.firstWhere((c) => c.id == value); _validationMessage = null; }));
-  InputDecoration _decoration(String hint) => InputDecoration(hintText: hint, hintStyle: const TextStyle(color: EstoquePalette.textMuted), filled: true, fillColor: EstoquePalette.surfaceAlt, contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15), border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: EstoquePalette.border)), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: EstoquePalette.border)), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: EstoquePalette.primary, width: 1.5)));
+  Future<void> _abrirCliente() async {
+    final cliente = await abrirSeletorComBusca<ClienteResponse>(context: context, titulo: 'Escolher cliente', itens: _clientes.where((item) => item.id != null).toList(), tituloItem: (item) => item.nome ?? 'Cliente ${item.id}', subtituloItem: (item) => item.telefone ?? '', icone: Icons.person_outline_rounded, selecionado: _cliente);
+    if (cliente != null && mounted) setState(() { _cliente = cliente; _validationMessage = null; });
+  }
+  Future<void> _abrirMesa() async {
+    final mesa = await abrirSeletorComBusca<MesaDto>(context: context, titulo: 'Escolher mesa', itens: _mesas.where((item) => item.id != null).toList(), tituloItem: (item) => 'Mesa ${item.numero ?? item.id}', subtituloItem: (item) => item.descricao ?? '', icone: Icons.table_restaurant_rounded, selecionado: _mesaSelecionada);
+    if (mesa != null && mounted) setState(() { _mesaId = mesa.id; _validationMessage = null; });
+  }
+  Future<void> _abrirGarcom() async {
+    final garcom = await abrirSeletorComBusca<UsuarioResposta>(context: context, titulo: 'Escolher garçom', itens: _garcons, tituloItem: (item) => item.nome ?? item.login ?? 'Garçom ${item.id}', subtituloItem: (item) => item.login ?? '', icone: Icons.person_outline_rounded, selecionado: _garcomSelecionado);
+    if (garcom != null && mounted) setState(() { _garcomId = garcom.id; _validationMessage = null; });
+  }
+  Future<void> _abrirEscopo() async {
+    final escopo = await abrirSeletorComBusca<String>(context: context, titulo: 'Tipo de comanda', itens: const ['INDIVIDUAL', 'COMPARTILHADA'], tituloItem: (item) => item == 'COMPARTILHADA' ? 'Compartilhada' : 'Individual', icone: Icons.group_outlined, selecionado: _escopo, limiteInicial: 2);
+    if (escopo != null && mounted) setState(() => _escopo = escopo);
+  }
+  Widget _seletorCliente() => CampoSeletorComanda(rotulo: 'Cliente *', valor: _cliente?.nome ?? '', detalhe: _cliente?.telefone, icone: Icons.person_outline_rounded, aoTocar: _abrirCliente, erro: _validationMessage != null && _cliente == null);
+  Widget _seletorMesa() => CampoSeletorComanda(rotulo: 'Mesa *', valor: _mesaId == null ? '' : _mesaLabel, icone: Icons.table_restaurant_rounded, aoTocar: _abrirMesa, erro: _validationMessage != null && _mesaId == null);
+  Widget _seletorGarcom() => CampoSeletorComanda(rotulo: 'Garçom responsável *', valor: _garcomId == null ? '' : _garcomLabel, icone: Icons.person_outline_rounded, aoTocar: _abrirGarcom, erro: _validationMessage != null && _garcomId == null);
+  Widget _seletorEscopo() => CampoSeletorComanda(rotulo: 'Tipo de comanda', valor: _escopo == 'COMPARTILHADA' ? 'Compartilhada' : 'Individual', icone: Icons.group_outlined, aoTocar: _abrirEscopo);
   Widget _textField(TextEditingController controller, String hint, {int maxLines = 1}) => Container(decoration: BoxDecoration(color: EstoquePalette.surfaceAlt, borderRadius: BorderRadius.circular(16), border: Border.all(color: EstoquePalette.border), boxShadow: const [BoxShadow(color: Color(0x0F9C5A1E), blurRadius: 12, offset: Offset(0, 4))]), child: TextField(controller: controller, maxLines: maxLines, style: const TextStyle(color: EstoquePalette.text, fontSize: 15), decoration: InputDecoration(hintText: hint, hintStyle: const TextStyle(color: EstoquePalette.textMuted), border: InputBorder.none, contentPadding: const EdgeInsets.all(16))));
   Widget _addressCard() => Container(width: double.infinity, padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: _cliente?.endereco == null ? EstoquePalette.warningBg : EstoquePalette.inputFill, borderRadius: BorderRadius.circular(16), border: Border.all(color: _cliente?.endereco == null ? EstoquePalette.warningBorder : EstoquePalette.border)), child: Row(children: [Icon(_cliente?.endereco == null ? Icons.info_outline_rounded : Icons.location_on_outlined, color: EstoquePalette.primary, size: 20), const SizedBox(width: 10), Expanded(child: Text(_cliente?.endereco == null ? 'O cliente precisa ter endereço cadastrado.' : 'Endereço cadastrado selecionado para a entrega.', style: const TextStyle(color: EstoquePalette.text, fontSize: 12, fontWeight: FontWeight.w600, height: 1.35)))]));
   Widget _infoCard(String text) => Container(width: double.infinity, padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: EstoquePalette.warningBg, borderRadius: BorderRadius.circular(16), border: Border.all(color: EstoquePalette.warningBorder)), child: Row(children: [const Icon(Icons.lightbulb_outline_rounded, color: EstoquePalette.primary, size: 20), const SizedBox(width: 10), Expanded(child: Text(text, style: const TextStyle(color: EstoquePalette.text, fontSize: 12, fontWeight: FontWeight.w600, height: 1.35)))]));
   Widget _errorBanner() => Container(width: double.infinity, padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: EstoquePalette.warningBg, borderRadius: BorderRadius.circular(16), border: Border.all(color: EstoquePalette.error)), child: Row(children: [const Icon(Icons.warning_amber_rounded, color: EstoquePalette.error, size: 18), const SizedBox(width: 10), Expanded(child: Text(_validationMessage!, style: const TextStyle(color: EstoquePalette.text, fontSize: 12, fontWeight: FontWeight.w600)))]));
-  String get _mesaLabel { for (final mesa in _mesas) { if (mesa.id == _mesaId) return 'Mesa ${mesa.numero ?? mesa.id}'; } return 'Mesa $_mesaId'; }
-  String get _garcomLabel { for (final usuario in _garcons) { if (usuario.id == _garcomId) return usuario.nome ?? usuario.login ?? 'Garçom $_garcomId'; } return 'Garçom $_garcomId'; }
+  MesaDto? get _mesaSelecionada { for (final mesa in _mesas) { if (mesa.id == _mesaId) return mesa; } return null; }
+  UsuarioResposta? get _garcomSelecionado { for (final usuario in _garcons) { if (usuario.id == _garcomId) return usuario; } return null; }
+  String get _mesaLabel => _mesaSelecionada == null ? 'Mesa $_mesaId' : 'Mesa ${_mesaSelecionada!.numero ?? _mesaSelecionada!.id}';
+  String get _garcomLabel => _garcomSelecionado?.nome ?? _garcomSelecionado?.login ?? 'Garçom $_garcomId';
   Widget _summaryCard() => Container(width: double.infinity, padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: EstoquePalette.surface, borderRadius: BorderRadius.circular(18), border: Border.all(color: EstoquePalette.border)), child: Column(children: [_summaryLine('Canal', _canalOptions.firstWhere((o) => o.value == _tipo).label), if (_mesaId != null) _summaryLine('Mesa', _mesaLabel), if (_garcomId != null) _summaryLine('Garçom', _garcomLabel), if (_cliente != null) _summaryLine('Cliente', _cliente!.nome ?? 'Cliente'), if (_tipo == 'MESA') _summaryLine('Escopo', _escopo == 'COMPARTILHADA' ? 'Compartilhada' : 'Individual')]));
   Widget _summaryLine(String label, String value) => Padding(padding: const EdgeInsets.symmetric(vertical: 5), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(label, style: const TextStyle(color: EstoquePalette.textMuted, fontSize: 13)), Flexible(child: Text(value, textAlign: TextAlign.end, style: const TextStyle(color: EstoquePalette.text, fontSize: 13, fontWeight: FontWeight.w700)))]));
   Widget _bottomButtons() => SafeArea(top: false, child: Padding(padding: const EdgeInsets.fromLTRB(16, 4, 16, 12), child: Row(children: [Expanded(child: OutlinedButton(onPressed: _previous, style: OutlinedButton.styleFrom(foregroundColor: EstoquePalette.text, backgroundColor: EstoquePalette.surfaceAlt, side: const BorderSide(color: EstoquePalette.border), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), padding: const EdgeInsets.symmetric(vertical: 16)), child: Text(_step == 0 ? 'Cancelar' : 'Voltar'))), const SizedBox(width: 12), Expanded(child: ElevatedButton(onPressed: _saving ? null : _next, style: ElevatedButton.styleFrom(backgroundColor: EstoquePalette.primary, foregroundColor: Colors.white, disabledBackgroundColor: EstoquePalette.primarySoft, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), padding: const EdgeInsets.symmetric(vertical: 16)), child: _saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : Row(mainAxisAlignment: MainAxisAlignment.center, children: [Text(_step == 3 ? 'Abrir comanda' : 'Continuar'), const SizedBox(width: 8), const Icon(Icons.chevron_right_rounded, size: 18)]))) ])));
