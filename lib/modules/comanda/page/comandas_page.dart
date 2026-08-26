@@ -43,16 +43,7 @@ class _ComandasPageState extends State<ComandasPage> {
     ),
     floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     body: SafeArea(child: Column(children: [
-      Padding(padding: const EdgeInsets.fromLTRB(16, 16, 16, 6), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const SizedBox(width: 44, height: 44),
-        const SizedBox(width: 12),
-        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Comandas', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, height: 1.05, color: EstoquePalette.text)),
-          SizedBox(height: 2),
-          Text('Acompanhe as vendas abertas e finalizadas', style: TextStyle(fontSize: 12, height: 1.15, color: EstoquePalette.textMuted)),
-        ])),
-        IconButton(onPressed: _load, color: EstoquePalette.text, icon: const Icon(Icons.refresh_rounded)),
-      ])),
+      const SizedBox(height: 10),
       _filters(),
       Expanded(child: RefreshIndicator(onRefresh: _load, color: EstoquePalette.primary, child: _body())),
     ])),
@@ -82,9 +73,9 @@ class _ComandasPageState extends State<ComandasPage> {
       );
   Widget _body() {
     if (_loading) return const Center(child: CircularProgressIndicator(color: EstoquePalette.primary));
-    if (_erro != null) return ListView(children: [const SizedBox(height: 100), Center(child: Text(_erro!, style: TextStyle(color: EstoquePalette.text))), Center(child: TextButton(onPressed: _load, style: TextButton.styleFrom(foregroundColor: EstoquePalette.primary), child: const Text('Tentar novamente')))]);
-    if (_comandas.isEmpty) return ListView(children: const [SizedBox(height: 80), Center(child: Icon(Icons.receipt_long_outlined, size: 48, color: EstoquePalette.primary)), SizedBox(height: 14), Center(child: Text('Nenhuma comanda encontrada.', style: TextStyle(color: EstoquePalette.text, fontWeight: FontWeight.w600)))]);
-    return ListView.separated(padding: const EdgeInsets.fromLTRB(16, 8, 16, 96), itemCount: _comandas.length, separatorBuilder: (_, __) => const SizedBox(height: 10), itemBuilder: (_, i) {
+    if (_erro != null) return ListView(physics: const AlwaysScrollableScrollPhysics(), children: [const SizedBox(height: 100), Center(child: Text(_erro!, style: TextStyle(color: EstoquePalette.text))), Center(child: TextButton(onPressed: _load, style: TextButton.styleFrom(foregroundColor: EstoquePalette.primary), child: const Text('Tentar novamente')))]);
+    if (_comandas.isEmpty) return ListView(physics: const AlwaysScrollableScrollPhysics(), children: const [SizedBox(height: 80), Center(child: Icon(Icons.receipt_long_outlined, size: 48, color: EstoquePalette.primary)), SizedBox(height: 14), Center(child: Text('Nenhuma comanda encontrada.', style: TextStyle(color: EstoquePalette.text, fontWeight: FontWeight.w600)))]);
+    return ListView.separated(physics: const AlwaysScrollableScrollPhysics(), padding: const EdgeInsets.fromLTRB(16, 8, 16, 96), itemCount: _comandas.length, separatorBuilder: (_, __) => const SizedBox(height: 10), itemBuilder: (_, i) {
       final c = _comandas[i];
       return Card(color: EstoquePalette.surface, elevation: 0, shadowColor: EstoquePalette.shadow, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: EstoquePalette.border)), child: ListTile(onTap: () async { await Navigator.push(context, MaterialPageRoute(builder: (_) => ComandaDetalhePage(id: c.id!))); _load(); }, contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4), leading: Container(width: 44, height: 44, decoration: BoxDecoration(color: EstoquePalette.inputFill, borderRadius: BorderRadius.circular(14)), child: Icon(c.tipoOrigem == 'MESA' ? Icons.table_restaurant : c.tipoOrigem == 'DELIVERY' ? Icons.delivery_dining : Icons.point_of_sale, color: EstoquePalette.primary)), title: Text(c.codigo.isEmpty ? 'Comanda #${c.id}' : c.codigo, style: const TextStyle(fontWeight: FontWeight.w700, color: EstoquePalette.text)), subtitle: Text([c.tipoOrigem, if (c.clienteNome != null) c.clienteNome!, if (c.mesaNumero != null) 'Mesa ${c.mesaNumero}'].join(' • '), style: const TextStyle(color: EstoquePalette.textMuted, fontSize: 12)), trailing: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [Text(_money(c.totalLiquido), style: const TextStyle(fontWeight: FontWeight.w700, color: EstoquePalette.text)), Text(c.status.replaceAll('_', ' '), style: TextStyle(fontSize: 11, color: _statusColor(c.status), fontWeight: FontWeight.w700))])));
     });

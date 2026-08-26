@@ -16,6 +16,7 @@ import 'package:my_app_teste/modules/unidade_medida/page/unidade_medida_page.dar
 import 'package:my_app_teste/modules/usuario/page/usuario_list_page.dart';
 import 'package:my_app_teste/modules/insumo/pages/insumos_list_page.dart';
 import 'package:my_app_teste/modules/lote/page/lotes_page.dart';
+import 'package:my_app_teste/modules/pedidos/page/pedidos_page.dart';
 
 class _AbaPrincipal {
   final String tituloAppBar;
@@ -71,14 +72,17 @@ class _HomeState extends State<Home> {
       icone: Icons.shopping_bag_outlined,
       pagina: ProdutoPage(),
     ),
-    _AbaPrincipal(
+    const _AbaPrincipal(
       tituloAppBar: 'Comandas',
       rotuloInferior: 'Comandas',
+      icone: Icons.receipt_long_outlined,
+      pagina: ComandasPage(),
+    ),
     const _AbaPrincipal(
       tituloAppBar: 'Pedidos',
       rotuloInferior: 'Pedidos',
       icone: Icons.receipt_long_outlined,
-      pagina: ComandasPage(),
+      pagina: PedidosPagina(),
     ),
     const _AbaPrincipal(
       tituloAppBar: 'Estoque',
