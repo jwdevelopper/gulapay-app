@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/acoes_criacao.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/modules/entregador/dto/entregador_response.dart';
@@ -50,6 +51,7 @@ class _EntregadorPageState extends State<EntregadorPage> {
   @override
   void initState() {
     super.initState();
+    AcoesCriacao.registrar('Entregadores', _openCreate);
     _ensureInitialized();
     _load();
   }
@@ -352,7 +354,6 @@ class _EntregadorPageState extends State<EntregadorPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: EntregadoresPalette.background,
       floatingActionButton: FloatingActionButton(
         tooltip: 'Cadastrar entregador',
         onPressed: _openCreate,
@@ -361,6 +362,7 @@ class _EntregadorPageState extends State<EntregadorPage> {
         shape: const CircleBorder(),
         child: const Icon(Icons.add_rounded),
       ),
+      backgroundColor: EntregadoresPalette.background,
       body: SafeArea(
         child: Column(
           children: [

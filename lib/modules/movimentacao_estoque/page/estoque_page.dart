@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/acoes_criacao.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/dto/insumo.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/dto/movimentacao_estoque.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/service/movimentacao_estoque_service.dart';
@@ -36,6 +37,7 @@ class _EstoquePageState extends State<EstoquePage>
   @override
   void initState() {
     super.initState();
+    AcoesCriacao.registrar('Estoque', _openCreate);
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
@@ -849,7 +851,6 @@ class _EstoquePageState extends State<EstoquePage>
  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: EstoquePalette.background,
       floatingActionButton: FloatingActionButton(
         onPressed: _openCreate,
         backgroundColor: EstoquePalette.primary,
@@ -857,7 +858,7 @@ class _EstoquePageState extends State<EstoquePage>
         shape: const CircleBorder(),
         child: const Icon(Icons.add_rounded),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      backgroundColor: EstoquePalette.background,
       body: SafeArea(
         child: Column(
           children: [

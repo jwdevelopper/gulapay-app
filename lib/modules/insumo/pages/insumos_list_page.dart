@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
+import 'package:my_app_teste/core/acoes_criacao.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/modules/insumo/components/insumo_card.dart';
 import 'package:my_app_teste/modules/insumo/components/insumo_search_field.dart';
@@ -8,7 +10,6 @@ import 'package:my_app_teste/modules/insumo/models/insumo_sort_options.dart';
 import 'package:my_app_teste/modules/insumo/pages/insumo_form_page.dart';
 import 'package:my_app_teste/modules/insumo/service/insumo_service.dart';
 import 'package:my_app_teste/modules/insumo/components/empty_state_card.dart';
-import 'package:my_app_teste/core/theme/app_tema.dart';
 
 class InsumosListPage extends StatefulWidget {
   const InsumosListPage({super.key});
@@ -29,6 +30,7 @@ class _InsumosListPageState extends State<InsumosListPage> {
   @override
   void initState() {
     super.initState();
+    AcoesCriacao.registrar('Insumos', _openCreate);
     _load();
   }
 
@@ -456,7 +458,6 @@ class _InsumosListPageState extends State<InsumosListPage> {
         shape: const CircleBorder(),
         child: const Icon(Icons.add_rounded),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: Column(
         children: [
           const SizedBox(height: 12),
