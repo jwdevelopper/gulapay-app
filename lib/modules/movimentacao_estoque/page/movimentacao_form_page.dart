@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:my_app_teste/core/widgets/app_campo_busca.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/dto/insumo.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/dto/lote.dart';
@@ -225,6 +226,45 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
       return true;
     }
     return true;
+  }
+
+  String? _validarData(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Informe a data de validade';
+    }
+
+    if (value.length < 10) {
+      return 'Informe a data completa (DD/MM/AAAA)';
+    }
+
+    final partes = value.split('/');
+    if (partes.length != 3) return 'Data inválida';
+
+    final dia = int.tryParse(partes[0]);
+    final mes = int.tryParse(partes[1]);
+    final ano = int.tryParse(partes[2]);
+
+    if (dia == null || mes == null || ano == null) {
+      return 'Data inválida';
+    }
+
+    try {
+      final data = DateTime(ano, mes, dia);
+
+      if (data.day != dia || data.month != mes || data.year != ano) {
+        return 'Data inexistente no calendário';
+      }
+
+      final hoje = DateTime.now();
+      final hojeSemHora = DateTime(hoje.year, hoje.month, hoje.day);
+      if (data.isBefore(hojeSemHora)) {
+        return 'A data de validade não pode ser no passado';
+      }
+    } catch (e) {
+      return 'Data inválida';
+    }
+
+    return null;
   }
 
   Future<void> _next() async {
@@ -1140,7 +1180,9 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
             controller: _validade,
             keyboardType: TextInputType.number,
             inputFormatters: [_dataMaskFormatter],
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             style: const TextStyle(color: EstoquePalette.text, fontSize: 15),
+            validator: _validarData,
             decoration: InputDecoration(
               hintText: 'DD/MM/AAAA',
               hintStyle: const TextStyle(
@@ -1164,7 +1206,20 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
                   width: 1.5,
                 ),
               ),
+              // Bordas de erro
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: EstoquePalette.error),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(
+                  color: EstoquePalette.error,
+                  width: 1.5,
+                ),
+              ),
             ),
+            onChanged: (_) => setState(() {}),
           ),
 
           const Text(
@@ -1179,8 +1234,12 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
 
           TextFormField(
             controller: _custoUnitario,
-            keyboardType: TextInputType.number,
-            inputFormatters: [_moedaFormatter],
+            keyboardType: const TextInputType.numberWithOptions(
+              decimal: true,
+              signed: false,
+            ),
+            
+            inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'[-]')), _moedaFormatter],
             style: const TextStyle(
               color: EstoquePalette.text,
               fontSize: 15,
