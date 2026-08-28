@@ -357,8 +357,13 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
       child: TextField(controller: controller, onChanged: onChanged, maxLines: maxLines, keyboardType: keyboardType,
         style: TextStyle(color: EstoquePalette.text, fontSize: big ? 28 : 15, fontWeight: big ? FontWeight.w700 : FontWeight.w500),
         decoration: InputDecoration(hintText: hint, hintStyle: const TextStyle(color: EstoquePalette.textMuted),
-          prefixText: price ? 'R\$ ' : null,
-          prefixStyle: const TextStyle(color: EstoquePalette.textMuted, fontSize: 20, fontWeight: FontWeight.w700),
+        prefixIcon: price
+            ? Padding(
+                padding: const EdgeInsets.only(left: 16, right: 4),
+                child: Text('R\$', style: TextStyle(color: EstoquePalette.textMuted, fontSize: 20, fontWeight: FontWeight.w700)),
+              )
+            : null,
+        prefixIconConstraints: price ? const BoxConstraints(minWidth: 0, minHeight: 0) : null,
           suffixText: suffix, suffixStyle: const TextStyle(color: EstoquePalette.textMuted, fontSize: 14, fontWeight: FontWeight.w600),
           border: InputBorder.none, contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: big ? 20 : 16))));
   }
@@ -410,9 +415,20 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const Text('Tipo de movimentação *', style: TextStyle(color: EstoquePalette.text, fontSize: 13, fontWeight: FontWeight.w700)),
       const SizedBox(height: 8),
-      GridView.count(crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10, shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(), childAspectRatio: 1.25,
-        children: _tipoOptions.map(_buildTypeOption).toList()),
+      GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 280,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          childAspectRatio: 1.25,
+        ),
+        itemCount: _tipoOptions.length,
+        itemBuilder: (context, index) {
+          return _buildTypeOption(_tipoOptions[index]);
+        },
+      ),
       if (_selectedTipo == 'SAIDA_PERDA_VALIDADE') ...[
         const SizedBox(height: 16),
         _buildInfoCard('Perda por validade exige que você selecione qual lote venceu na próxima etapa.'),
