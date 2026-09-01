@@ -8,9 +8,16 @@ import '../dto/cliente_update_request.dart';
 
 final _dio = ApiClient.dio;
 
-Future<List<ClienteResponse>> listarClientes() async {
+Future<List<ClienteResponse>> listarClientes({bool apenasAtivos = false, String? telefone}) async {
   try {
-    final response = await _dio.get(ConstantsApi.urlClientes);
+    final queryParameters = <String, dynamic>{'apenasAtivos': apenasAtivos};
+    if (telefone != null && telefone.trim().isNotEmpty) {
+      queryParameters['telefone'] = telefone.trim();
+    }
+    final response = await _dio.get(
+      ConstantsApi.urlClientes,
+      queryParameters: queryParameters,
+    );
     return (response.data as List)
         .map((item) => ClienteResponse.fromJson(item))
         .toList();

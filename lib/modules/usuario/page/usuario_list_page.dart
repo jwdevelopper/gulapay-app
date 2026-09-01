@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/acoes_criacao.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/auth_session.dart';
@@ -33,6 +34,7 @@ class _UsuarioListaPaginaState extends State<UsuarioListaPagina> {
   @override
   void initState() {
     super.initState();
+    AcoesCriacao.registrar('Usuários', () => _abrirFormulario());
     _inicializar();
   }
 
@@ -186,13 +188,13 @@ class _UsuarioListaPaginaState extends State<UsuarioListaPagina> {
     }
 
     return Scaffold(
-      backgroundColor: AppTema.fundo,
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppTema.primaria,
         foregroundColor: Colors.white,
         onPressed: () => _abrirFormulario(),
         child: const Icon(Icons.add),
       ),
+      backgroundColor: AppTema.fundo,
       body: Column(
         children: [
           _construirBuscaEFiltro(),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/acoes_criacao.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
@@ -30,6 +31,7 @@ class _UnidadeMedidaPageState extends State<UnidadeMedidaPage> {
   @override
   void initState() {
     super.initState();
+    AcoesCriacao.registrar('Unidades de Medida', () => _abrirFormulario());
     _carregar();
   }
 
@@ -264,13 +266,13 @@ class _UnidadeMedidaPageState extends State<UnidadeMedidaPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTema.fundo,
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppTema.primaria,
         foregroundColor: Colors.white,
         onPressed: () => _abrirFormulario(),
         child: const Icon(Icons.add),
       ),
+      backgroundColor: AppTema.fundo,
       body: Column(
         children: [
           _construirFiltros(),

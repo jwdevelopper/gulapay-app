@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/acoes_criacao.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/core/widgets/app_campo_busca.dart';
@@ -97,8 +98,9 @@ class _LotesPageState extends State<LotesPage> {
     return codigo.contains(termo) || insumo.contains(termo);
   }
 
-  List<LoteResponse> get _filtrados =>
-      _lotes.where((l) => _correspondeTexto(l) && _correspondeValidade(l)).toList();
+  List<LoteResponse> get _filtrados => _lotes
+      .where((l) => _correspondeTexto(l) && _correspondeValidade(l))
+      .toList();
 
   int _contar(bool Function(LoteStatusValidade) teste) {
     return _lotes
@@ -119,11 +121,29 @@ class _LotesPageState extends State<LotesPage> {
   Future<void> _abrirCriacao() async {
     final criado = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(
-        builder: (_) => LoteFormPage(insumoInicial: _insumo),
-      ),
+      MaterialPageRoute(builder: (_) => LoteFormPage(insumoInicial: _insumo)),
     );
     if (criado == true) await _carregar();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    AcoesCriacao.registrar('Lotes', _criarPeloMenu);
+  }
+
+  /// Chamado pelo "+" da NavBar da Home. A criação de lote depende de um
+  /// insumo selecionado — sem ele, orienta o usuário em vez de abrir o form.
+  void _criarPeloMenu() {
+    if (_insumo == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Selecione um insumo antes de criar um lote.'),
+        ),
+      );
+      return;
+    }
+    _abrirCriacao();
   }
 
   @override
@@ -131,7 +151,6 @@ class _LotesPageState extends State<LotesPage> {
     final temInsumo = _insumo != null;
 
     return Scaffold(
-      backgroundColor: AppTema.fundo,
       floatingActionButton: temInsumo
           ? FloatingActionButton(
               onPressed: _abrirCriacao,
@@ -141,6 +160,7 @@ class _LotesPageState extends State<LotesPage> {
               child: const Icon(Icons.add_rounded),
             )
           : null,
+      backgroundColor: AppTema.fundo,
       body: temInsumo ? _corpoComInsumo() : _corpoSelecaoInsumo(),
     );
   }
@@ -163,8 +183,10 @@ class _LotesPageState extends State<LotesPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTema.primaria,
                 foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 14,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -219,8 +241,7 @@ class _LotesPageState extends State<LotesPage> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.inventory_2_outlined,
-              color: AppTema.primariaEscura),
+          const Icon(Icons.inventory_2_outlined, color: AppTema.primariaEscura),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -245,10 +266,7 @@ class _LotesPageState extends State<LotesPage> {
               ],
             ),
           ),
-          TextButton(
-            onPressed: _selecionarInsumo,
-            child: const Text('Trocar'),
-          ),
+          TextButton(onPressed: _selecionarInsumo, child: const Text('Trocar')),
         ],
       ),
     );
@@ -269,10 +287,7 @@ class _LotesPageState extends State<LotesPage> {
             '⏰ Vencidos${vencidos > 0 ? ' · $vencidos' : ''}',
             _FiltroValidade.vencidos,
           ),
-          _chip(
-            '⚠️ 7d${ate7 > 0 ? ' · $ate7' : ''}',
-            _FiltroValidade.ate7,
-          ),
+          _chip('⚠️ 7d${ate7 > 0 ? ' · $ate7' : ''}', _FiltroValidade.ate7),
           _chip('📅 30d', _FiltroValidade.ate30),
         ],
       ),
@@ -297,12 +312,8 @@ class _LotesPageState extends State<LotesPage> {
         ),
         backgroundColor: AppTema.cartao,
         selectedColor: AppTema.primaria,
-        side: BorderSide(
-          color: ativo ? AppTema.primaria : AppTema.bordaCampo,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        side: BorderSide(color: ativo ? AppTema.primaria : AppTema.bordaCampo),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         onSelected: (_) => setState(() => _filtroValidade = valor),
       ),
     );

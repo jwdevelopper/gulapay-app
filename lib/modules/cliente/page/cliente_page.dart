@@ -1,5 +1,6 @@
 // lib/modules/cliente/page/cliente_page.dart
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/acoes_criacao.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
@@ -31,6 +32,7 @@ class _ClientePageState extends State<ClientePage> {
   @override
   void initState() {
     super.initState();
+    AcoesCriacao.registrar('Clientes', () => _abrirFormulario());
     _carregar();
   }
 
@@ -238,13 +240,13 @@ class _ClientePageState extends State<ClientePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTema.fundo,
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppTema.primaria,
         foregroundColor: Colors.white,
         onPressed: () => _abrirFormulario(),
         child: const Icon(Icons.add),
       ),
+      backgroundColor: AppTema.fundo,
       body: Column(
         children: [
           _construirBusca(),

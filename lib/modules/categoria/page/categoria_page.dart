@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/acoes_criacao.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
@@ -30,6 +31,7 @@ class _CategoriaPageState extends State<CategoriaPage> {
   @override
   void initState() {
     super.initState();
+    AcoesCriacao.registrar('Categorias', () => _abrirFormulario());
     _carregar();
   }
 
@@ -199,13 +201,13 @@ class _CategoriaPageState extends State<CategoriaPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTema.fundo,
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppTema.primaria,
         foregroundColor: Colors.white,
         onPressed: () => _abrirFormulario(),
         child: const Icon(Icons.add),
       ),
+      backgroundColor: AppTema.fundo,
       body: SafeArea(
         child: Column(
           children: [
