@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/acoes_criacao.dart';
 import 'package:my_app_teste/core/api_client.dart';
 import 'package:my_app_teste/core/auth_session.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
+import 'package:my_app_teste/core/widgets/barra_navegacao_curvada.dart';
 import 'package:my_app_teste/modules/categoria/page/categoria_page.dart';
 import 'package:my_app_teste/modules/cliente/page/cliente_page.dart';
 import 'package:my_app_teste/modules/dashboard/page/dashboard_page.dart';
@@ -9,13 +11,12 @@ import 'package:my_app_teste/modules/entregador/page/entregador_page.dart';
 import 'package:my_app_teste/modules/login/page/login_page.dart';
 import 'package:my_app_teste/modules/mesa/page/mesa_page.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/page/estoque_page.dart';
-import 'package:my_app_teste/modules/pedidos/page/pedidos_page.dart';
+import 'package:my_app_teste/modules/comanda/page/comandas_page.dart';
 import 'package:my_app_teste/modules/produto/page/produto_page.dart';
 import 'package:my_app_teste/modules/unidade_medida/page/unidade_medida_page.dart';
 import 'package:my_app_teste/modules/usuario/page/usuario_list_page.dart';
 import 'package:my_app_teste/modules/insumo/pages/insumos_list_page.dart';
 import 'package:my_app_teste/modules/lote/page/lotes_page.dart';
-import 'package:my_app_teste/shared/bottom_bar/bottom_bar.dart';
 
 class _AbaPrincipal {
   final String tituloAppBar;
@@ -41,74 +42,84 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  static const List<_AbaPrincipal> _todasAbas = [
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  int _indiceSelecionado = 0; // Índice lógico da página atual
+
+  bool _ehAdministrador = false;
+
+  late final List<_AbaPrincipal> _todasAbas = [
     _AbaPrincipal(
       tituloAppBar: 'Início',
       rotuloInferior: 'Início',
       icone: Icons.home_outlined,
-      pagina: DashboardPage(),
+      pagina: DashboardPage(
+        onNavegarParaAba: (indice) {
+          setState(() => _indiceSelecionado = indice);
+        },
+      ),
     ),
-    _AbaPrincipal(
+    const _AbaPrincipal(
       tituloAppBar: 'Mesas',
       rotuloInferior: 'Mesas',
       icone: Icons.grid_view_outlined,
       pagina: MesaPage(),
     ),
-    _AbaPrincipal(
+    const _AbaPrincipal(
       tituloAppBar: 'Produtos',
       rotuloInferior: 'Produtos',
       icone: Icons.shopping_bag_outlined,
       pagina: ProdutoPage(),
     ),
-    _AbaPrincipal(
-      tituloAppBar: 'Pedidos',
-      rotuloInferior: 'Pedidos',
+    const _AbaPrincipal(
+      tituloAppBar: 'Comandas',
+      rotuloInferior: 'Comandas',
       icone: Icons.receipt_long_outlined,
-      pagina: PedidosPagina(),
+      pagina: ComandasPage(),
     ),
-    _AbaPrincipal(
+    const _AbaPrincipal(
       tituloAppBar: 'Estoque',
       rotuloInferior: 'Estoque',
       icone: Icons.inventory_2_outlined,
       pagina: EstoquePage(),
     ),
-    _AbaPrincipal(
+    const _AbaPrincipal(
       tituloAppBar: 'Categorias',
       rotuloInferior: 'Categorias',
       icone: Icons.category_outlined,
       pagina: CategoriaPage(),
     ),
-    _AbaPrincipal(
+    const _AbaPrincipal(
       tituloAppBar: 'Clientes',
       rotuloInferior: 'Clientes',
       icone: Icons.groups_outlined,
       pagina: ClientePage(),
     ),
-    _AbaPrincipal(
+    const _AbaPrincipal(
       tituloAppBar: 'Insumos',
       rotuloInferior: 'Insumos',
       icone: Icons.local_grocery_store_outlined,
       pagina: InsumosListPage(),
     ),
-    _AbaPrincipal(
+    const _AbaPrincipal(
       tituloAppBar: 'Lotes',
       rotuloInferior: 'Lotes',
       icone: Icons.layers_outlined,
       pagina: LotesPage(),
     ),
-    _AbaPrincipal(
+    const _AbaPrincipal(
       tituloAppBar: 'Unidades de Medida',
       rotuloInferior: 'Unidades',
       icone: Icons.straighten_outlined,
       pagina: UnidadeMedidaPage(),
     ),
-    _AbaPrincipal(
+    const _AbaPrincipal(
       tituloAppBar: 'Entregadores',
       rotuloInferior: 'Entregas',
       icone: Icons.delivery_dining_outlined,
       pagina: EntregadorPage(),
     ),
-    _AbaPrincipal(
+    const _AbaPrincipal(
       tituloAppBar: 'Usuários',
       rotuloInferior: 'Equipe',
       icone: Icons.people_outline,
@@ -117,12 +128,43 @@ class _HomeState extends State<Home> {
     ),
   ];
 
-  int _indiceSelecionado = 0;
-  bool _ehAdministrador = false;
+  List<_AbaPrincipal> get _abasVisiveis =>
+      _todasAbas.where((aba) => !aba.apenasAdmin || _ehAdministrador).toList();
 
-  List<_AbaPrincipal> get _abasVisiveis => _todasAbas
-      .where((aba) => !aba.apenasAdmin || _ehAdministrador)
-      .toList();
+  List<_AbaPrincipal> get _abasFixasNavBar => _abasVisiveis.where((aba) {
+    return aba.rotuloInferior == 'Início' ||
+        aba.rotuloInferior == 'Mesas' ||
+        aba.rotuloInferior == 'Comandas' ||
+        aba.rotuloInferior == 'Clientes';
+  }).toList();
+
+  _AbaPrincipal get _abaAtual {
+    final abas = _abasVisiveis;
+    return abas[_indiceSelecionado.clamp(0, abas.length - 1)];
+  }
+
+  /// Menu dinâmico:
+  ///
+  /// - Tela SEM cadastro (Início, Mesas, Comandas): abas fixas nas posições
+  ///   naturais, bolha na aba tocada.
+  /// - Tela COM cadastro ("+" visível): o item atual — aba fixa ou página
+  ///   vinda do drawer — vai para o CENTRO da barra com a bolha, e o "+"
+  ///   ocupa o canto direito. A curva acompanha os dois: bolha no centro,
+  ///   "+" elevado no canto.
+  List<_AbaPrincipal> get _itensNavBar {
+    final fixas = _abasFixasNavBar;
+    final atual = _abaAtual;
+    final temCriacao = AcoesCriacao.de(atual.tituloAppBar) != null;
+
+    if (!temCriacao) {
+      if (fixas.contains(atual)) return fixas;
+      return List<_AbaPrincipal>.of(fixas)..insert(fixas.length ~/ 2, atual);
+    }
+
+    final itens = List<_AbaPrincipal>.of(fixas)..remove(atual);
+    itens.insert((itens.length + 1) ~/ 2, atual);
+    return itens;
+  }
 
   @override
   void initState() {
@@ -141,12 +183,18 @@ class _HomeState extends State<Home> {
     });
   }
 
-  void _aoTocarAba(int indice) {
-    setState(() => _indiceSelecionado = indice);
+  void _aoTocarNavBar(int indice) {
+    final itens = _itensNavBar;
+    if (indice >= itens.length) return;
+
+    final indiceCompleto = _abasVisiveis.indexOf(itens[indice]);
+    if (indiceCompleto >= 0) {
+      setState(() => _indiceSelecionado = indiceCompleto);
+    }
   }
 
   void _selecionarPeloMenu(int indice) {
-    Navigator.pop(context); // fecha o drawer antes de trocar de aba
+    Navigator.pop(context);
     setState(() => _indiceSelecionado = indice);
   }
 
@@ -234,9 +282,9 @@ class _HomeState extends State<Home> {
                 Text(
                   'Notificações',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: AppTema.textoEscuro,
-                      ),
+                    fontWeight: FontWeight.w700,
+                    color: AppTema.textoEscuro,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -256,13 +304,14 @@ class _HomeState extends State<Home> {
 
   @override
   Widget build(BuildContext context) {
-    final abas = _abasVisiveis;
-    final abaAtual =
-        _indiceSelecionado < abas.length ? abas[_indiceSelecionado] : abas.first;
+    final abasDrawer = _abasVisiveis;
+    final itensNavBar = _itensNavBar;
+    final abaAtual = _abaAtual;
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: AppTema.fundo,
-      drawer: _construirMenuLateral(abas),
+      drawer: _construirMenuLateral(abasDrawer),
       appBar: AppBar(
         title: Text(
           abaAtual.tituloAppBar,
@@ -294,23 +343,30 @@ class _HomeState extends State<Home> {
         ),
       ),
       body: IndexedStack(
-        index: _indiceSelecionado.clamp(0, abas.length - 1),
-        children: abas.map((a) => a.pagina).toList(),
+        index: _indiceSelecionado.clamp(0, abasDrawer.length - 1),
+        children: abasDrawer.map((a) => a.pagina).toList(),
       ),
-      bottomNavigationBar: BottomBar(
-        items: abas
-            .map(
-              (a) =>
-                  BottomBarItem(label: a.rotuloInferior, icon: a.icone),
-            )
-            .toList(),
-        selectedIndex: _indiceSelecionado.clamp(0, abas.length - 1),
-        onTap: _aoTocarAba,
-        backgroundColor: AppTema.cartao,
-        borderColor: AppTema.bordaCampo,
-        activeColor: AppTema.primariaEscura,
-        inactiveColor: AppTema.textoSecundario,
-        activeIndicatorColor: AppTema.fundoDica,
+
+      // Menu dinâmico: quando a tela atual tem cadastro (FAB "+"), o item
+      // dela é remanejado para o CENTRO da barra (_itensNavBar); nas demais,
+      // as abas ficam nas posições naturais. A bolha anima normalmente.
+      bottomNavigationBar: BarraNavegacaoCurvada(
+        altura: 65,
+        indice: itensNavBar.indexOf(abaAtual),
+        corFundo: AppTema.fundo,
+        cor: Color.lerp(AppTema.fundo, Colors.black, 0.08)!,
+        corBotao: AppTema.primaria,
+        duracaoAnimacao: const Duration(milliseconds: 300),
+        curvaAnimacao: Curves.easeInOut,
+        itens: [
+          for (final aba in itensNavBar)
+            Icon(
+              aba.icone,
+              size: 30,
+              color: aba == abaAtual ? Colors.white : AppTema.textoSecundario,
+            ),
+        ],
+        aoTocar: _aoTocarNavBar,
       ),
     );
   }

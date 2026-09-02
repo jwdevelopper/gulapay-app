@@ -1,4 +1,5 @@
 class ClienteEndereco {
+  int? id;
   String? logradouro;
   String? numero;
   String? complemento;
@@ -8,6 +9,7 @@ class ClienteEndereco {
   String? cep;
 
   ClienteEndereco({
+    this.id,
     this.logradouro,
     this.numero,
     this.complemento,
@@ -18,6 +20,7 @@ class ClienteEndereco {
   });
 
   ClienteEndereco.fromJson(Map<String, dynamic> json) {
+    id = json['id'] is int ? json['id'] : int.tryParse('${json['id']}');
     logradouro = json['logradouro'];
     numero = json['numero'];
     complemento = json['complemento'];

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/acoes_criacao.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/modules/categoria/dto/categoria.dart';
@@ -32,6 +33,7 @@ class _ProdutosPageState extends State<ProdutosPage> {
   @override
   void initState() {
     super.initState();
+    AcoesCriacao.registrar('Produtos', _openCreate);
     _loadCategories();
     _load();
   }
@@ -530,7 +532,6 @@ class _ProdutosPageState extends State<ProdutosPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ProdutosPalette.background,
       floatingActionButton: FloatingActionButton(
         onPressed: _openCreate,
         backgroundColor: ProdutosPalette.primary,
@@ -538,19 +539,12 @@ class _ProdutosPageState extends State<ProdutosPage> {
         shape: const CircleBorder(),
         child: const Icon(Icons.add_rounded),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      backgroundColor: ProdutosPalette.background,
       body: SafeArea(
         child: Column(
           children: [
-            ProdutoPageHeader(
-              title: _screenTitle,
-              subtitle: _screenSubtitle,
-              hasCategoryFilter: _filters.categoriaId != null,
-              hasActiveFilter: _filters.hasActiveFilter || _search.isNotEmpty,
-              onBackTap: _clearCategoryFilter,
-              onFilterTap: _openFilterSheet,
-              onClearFiltersTap: _clearSearchAndFilter,
-            ),
+            const SizedBox(height: 16),
+            
             ProdutoSearchField(
               controller: _searchController,
               search: _search,
