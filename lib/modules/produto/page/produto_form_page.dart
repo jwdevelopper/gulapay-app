@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/widgets/app_linha_resumo.dart';
+import 'package:my_app_teste/core/widgets/app_botao_icone.dart';
+import 'package:my_app_teste/core/theme/paleta_app.dart';
 import 'package:my_app_teste/modules/categoria/dto/categoria.dart';
 import 'package:my_app_teste/modules/categoria/service/categoria_service.dart';
 import 'package:my_app_teste/modules/produto/dto/produto.dart';
@@ -25,24 +28,6 @@ class _ChoiceOption {
     required this.value,
     required this.icon,
   });
-}
-
-class _WarmPalette {
-  static const background = Color(0xFFFCF6EC);
-  static const surface = Color(0xFFFFF9F1);
-  static const surfaceAlt = Color(0xFFFFFDF9);
-  static const primary = Color(0xFFF07330);
-  static const primaryPressed = Color(0xFFE85F1E);
-  static const primarySoft = Color(0xFFF8C39C);
-  static const text = Color(0xFF3D261A);
-  static const textMuted = Color(0xFFA06E4E);
-  static const border = Color(0xFFE8D8C2);
-  static const borderSoft = Color(0xFFF0E3D0);
-  static const inputFill = Color(0xFFFFF4E8);
-  static const warningBg = Color(0xFFFCEEDC);
-  static const warningBorder = Color(0xFFE9C48D);
-  static const error = Color(0xFFD96A4A);
-  static const shadow = Color(0x1A9C5A1E);
 }
 
 const List<_ChoiceOption> _tipoOptions = [
@@ -320,7 +305,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
           heightFactor: 0.72,
           child: Container(
             decoration: const BoxDecoration(
-              color: _WarmPalette.surface,
+              color: PaletaApp.surface,
               borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
             ),
             child: SafeArea(
@@ -335,7 +320,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
                         width: 40,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: _WarmPalette.borderSoft,
+                          color: PaletaApp.borderSoft,
                           borderRadius: BorderRadius.circular(999),
                         ),
                       ),
@@ -347,7 +332,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
                           child: Text(
                             'Escolher categoria',
                             style: TextStyle(
-                              color: _WarmPalette.text,
+                              color: PaletaApp.text,
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
                             ),
@@ -356,7 +341,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
                         IconButton(
                           onPressed: () => Navigator.pop(sheetContext),
                           icon: const Icon(Icons.close_rounded),
-                          color: _WarmPalette.text,
+                          color: PaletaApp.text,
                         ),
                       ],
                     ),
@@ -370,13 +355,13 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
                                   Icon(
                                     Icons.inbox_outlined,
                                     size: 42,
-                                    color: _WarmPalette.textMuted,
+                                    color: PaletaApp.textMuted,
                                   ),
                                   SizedBox(height: 12),
                                   Text(
                                     'Sem categorias',
                                     style: TextStyle(
-                                      color: _WarmPalette.text,
+                                      color: PaletaApp.text,
                                       fontSize: 16,
                                       fontWeight: FontWeight.w700,
                                     ),
@@ -406,13 +391,13 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
                                     padding: const EdgeInsets.all(14),
                                     decoration: BoxDecoration(
                                       color: selected
-                                          ? _WarmPalette.warningBg
-                                          : _WarmPalette.surfaceAlt,
+                                          ? PaletaApp.warningBg
+                                          : PaletaApp.surfaceAlt,
                                       borderRadius: BorderRadius.circular(18),
                                       border: Border.all(
                                         color: selected
-                                            ? _WarmPalette.primary
-                                            : _WarmPalette.border,
+                                            ? PaletaApp.primary
+                                            : PaletaApp.border,
                                       ),
                                     ),
                                     child: Row(
@@ -422,8 +407,8 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
                                           height: 40,
                                           decoration: BoxDecoration(
                                             color: selected
-                                                ? _WarmPalette.primary
-                                                : _WarmPalette.inputFill,
+                                                ? PaletaApp.primary
+                                                : PaletaApp.inputFill,
                                             borderRadius: BorderRadius.circular(
                                               14,
                                             ),
@@ -432,7 +417,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
                                             _iconForCategory(categoria.nome),
                                             color: selected
                                                 ? Colors.white
-                                                : _WarmPalette.primary,
+                                                : PaletaApp.primary,
                                             size: 20,
                                           ),
                                         ),
@@ -445,7 +430,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
                                               Text(
                                                 categoria.nome,
                                                 style: const TextStyle(
-                                                  color: _WarmPalette.text,
+                                                  color: PaletaApp.text,
                                                   fontSize: 15,
                                                   fontWeight: FontWeight.w700,
                                                 ),
@@ -458,7 +443,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
                                                   categoria.descricao!.trim(),
                                                   style: const TextStyle(
                                                     color:
-                                                        _WarmPalette.textMuted,
+                                                        PaletaApp.textMuted,
                                                     fontSize: 12,
                                                   ),
                                                 ),
@@ -469,7 +454,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
                                         if (selected)
                                           const Icon(
                                             Icons.check_rounded,
-                                            color: _WarmPalette.primary,
+                                            color: PaletaApp.primary,
                                           )
                                         else
                                           const SizedBox(width: 18),
@@ -533,9 +518,8 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _HeaderIconButton(
-            icon: Icons.arrow_back_rounded,
-            onTap: () {
+          AppBotaoIcone(icone: Icons.arrow_back_rounded,
+            aoTocar: () {
               if (_step == 0) {
                 Navigator.pop(context);
               } else {
@@ -551,7 +535,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
                 Text(
                   _isEdit ? 'Editar produto' : 'Novo produto',
                   style: const TextStyle(
-                    color: _WarmPalette.text,
+                    color: PaletaApp.text,
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
                     height: 1.05,
@@ -561,7 +545,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
                 Text(
                   'Etapa ${_step + 1} de 3 • $_stepLabel',
                   style: const TextStyle(
-                    color: _WarmPalette.textMuted,
+                    color: PaletaApp.textMuted,
                     fontSize: 12,
                   ),
                 ),
@@ -584,7 +568,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
               height: 4,
               margin: EdgeInsets.only(right: index == 2 ? 0 : 8),
               decoration: BoxDecoration(
-                color: active ? _WarmPalette.primary : _WarmPalette.borderSoft,
+                color: active ? PaletaApp.primary : PaletaApp.borderSoft,
                 borderRadius: BorderRadius.circular(999),
               ),
             ),
@@ -600,7 +584,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
         Text(
           label,
           style: const TextStyle(
-            color: _WarmPalette.text,
+            color: PaletaApp.text,
             fontSize: 13,
             fontWeight: FontWeight.w700,
           ),
@@ -610,7 +594,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
           Text(
             counter,
             style: const TextStyle(
-              color: _WarmPalette.textMuted,
+              color: PaletaApp.textMuted,
               fontSize: 11,
               fontWeight: FontWeight.w500,
             ),
@@ -630,14 +614,14 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: _WarmPalette.surfaceAlt,
+        color: PaletaApp.surfaceAlt,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: error ? _WarmPalette.error : _WarmPalette.border,
+          color: error ? PaletaApp.error : PaletaApp.border,
         ),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x0F9C5A1E),
+            color: PaletaApp.sombraCampo,
             blurRadius: 12,
             offset: Offset(0, 4),
           ),
@@ -649,16 +633,16 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
         maxLines: maxLines,
         keyboardType: keyboardType,
         style: TextStyle(
-          color: _WarmPalette.text,
+          color: PaletaApp.text,
           fontSize: price ? 28 : 15,
           fontWeight: price ? FontWeight.w700 : FontWeight.w500,
         ),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(color: _WarmPalette.textMuted),
+          hintStyle: const TextStyle(color: PaletaApp.textMuted),
           prefixText: price ? 'R\$ ' : null,
           prefixStyle: const TextStyle(
-            color: _WarmPalette.textMuted,
+            color: PaletaApp.textMuted,
             fontSize: 20,
             fontWeight: FontWeight.w700,
           ),
@@ -678,9 +662,9 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _WarmPalette.warningBg,
+        color: PaletaApp.warningBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _WarmPalette.error),
+        border: Border.all(color: PaletaApp.error),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -689,7 +673,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
             padding: EdgeInsets.only(top: 1),
             child: Icon(
               Icons.warning_amber_rounded,
-              color: _WarmPalette.error,
+              color: PaletaApp.error,
               size: 18,
             ),
           ),
@@ -698,7 +682,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
             child: Text(
               _validationMessage!,
               style: const TextStyle(
-                color: _WarmPalette.text,
+                color: PaletaApp.text,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 height: 1.35,
@@ -715,9 +699,9 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _WarmPalette.warningBg,
+        color: PaletaApp.warningBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _WarmPalette.warningBorder),
+        border: Border.all(color: PaletaApp.warningBorder),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -726,7 +710,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
             padding: EdgeInsets.only(top: 1),
             child: Icon(
               Icons.lightbulb_outline_rounded,
-              color: _WarmPalette.primary,
+              color: PaletaApp.primary,
               size: 18,
             ),
           ),
@@ -735,7 +719,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
             child: Text(
               text,
               style: const TextStyle(
-                color: _WarmPalette.text,
+                color: PaletaApp.text,
                 fontSize: 12,
                 height: 1.35,
                 fontWeight: FontWeight.w500,
@@ -776,7 +760,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
           const Text(
             'Informe o nome do produto.',
             style: TextStyle(
-              color: _WarmPalette.error,
+              color: PaletaApp.error,
               fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
@@ -812,14 +796,14 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: _WarmPalette.surfaceAlt,
+          color: PaletaApp.surfaceAlt,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: _categoriaError ? _WarmPalette.error : _WarmPalette.border,
+            color: _categoriaError ? PaletaApp.error : PaletaApp.border,
           ),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x0F9C5A1E),
+              color: PaletaApp.sombraCampo,
               blurRadius: 12,
               offset: Offset(0, 4),
             ),
@@ -832,13 +816,13 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
               height: 42,
               decoration: BoxDecoration(
                 color: hasSelection
-                    ? _WarmPalette.primary
-                    : _WarmPalette.inputFill,
+                    ? PaletaApp.primary
+                    : PaletaApp.inputFill,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(
                 _iconForCategory(_selectedCategoriaLabel),
-                color: hasSelection ? Colors.white : _WarmPalette.primary,
+                color: hasSelection ? Colors.white : PaletaApp.primary,
                 size: 20,
               ),
             ),
@@ -850,7 +834,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
                   const Text(
                     'Categoria *',
                     style: TextStyle(
-                      color: _WarmPalette.text,
+                      color: PaletaApp.text,
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
@@ -860,8 +844,8 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
                     _selectedCategoriaLabel,
                     style: TextStyle(
                       color: hasSelection
-                          ? _WarmPalette.text
-                          : _WarmPalette.textMuted,
+                          ? PaletaApp.text
+                          : PaletaApp.textMuted,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
@@ -871,7 +855,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
             ),
             const Icon(
               Icons.chevron_right_rounded,
-              color: _WarmPalette.textMuted,
+              color: PaletaApp.textMuted,
             ),
           ],
         ),
@@ -886,7 +870,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
         const Text(
           'Preço de venda *',
           style: TextStyle(
-            color: _WarmPalette.text,
+            color: PaletaApp.text,
             fontSize: 13,
             fontWeight: FontWeight.w700,
           ),
@@ -914,7 +898,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
           const Text(
             'Informe um preço válido.',
             style: TextStyle(
-              color: _WarmPalette.error,
+              color: PaletaApp.error,
               fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
@@ -927,7 +911,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
           const Text(
             'Selecione uma categoria.',
             style: TextStyle(
-              color: _WarmPalette.error,
+              color: PaletaApp.error,
               fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
@@ -957,10 +941,10 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: selected ? _WarmPalette.warningBg : _WarmPalette.surfaceAlt,
+          color: selected ? PaletaApp.warningBg : PaletaApp.surfaceAlt,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected ? _WarmPalette.primary : _WarmPalette.border,
+            color: selected ? PaletaApp.primary : PaletaApp.border,
           ),
         ),
         child: Column(
@@ -973,13 +957,13 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
                   height: 34,
                   decoration: BoxDecoration(
                     color: selected
-                        ? _WarmPalette.primary
-                        : _WarmPalette.inputFill,
+                        ? PaletaApp.primary
+                        : PaletaApp.inputFill,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     option.icon,
-                    color: selected ? Colors.white : _WarmPalette.primary,
+                    color: selected ? Colors.white : PaletaApp.primary,
                     size: 18,
                   ),
                 ),
@@ -987,7 +971,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
                 if (selected)
                   const Icon(
                     Icons.check_circle_rounded,
-                    color: _WarmPalette.primary,
+                    color: PaletaApp.primary,
                     size: 18,
                   ),
               ],
@@ -996,7 +980,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
             Text(
               option.label,
               style: const TextStyle(
-                color: _WarmPalette.text,
+                color: PaletaApp.text,
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
               ),
@@ -1005,7 +989,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
             Text(
               option.description,
               style: const TextStyle(
-                color: _WarmPalette.textMuted,
+                color: PaletaApp.textMuted,
                 fontSize: 11,
                 height: 1.2,
               ),
@@ -1043,10 +1027,10 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: selected ? _WarmPalette.warningBg : _WarmPalette.surfaceAlt,
+          color: selected ? PaletaApp.warningBg : PaletaApp.surfaceAlt,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected ? _WarmPalette.primary : _WarmPalette.border,
+            color: selected ? PaletaApp.primary : PaletaApp.border,
           ),
         ),
         child: Row(
@@ -1055,12 +1039,12 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: selected ? _WarmPalette.primary : _WarmPalette.inputFill,
+                color: selected ? PaletaApp.primary : PaletaApp.inputFill,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(
                 option.icon,
-                color: selected ? Colors.white : _WarmPalette.primary,
+                color: selected ? Colors.white : PaletaApp.primary,
                 size: 20,
               ),
             ),
@@ -1072,7 +1056,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
                   Text(
                     option.label,
                     style: const TextStyle(
-                      color: _WarmPalette.text,
+                      color: PaletaApp.text,
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                     ),
@@ -1081,7 +1065,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
                   Text(
                     option.description,
                     style: const TextStyle(
-                      color: _WarmPalette.textMuted,
+                      color: PaletaApp.textMuted,
                       fontSize: 11,
                     ),
                   ),
@@ -1091,13 +1075,13 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
             if (selected)
               const Icon(
                 Icons.check_circle_rounded,
-                color: _WarmPalette.primary,
+                color: PaletaApp.primary,
                 size: 18,
               )
             else
               const Icon(
                 Icons.radio_button_unchecked_rounded,
-                color: _WarmPalette.border,
+                color: PaletaApp.border,
               ),
           ],
         ),
@@ -1112,12 +1096,12 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _WarmPalette.surface,
+        color: PaletaApp.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _WarmPalette.borderSoft),
+        border: Border.all(color: PaletaApp.borderSoft),
         boxShadow: const [
           BoxShadow(
-            color: _WarmPalette.shadow,
+            color: PaletaApp.shadow,
             blurRadius: 12,
             offset: Offset(0, 4),
           ),
@@ -1129,28 +1113,26 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
           const Text(
             'RESUMO',
             style: TextStyle(
-              color: _WarmPalette.textMuted,
+              color: PaletaApp.textMuted,
               fontSize: 12,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.4,
             ),
           ),
           const SizedBox(height: 12),
-          _SummaryRow(
-            label: 'Nome',
-            value: _nome.text.trim().isEmpty ? '-' : _nome.text.trim(),
+          AppLinhaResumo(rotulo: 'Nome',
+            valor: _nome.text.trim().isEmpty ? '-' : _nome.text.trim(),
           ),
-          const Divider(height: 18, color: _WarmPalette.borderSoft),
-          _SummaryRow(
-            label: 'Preço',
-            value: _formatCurrency(priceValue > 0 ? priceValue : null),
+          const Divider(height: 18, color: PaletaApp.borderSoft),
+          AppLinhaResumo(rotulo: 'Preço',
+            valor: _formatCurrency(priceValue > 0 ? priceValue : null),
           ),
-          const Divider(height: 18, color: _WarmPalette.borderSoft),
-          _SummaryRow(label: 'Categoria', value: categoriaName),
-          const Divider(height: 18, color: _WarmPalette.borderSoft),
-          _SummaryRow(label: 'Tipo', value: _friendlyType(_selectedTipo)),
-          const Divider(height: 18, color: _WarmPalette.borderSoft),
-          _SummaryRow(label: 'Setor', value: _friendlySetor(_selectedSetor)),
+          const Divider(height: 18, color: PaletaApp.borderSoft),
+          AppLinhaResumo(rotulo: 'Categoria', valor: categoriaName),
+          const Divider(height: 18, color: PaletaApp.borderSoft),
+          AppLinhaResumo(rotulo: 'Tipo', valor: _friendlyType(_selectedTipo)),
+          const Divider(height: 18, color: PaletaApp.borderSoft),
+          AppLinhaResumo(rotulo: 'Setor', valor: _friendlySetor(_selectedSetor)),
         ],
       ),
     );
@@ -1163,7 +1145,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
         const Text(
           'Tipo do produto *',
           style: TextStyle(
-            color: _WarmPalette.text,
+            color: PaletaApp.text,
             fontSize: 13,
             fontWeight: FontWeight.w700,
           ),
@@ -1175,7 +1157,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
           const Text(
             'Selecione um tipo de produto.',
             style: TextStyle(
-              color: _WarmPalette.error,
+              color: PaletaApp.error,
               fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
@@ -1185,7 +1167,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
         const Text(
           'Setor de produção *',
           style: TextStyle(
-            color: _WarmPalette.text,
+            color: PaletaApp.text,
             fontSize: 13,
             fontWeight: FontWeight.w700,
           ),
@@ -1197,7 +1179,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
           const Text(
             'Selecione o setor de produção.',
             style: TextStyle(
-              color: _WarmPalette.error,
+              color: PaletaApp.error,
               fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
@@ -1238,9 +1220,9 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
               child: OutlinedButton(
                 onPressed: _step == 0 ? () => Navigator.pop(context) : _prev,
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: _WarmPalette.text,
-                  backgroundColor: _WarmPalette.surfaceAlt,
-                  side: const BorderSide(color: _WarmPalette.border),
+                  foregroundColor: PaletaApp.text,
+                  backgroundColor: PaletaApp.surfaceAlt,
+                  side: const BorderSide(color: PaletaApp.border),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -1254,14 +1236,14 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
               child: ElevatedButton(
                 onPressed: _saving ? null : _next,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _WarmPalette.primary,
+                  backgroundColor: PaletaApp.primary,
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: _WarmPalette.primarySoft.withOpacity(
+                  disabledBackgroundColor: PaletaApp.primarySoft.withOpacity(
                     0.55,
                   ),
                   disabledForegroundColor: Colors.white.withOpacity(0.8),
                   elevation: 4,
-                  shadowColor: _WarmPalette.primaryPressed.withOpacity(0.35),
+                  shadowColor: PaletaApp.primaryPressed.withOpacity(0.35),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -1295,7 +1277,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _WarmPalette.background,
+      backgroundColor: PaletaApp.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -1317,67 +1299,3 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
   }
 }
 
-class _HeaderIconButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  const _HeaderIconButton({required this.icon, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: _WarmPalette.surface,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: _WarmPalette.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _WarmPalette.border),
-          ),
-          child: Icon(icon, color: _WarmPalette.text, size: 22),
-        ),
-      ),
-    );
-  }
-}
-
-class _SummaryRow extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _SummaryRow({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: _WarmPalette.textMuted,
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Flexible(
-          child: Text(
-            value,
-            textAlign: TextAlign.right,
-            style: const TextStyle(
-              color: _WarmPalette.text,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}

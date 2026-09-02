@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/modules/movimentacao_estoque/widgets/estoque_palette.dart';
+import 'package:my_app_teste/core/theme/paleta_app.dart';
 
 Future<T?> abrirSeletorComBusca<T>({
   required BuildContext context,
@@ -57,30 +57,30 @@ class CampoSeletorComanda extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: EstoquePalette.surfaceAlt,
+          color: PaletaApp.surfaceAlt,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: erro ? EstoquePalette.error : EstoquePalette.border),
+          border: Border.all(color: erro ? PaletaApp.error : PaletaApp.border),
         ),
         child: Row(children: [
           Container(
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: preenchido ? EstoquePalette.primary : EstoquePalette.inputFill,
+              color: preenchido ? PaletaApp.primary : PaletaApp.inputFill,
               borderRadius: BorderRadius.circular(13),
             ),
-            child: Icon(icone, color: preenchido ? Colors.white : EstoquePalette.primary, size: 20),
+            child: Icon(icone, color: preenchido ? Colors.white : PaletaApp.primary, size: 20),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(rotulo, style: const TextStyle(color: EstoquePalette.text, fontSize: 13, fontWeight: FontWeight.w700)),
+              Text(rotulo, style: const TextStyle(color: PaletaApp.text, fontSize: 13, fontWeight: FontWeight.w700)),
               const SizedBox(height: 4),
-              Text(valor.isEmpty ? 'Selecione uma opção' : valor, style: TextStyle(color: preenchido ? EstoquePalette.text : EstoquePalette.textMuted, fontSize: 14, fontWeight: FontWeight.w600)),
-              if (detalhe != null && preenchido) Text(detalhe!, style: const TextStyle(color: EstoquePalette.textMuted, fontSize: 11)),
+              Text(valor.isEmpty ? 'Selecione uma opção' : valor, style: TextStyle(color: preenchido ? PaletaApp.text : PaletaApp.textMuted, fontSize: 14, fontWeight: FontWeight.w600)),
+              if (detalhe != null && preenchido) Text(detalhe!, style: const TextStyle(color: PaletaApp.textMuted, fontSize: 11)),
             ]),
           ),
-          const Icon(Icons.chevron_right_rounded, color: EstoquePalette.textMuted),
+          const Icon(Icons.chevron_right_rounded, color: PaletaApp.textMuted),
         ]),
       ),
     );
@@ -137,17 +137,17 @@ class _SeletorComBuscaState<T> extends State<_SeletorComBusca<T>> {
     return FractionallySizedBox(
       heightFactor: 0.72,
       child: Container(
-        decoration: const BoxDecoration(color: EstoquePalette.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+        decoration: const BoxDecoration(color: PaletaApp.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
         child: SafeArea(
           top: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: EstoquePalette.borderSoft, borderRadius: BorderRadius.circular(999)))),
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: PaletaApp.borderSoft, borderRadius: BorderRadius.circular(999)))),
               const SizedBox(height: 18),
               Row(children: [
-                Expanded(child: Text(widget.titulo, style: const TextStyle(color: EstoquePalette.text, fontSize: 18, fontWeight: FontWeight.w700))),
-                IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded), color: EstoquePalette.text),
+                Expanded(child: Text(widget.titulo, style: const TextStyle(color: PaletaApp.text, fontSize: 18, fontWeight: FontWeight.w700))),
+                IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded), color: PaletaApp.text),
               ]),
               const SizedBox(height: 8),
               TextField(
@@ -156,22 +156,22 @@ class _SeletorComBuscaState<T> extends State<_SeletorComBusca<T>> {
                 autofocus: true,
                 decoration: InputDecoration(
                   hintText: 'Pesquisar...',
-                  prefixIcon: const Icon(Icons.search_rounded, color: EstoquePalette.textMuted),
+                  prefixIcon: const Icon(Icons.search_rounded, color: PaletaApp.textMuted),
                   filled: true,
-                  fillColor: EstoquePalette.surfaceAlt,
+                  fillColor: PaletaApp.surfaceAlt,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: EstoquePalette.border)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: EstoquePalette.border)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: EstoquePalette.primary, width: 1.5)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: PaletaApp.border)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: PaletaApp.border)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: PaletaApp.primary, width: 1.5)),
                 ),
               ),
               const SizedBox(height: 12),
               if (_busca.text.trim().isEmpty && widget.itens.length > widget.limiteInicial)
-                Text('Mostrando os primeiros ${widget.limiteInicial} em ordem alfabética.', style: const TextStyle(color: EstoquePalette.textMuted, fontSize: 11)),
+                Text('Mostrando os primeiros ${widget.limiteInicial} em ordem alfabética.', style: const TextStyle(color: PaletaApp.textMuted, fontSize: 11)),
               if (_busca.text.trim().isEmpty && widget.itens.length > widget.limiteInicial) const SizedBox(height: 8),
               Expanded(
                 child: resultados.isEmpty
-                    ? const Center(child: Text('Nenhum resultado encontrado.', style: TextStyle(color: EstoquePalette.textMuted)))
+                    ? const Center(child: Text('Nenhum resultado encontrado.', style: TextStyle(color: PaletaApp.textMuted)))
                     : ListView.separated(
                         itemCount: resultados.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 10),
@@ -185,18 +185,18 @@ class _SeletorComBuscaState<T> extends State<_SeletorComBusca<T>> {
                             child: Container(
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
-                                color: selecionado ? EstoquePalette.inputFill : EstoquePalette.surfaceAlt,
+                                color: selecionado ? PaletaApp.inputFill : PaletaApp.surfaceAlt,
                                 borderRadius: BorderRadius.circular(18),
-                                border: Border.all(color: selecionado ? EstoquePalette.primary : EstoquePalette.border),
+                                border: Border.all(color: selecionado ? PaletaApp.primary : PaletaApp.border),
                               ),
                               child: Row(children: [
-                                Container(width: 40, height: 40, decoration: BoxDecoration(color: selecionado ? EstoquePalette.primary : EstoquePalette.inputFill, borderRadius: BorderRadius.circular(13)), child: Icon(widget.icone, color: selecionado ? Colors.white : EstoquePalette.primary, size: 20)),
+                                Container(width: 40, height: 40, decoration: BoxDecoration(color: selecionado ? PaletaApp.primary : PaletaApp.inputFill, borderRadius: BorderRadius.circular(13)), child: Icon(widget.icone, color: selecionado ? Colors.white : PaletaApp.primary, size: 20)),
                                 const SizedBox(width: 14),
                                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                  Text(widget.tituloItem(item), style: const TextStyle(color: EstoquePalette.text, fontSize: 14, fontWeight: FontWeight.w700)),
-                                  if (subtitulo?.isNotEmpty == true) Text(subtitulo!, style: const TextStyle(color: EstoquePalette.textMuted, fontSize: 11)),
+                                  Text(widget.tituloItem(item), style: const TextStyle(color: PaletaApp.text, fontSize: 14, fontWeight: FontWeight.w700)),
+                                  if (subtitulo?.isNotEmpty == true) Text(subtitulo!, style: const TextStyle(color: PaletaApp.textMuted, fontSize: 11)),
                                 ])),
-                                if (selecionado) const Icon(Icons.check_circle_rounded, color: EstoquePalette.primary, size: 20),
+                                if (selecionado) const Icon(Icons.check_circle_rounded, color: PaletaApp.primary, size: 20),
                               ]),
                             ),
                           );

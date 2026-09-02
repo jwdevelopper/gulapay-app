@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/theme/paleta_app.dart';
 
-import 'produtos_palette.dart';
 
 class ProdutoCategoryChip extends StatelessWidget {
   final String label;
@@ -25,11 +25,11 @@ class ProdutoCategoryChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: selected
-              ? ProdutosPalette.primary
-              : ProdutosPalette.surfaceAlt,
+              ? PaletaApp.primary
+              : PaletaApp.surfaceAlt,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: selected ? ProdutosPalette.primary : ProdutosPalette.border,
+            color: selected ? PaletaApp.primary : PaletaApp.border,
           ),
           boxShadow: selected
               ? const [
@@ -47,13 +47,13 @@ class ProdutoCategoryChip extends StatelessWidget {
             Icon(
               icon,
               size: 15,
-              color: selected ? Colors.white : ProdutosPalette.primary,
+              color: selected ? Colors.white : PaletaApp.primary,
             ),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
-                color: selected ? Colors.white : ProdutosPalette.text,
+                color: selected ? Colors.white : PaletaApp.text,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/widgets/app_data.dart';
 import 'package:flutter/services.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
@@ -113,23 +114,16 @@ class _LoteFormPageState extends State<LoteFormPage> {
   }
 
   Future<void> _selecionarValidade() async {
-    final hoje = DateTime.now();
-    final selecionada = await showDatePicker(
-      context: context,
-      initialDate: _validade ?? hoje,
-      firstDate: DateTime(hoje.year - 5),
-      lastDate: DateTime(hoje.year + 10),
-      helpText: 'Selecione a validade',
+    final selecionada = await abrirSeletorData(
+      context,
+      dataInicial: _validade,
+      textoAjuda: 'Selecione a validade',
     );
     if (selecionada == null) return;
     setState(() => _validade = selecionada);
   }
 
-  String _isoDe(DateTime data) {
-    final mes = data.month.toString().padLeft(2, '0');
-    final dia = data.day.toString().padLeft(2, '0');
-    return '${data.year}-$mes-$dia';
-  }
+  String _isoDe(DateTime data) => formatarDataIso(data);
 
   double? _parseNumero(String texto) {
     final limpo = texto.trim().replaceAll('.', '').replaceAll(',', '.');

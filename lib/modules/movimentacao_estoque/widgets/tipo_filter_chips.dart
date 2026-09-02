@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/theme/paleta_app.dart';
 
-import 'estoque_palette.dart';
 
 class TipoFilterChip {
   final String label;
@@ -52,13 +52,13 @@ class TipoFilterChips extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: selected
-                        ? EstoquePalette.primary
-                        : EstoquePalette.surfaceAlt,
+                        ? PaletaApp.primary
+                        : PaletaApp.surfaceAlt,
                     borderRadius: BorderRadius.circular(999),
                     border: Border.all(
                       color: selected
-                          ? EstoquePalette.primary
-                          : EstoquePalette.border,
+                          ? PaletaApp.primary
+                          : PaletaApp.border,
                     ),
                   ),
                   child: Row(
@@ -70,7 +70,7 @@ class TipoFilterChips extends StatelessWidget {
                           size: 14,
                           color: selected
                               ? Colors.white
-                              : EstoquePalette.textMuted,
+                              : PaletaApp.textMuted,
                         ),
                         const SizedBox(width: 6),
                       ],
@@ -79,7 +79,7 @@ class TipoFilterChips extends StatelessWidget {
                         style: TextStyle(
                           color: selected
                               ? Colors.white
-                              : EstoquePalette.text,
+                              : PaletaApp.text,
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                         ),

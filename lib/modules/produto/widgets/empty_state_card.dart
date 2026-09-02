@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/theme/paleta_app.dart';
 
-import 'produtos_palette.dart';
 
 class EmptyStateCard extends StatelessWidget {
   final String title;
@@ -25,12 +25,12 @@ class EmptyStateCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: ProdutosPalette.surface,
+        color: PaletaApp.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: ProdutosPalette.borderSoft),
+        border: Border.all(color: PaletaApp.borderSoft),
         boxShadow: const [
           BoxShadow(
-            color: ProdutosPalette.shadow,
+            color: PaletaApp.shadow,
             blurRadius: 18,
             offset: Offset(0, 8),
           ),
@@ -43,17 +43,17 @@ class EmptyStateCard extends StatelessWidget {
             width: 70,
             height: 70,
             decoration: BoxDecoration(
-              color: ProdutosPalette.inputFill,
+              color: PaletaApp.inputFill,
               borderRadius: BorderRadius.circular(22),
             ),
-            child: Icon(icon, color: ProdutosPalette.primary, size: 34),
+            child: Icon(icon, color: PaletaApp.primary, size: 34),
           ),
           const SizedBox(height: 18),
           Text(
             title,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              color: ProdutosPalette.text,
+              color: PaletaApp.text,
               fontSize: 18,
               fontWeight: FontWeight.w700,
             ),
@@ -63,7 +63,7 @@ class EmptyStateCard extends StatelessWidget {
             subtitle,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              color: ProdutosPalette.textMuted,
+              color: PaletaApp.textMuted,
               fontSize: 13,
               height: 1.35,
             ),
@@ -75,9 +75,9 @@ class EmptyStateCard extends StatelessWidget {
                 ? OutlinedButton.icon(
                     onPressed: onPressed,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: ProdutosPalette.text,
-                      side: const BorderSide(color: ProdutosPalette.border),
-                      backgroundColor: ProdutosPalette.surfaceAlt,
+                      foregroundColor: PaletaApp.text,
+                      side: const BorderSide(color: PaletaApp.border),
+                      backgroundColor: PaletaApp.surfaceAlt,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
@@ -89,10 +89,10 @@ class EmptyStateCard extends StatelessWidget {
                 : ElevatedButton.icon(
                     onPressed: onPressed,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: ProdutosPalette.primary,
+                      backgroundColor: PaletaApp.primary,
                       foregroundColor: Colors.white,
                       elevation: 4,
-                      shadowColor: ProdutosPalette.primaryPressed.withValues(
+                      shadowColor: PaletaApp.primaryPressed.withValues(
                         alpha: 0.35,
                       ),
                       shape: RoundedRectangleBorder(

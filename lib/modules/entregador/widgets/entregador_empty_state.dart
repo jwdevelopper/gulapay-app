@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/theme/paleta_app.dart';
 
-import 'entregadores_palette.dart';
 
 class EntregadorEmptyState extends StatelessWidget {
   final String title;
@@ -26,16 +26,16 @@ class EntregadorEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final buttonStyle = secondary
         ? OutlinedButton.styleFrom(
-            foregroundColor: EntregadoresPalette.text,
-            side: const BorderSide(color: EntregadoresPalette.border),
-            backgroundColor: EntregadoresPalette.surfaceAlt,
+            foregroundColor: PaletaApp.text,
+            side: const BorderSide(color: PaletaApp.border),
+            backgroundColor: PaletaApp.surfaceAlt,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
             padding: const EdgeInsets.symmetric(vertical: 15),
           )
         : ElevatedButton.styleFrom(
-            backgroundColor: EntregadoresPalette.primary,
+            backgroundColor: PaletaApp.primary,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
@@ -46,12 +46,12 @@ class EntregadorEmptyState extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: EntregadoresPalette.surface,
+        color: PaletaApp.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: EntregadoresPalette.borderSoft),
+        border: Border.all(color: PaletaApp.borderSoft),
         boxShadow: const [
           BoxShadow(
-            color: EntregadoresPalette.shadow,
+            color: PaletaApp.shadow,
             blurRadius: 18,
             offset: Offset(0, 8),
           ),
@@ -64,17 +64,17 @@ class EntregadorEmptyState extends StatelessWidget {
             width: 70,
             height: 70,
             decoration: BoxDecoration(
-              color: EntregadoresPalette.inputFill,
+              color: PaletaApp.inputFill,
               borderRadius: BorderRadius.circular(22),
             ),
-            child: Icon(icon, color: EntregadoresPalette.primary, size: 34),
+            child: Icon(icon, color: PaletaApp.primary, size: 34),
           ),
           const SizedBox(height: 18),
           Text(
             title,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              color: EntregadoresPalette.text,
+              color: PaletaApp.text,
               fontSize: 18,
               fontWeight: FontWeight.w700,
             ),
@@ -84,7 +84,7 @@ class EntregadorEmptyState extends StatelessWidget {
             subtitle,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              color: EntregadoresPalette.textMuted,
+              color: PaletaApp.textMuted,
               fontSize: 13,
               height: 1.35,
             ),

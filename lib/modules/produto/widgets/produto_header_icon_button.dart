@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/theme/paleta_app.dart';
 
-import 'produtos_palette.dart';
 
 class ProdutoHeaderIconButton extends StatelessWidget {
   final IconData icon;
@@ -11,7 +11,7 @@ class ProdutoHeaderIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: ProdutosPalette.surface,
+      color: PaletaApp.surface,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
@@ -20,11 +20,11 @@ class ProdutoHeaderIconButton extends StatelessWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: ProdutosPalette.surface,
+            color: PaletaApp.surface,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: ProdutosPalette.border),
+            border: Border.all(color: PaletaApp.border),
           ),
-          child: Icon(icon, color: ProdutosPalette.text, size: 22),
+          child: Icon(icon, color: PaletaApp.text, size: 22),
         ),
       ),
     );

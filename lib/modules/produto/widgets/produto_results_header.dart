@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/theme/paleta_app.dart';
 
-import 'produtos_palette.dart';
 
 class ProdutoResultsHeader extends StatelessWidget {
   final int resultCount;
@@ -34,7 +34,7 @@ class ProdutoResultsHeader extends StatelessWidget {
             child: Text(
               '$resultCount produtos${hasActiveFilter ? ' • filtros ativos' : ''}',
               style: const TextStyle(
-                color: ProdutosPalette.text,
+                color: PaletaApp.text,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -58,16 +58,16 @@ class ProdutoResultsHeader extends StatelessWidget {
                           : Icons.filter_alt_outlined,
                       size: 16,
                       color: hasActiveFilter
-                          ? ProdutosPalette.primaryPressed
-                          : ProdutosPalette.textMuted,
+                          ? PaletaApp.primaryPressed
+                          : PaletaApp.textMuted,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       hasActiveFilter ? 'Limpar' : 'Filtros',
                       style: TextStyle(
                         color: hasActiveFilter
-                            ? ProdutosPalette.primaryPressed
-                            : ProdutosPalette.text,
+                            ? PaletaApp.primaryPressed
+                            : PaletaApp.text,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                       ),
@@ -89,13 +89,13 @@ class ProdutoResultsHeader extends StatelessWidget {
                   const Icon(
                     Icons.sort_rounded,
                     size: 16,
-                    color: ProdutosPalette.textMuted,
+                    color: PaletaApp.textMuted,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     sortLabel,
                     style: const TextStyle(
-                      color: ProdutosPalette.text,
+                      color: PaletaApp.text,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),

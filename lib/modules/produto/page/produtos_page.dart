@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/theme/paleta_app.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/modules/categoria/dto/categoria.dart';
@@ -7,7 +8,6 @@ import 'package:my_app_teste/modules/produto/dto/produto.dart';
 import 'package:my_app_teste/modules/produto/models/produto_list_filter.dart';
 import 'package:my_app_teste/modules/produto/models/produto_sort_option.dart';
 import 'package:my_app_teste/modules/produto/service/produto_service.dart';
-import 'package:my_app_teste/modules/produto/widgets/produtos_palette.dart';
 import 'package:my_app_teste/modules/produto/widgets/produtos_widgets.dart';
 import 'produto_form_page.dart';
 
@@ -220,7 +220,7 @@ class _ProdutosPageState extends State<ProdutosPage> {
           children: [
             FaIcon(
               FontAwesomeIcons.triangleExclamation,
-              color: ProdutosPalette.primary,
+              color: PaletaApp.primary,
               size: 20,
             ),
             SizedBox(width: 10),
@@ -228,20 +228,20 @@ class _ProdutosPageState extends State<ProdutosPage> {
               'Excluir produto',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: ProdutosPalette.text,
+                color: PaletaApp.text,
               ),
             ),
           ],
         ),
         content: Text(
           'Deseja realmente excluir "${produto.nome}"? Esta ação não pode ser desfeita.',
-          style: const TextStyle(color: ProdutosPalette.text),
+          style: const TextStyle(color: PaletaApp.text),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             style: TextButton.styleFrom(
-              foregroundColor: ProdutosPalette.textMuted,
+              foregroundColor: PaletaApp.textMuted,
             ),
             child: const Text('Cancelar'),
           ),
@@ -475,7 +475,7 @@ class _ProdutosPageState extends State<ProdutosPage> {
         children: const [
           SizedBox(height: 120),
           Center(
-            child: CircularProgressIndicator(color: ProdutosPalette.primary),
+            child: CircularProgressIndicator(color: PaletaApp.primary),
           ),
         ],
       );
@@ -530,10 +530,10 @@ class _ProdutosPageState extends State<ProdutosPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ProdutosPalette.background,
+      backgroundColor: PaletaApp.background,
       floatingActionButton: FloatingActionButton(
         onPressed: _openCreate,
-        backgroundColor: ProdutosPalette.primary,
+        backgroundColor: PaletaApp.primary,
         foregroundColor: Colors.white,
         shape: const CircleBorder(),
         child: const Icon(Icons.add_rounded),
@@ -564,7 +564,7 @@ class _ProdutosPageState extends State<ProdutosPage> {
             ),
             Expanded(
               child: RefreshIndicator(
-                color: ProdutosPalette.primary,
+                color: PaletaApp.primary,
                 onRefresh: _reload,
                 child: _buildList(),
               ),

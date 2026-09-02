@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/theme/paleta_app.dart';
 
-import 'produtos_palette.dart';
 
 class ProdutoSearchField extends StatelessWidget {
   final TextEditingController controller;
@@ -22,9 +22,9 @@ class ProdutoSearchField extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
         decoration: BoxDecoration(
-          color: ProdutosPalette.surfaceAlt,
+          color: PaletaApp.surfaceAlt,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: ProdutosPalette.border),
+          border: Border.all(color: PaletaApp.border),
           boxShadow: const [
             BoxShadow(
               color: Color(0x08A86D37),
@@ -37,17 +37,17 @@ class ProdutoSearchField extends StatelessWidget {
           controller: controller,
           onChanged: onChanged,
           style: const TextStyle(
-            color: ProdutosPalette.text,
+            color: PaletaApp.text,
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
           decoration: InputDecoration(
             prefixIcon: const Icon(
               Icons.search_rounded,
-              color: ProdutosPalette.textMuted,
+              color: PaletaApp.textMuted,
             ),
             hintText: 'Buscar produto...',
-            hintStyle: const TextStyle(color: ProdutosPalette.textMuted),
+            hintStyle: const TextStyle(color: PaletaApp.textMuted),
             border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/theme/paleta_app.dart';
 
-import 'estoque_palette.dart';
 
 class EstoqueEmptyState extends StatelessWidget {
   final String title;
@@ -23,12 +23,12 @@ class EstoqueEmptyState extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: EstoquePalette.surface,
+        color: PaletaApp.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: EstoquePalette.borderSoft),
+        border: Border.all(color: PaletaApp.borderSoft),
         boxShadow: const [
           BoxShadow(
-            color: EstoquePalette.shadow,
+            color: PaletaApp.shadow,
             blurRadius: 18,
             offset: Offset(0, 8),
           ),
@@ -41,12 +41,12 @@ class EstoqueEmptyState extends StatelessWidget {
             width: 70,
             height: 70,
             decoration: BoxDecoration(
-              color: EstoquePalette.inputFill,
+              color: PaletaApp.inputFill,
               borderRadius: BorderRadius.circular(22),
             ),
             child: const Icon(
               Icons.inventory_2_rounded,
-              color: EstoquePalette.primary,
+              color: PaletaApp.primary,
               size: 34,
             ),
           ),
@@ -55,7 +55,7 @@ class EstoqueEmptyState extends StatelessWidget {
             title,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              color: EstoquePalette.text,
+              color: PaletaApp.text,
               fontSize: 18,
               fontWeight: FontWeight.w700,
             ),
@@ -65,7 +65,7 @@ class EstoqueEmptyState extends StatelessWidget {
             subtitle,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              color: EstoquePalette.textMuted,
+              color: PaletaApp.textMuted,
               fontSize: 13,
               height: 1.35,
             ),
@@ -77,10 +77,10 @@ class EstoqueEmptyState extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: onPressed,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: EstoquePalette.primary,
+                  backgroundColor: PaletaApp.primary,
                   foregroundColor: Colors.white,
                   elevation: 4,
-                  shadowColor: EstoquePalette.primaryPressed.withValues(
+                  shadowColor: PaletaApp.primaryPressed.withValues(
                     alpha: 0.35,
                   ),
                   shape: RoundedRectangleBorder(
@@ -100,7 +100,7 @@ class EstoqueEmptyState extends StatelessWidget {
               children: [
                 const Icon(
                   Icons.lightbulb_outline_rounded,
-                  color: EstoquePalette.textMuted,
+                  color: PaletaApp.textMuted,
                   size: 14,
                 ),
                 const SizedBox(width: 6),
@@ -108,7 +108,7 @@ class EstoqueEmptyState extends StatelessWidget {
                   child: Text(
                     tipText!,
                     style: const TextStyle(
-                      color: EstoquePalette.textMuted,
+                      color: PaletaApp.textMuted,
                       fontSize: 11,
                       height: 1.3,
                     ),

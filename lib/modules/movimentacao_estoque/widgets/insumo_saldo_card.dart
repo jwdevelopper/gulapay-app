@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/theme/paleta_app.dart';
 
-import 'estoque_palette.dart';
 
 class InsumoSaldoCard extends StatelessWidget {
   final String nome;
@@ -52,7 +52,7 @@ class InsumoSaldoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: EstoquePalette.surface,
+      color: PaletaApp.surface,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onTap,
@@ -60,16 +60,16 @@ class InsumoSaldoCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: EstoquePalette.surface,
+            color: PaletaApp.surface,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
               color: _abaixoDoMinimo
-                  ? EstoquePalette.warningBorder
-                  : EstoquePalette.border,
+                  ? PaletaApp.warningBorder
+                  : PaletaApp.border,
             ),
             boxShadow: const [
               BoxShadow(
-                color: EstoquePalette.shadow,
+                color: PaletaApp.shadow,
                 blurRadius: 14,
                 offset: Offset(0, 6),
               ),
@@ -83,7 +83,7 @@ class InsumoSaldoCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: _abaixoDoMinimo
                       ? const Color(0xFFFFF3E0)
-                      : EstoquePalette.inputFill,
+                      : PaletaApp.inputFill,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
@@ -91,8 +91,8 @@ class InsumoSaldoCard extends StatelessWidget {
                       ? Icons.warning_amber_rounded
                       : Icons.inventory_2_rounded,
                   color: _abaixoDoMinimo
-                      ? EstoquePalette.primary
-                      : EstoquePalette.textMuted,
+                      ? PaletaApp.primary
+                      : PaletaApp.textMuted,
                   size: 22,
                 ),
               ),
@@ -104,7 +104,7 @@ class InsumoSaldoCard extends StatelessWidget {
                     Text(
                       nome,
                       style: const TextStyle(
-                        color: EstoquePalette.text,
+                        color: PaletaApp.text,
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                       ),
@@ -115,7 +115,7 @@ class InsumoSaldoCard extends StatelessWidget {
                     Text(
                       _subtitleText,
                       style: const TextStyle(
-                        color: EstoquePalette.textMuted,
+                        color: PaletaApp.textMuted,
                         fontSize: 12,
                         height: 1.25,
                       ),
@@ -130,7 +130,7 @@ class InsumoSaldoCard extends StatelessWidget {
                   Text(
                     _saldoText,
                     style: const TextStyle(
-                      color: EstoquePalette.text,
+                      color: PaletaApp.text,
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
                     ),
@@ -140,7 +140,7 @@ class InsumoSaldoCard extends StatelessWidget {
                     Text(
                       '-${percentAbaixo!.toStringAsFixed(0)}%',
                       style: const TextStyle(
-                        color: EstoquePalette.error,
+                        color: PaletaApp.error,
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                       ),
@@ -149,7 +149,7 @@ class InsumoSaldoCard extends StatelessWidget {
                     Text(
                       fefoLabel!,
                       style: const TextStyle(
-                        color: EstoquePalette.textMuted,
+                        color: PaletaApp.textMuted,
                         fontSize: 10,
                         fontWeight: FontWeight.w500,
                       ),

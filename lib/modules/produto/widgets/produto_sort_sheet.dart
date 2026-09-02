@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/theme/paleta_app.dart';
 import 'package:my_app_teste/modules/produto/models/produto_sort_option.dart';
 
-import 'produtos_palette.dart';
 
 class ProdutoSortSheet extends StatelessWidget {
   final String selectedSort;
@@ -28,7 +28,7 @@ class ProdutoSortSheet extends StatelessWidget {
       heightFactor: 0.56,
       child: Container(
         decoration: const BoxDecoration(
-          color: ProdutosPalette.surface,
+          color: PaletaApp.surface,
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: SafeArea(
@@ -43,7 +43,7 @@ class ProdutoSortSheet extends StatelessWidget {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: ProdutosPalette.borderSoft,
+                      color: PaletaApp.borderSoft,
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -55,7 +55,7 @@ class ProdutoSortSheet extends StatelessWidget {
                       child: Text(
                         'Ordenar produtos',
                         style: TextStyle(
-                          color: ProdutosPalette.text,
+                          color: PaletaApp.text,
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                         ),
@@ -64,7 +64,7 @@ class ProdutoSortSheet extends StatelessWidget {
                     IconButton(
                       onPressed: () => Navigator.pop(context),
                       icon: const Icon(Icons.close_rounded),
-                      color: ProdutosPalette.text,
+                      color: PaletaApp.text,
                     ),
                   ],
                 ),
@@ -83,13 +83,13 @@ class ProdutoSortSheet extends StatelessWidget {
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             color: selected
-                                ? ProdutosPalette.warningBg
-                                : ProdutosPalette.surfaceAlt,
+                                ? PaletaApp.warningBg
+                                : PaletaApp.surfaceAlt,
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(
                               color: selected
-                                  ? ProdutosPalette.primary
-                                  : ProdutosPalette.border,
+                                  ? PaletaApp.primary
+                                  : PaletaApp.border,
                             ),
                           ),
                           child: Row(
@@ -99,15 +99,15 @@ class ProdutoSortSheet extends StatelessWidget {
                                 height: 40,
                                 decoration: BoxDecoration(
                                   color: selected
-                                      ? ProdutosPalette.primary
-                                      : ProdutosPalette.inputFill,
+                                      ? PaletaApp.primary
+                                      : PaletaApp.inputFill,
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                                 child: Icon(
                                   option.icon,
                                   color: selected
                                       ? Colors.white
-                                      : ProdutosPalette.primary,
+                                      : PaletaApp.primary,
                                   size: 20,
                                 ),
                               ),
@@ -119,7 +119,7 @@ class ProdutoSortSheet extends StatelessWidget {
                                     Text(
                                       option.label,
                                       style: const TextStyle(
-                                        color: ProdutosPalette.text,
+                                        color: PaletaApp.text,
                                         fontSize: 15,
                                         fontWeight: FontWeight.w700,
                                       ),
@@ -128,7 +128,7 @@ class ProdutoSortSheet extends StatelessWidget {
                                     Text(
                                       option.subtitle,
                                       style: const TextStyle(
-                                        color: ProdutosPalette.textMuted,
+                                        color: PaletaApp.textMuted,
                                         fontSize: 12,
                                       ),
                                     ),
@@ -138,7 +138,7 @@ class ProdutoSortSheet extends StatelessWidget {
                               if (selected)
                                 const Icon(
                                   Icons.check_rounded,
-                                  color: ProdutosPalette.primaryPressed,
+                                  color: PaletaApp.primaryPressed,
                                 ),
                             ],
                           ),

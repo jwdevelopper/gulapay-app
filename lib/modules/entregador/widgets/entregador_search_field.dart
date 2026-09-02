@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/theme/paleta_app.dart';
 
-import 'entregadores_palette.dart';
 
 class EntregadorSearchField extends StatelessWidget {
   final TextEditingController controller;
@@ -22,9 +22,9 @@ class EntregadorSearchField extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
         decoration: BoxDecoration(
-          color: EntregadoresPalette.surfaceAlt,
+          color: PaletaApp.surfaceAlt,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: EntregadoresPalette.border),
+          border: Border.all(color: PaletaApp.border),
           boxShadow: const [
             BoxShadow(
               color: Color(0x08A86D37),
@@ -37,17 +37,17 @@ class EntregadorSearchField extends StatelessWidget {
           controller: controller,
           onChanged: onChanged,
           style: const TextStyle(
-            color: EntregadoresPalette.text,
+            color: PaletaApp.text,
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
           decoration: InputDecoration(
             prefixIcon: const Icon(
               Icons.search_rounded,
-              color: EntregadoresPalette.textMuted,
+              color: PaletaApp.textMuted,
             ),
             hintText: 'Buscar entregador...',
-            hintStyle: const TextStyle(color: EntregadoresPalette.textMuted),
+            hintStyle: const TextStyle(color: PaletaApp.textMuted),
             border: InputBorder.none,
             enabledBorder: InputBorder.none,
             focusedBorder: InputBorder.none,

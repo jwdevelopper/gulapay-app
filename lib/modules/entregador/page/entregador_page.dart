@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/theme/paleta_app.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/modules/entregador/dto/entregador_response.dart';
@@ -8,7 +9,6 @@ import 'package:my_app_teste/modules/entregador/widgets/entregador_card.dart';
 import 'package:my_app_teste/modules/entregador/widgets/entregador_empty_state.dart';
 import 'package:my_app_teste/modules/entregador/widgets/entregador_results_header.dart';
 import 'package:my_app_teste/modules/entregador/widgets/entregador_search_field.dart';
-import 'package:my_app_teste/modules/entregador/widgets/entregadores_palette.dart';
 
 import 'entregador_form_page.dart';
 
@@ -136,7 +136,7 @@ class _EntregadorPageState extends State<EntregadorPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Entregador cadastrado com sucesso.'),
-        backgroundColor: EntregadoresPalette.success,
+        backgroundColor: PaletaApp.success,
       ),
     );
     await _load();
@@ -157,7 +157,7 @@ class _EntregadorPageState extends State<EntregadorPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Entregador atualizado com sucesso.'),
-        backgroundColor: EntregadoresPalette.success,
+        backgroundColor: PaletaApp.success,
       ),
     );
     await _load();
@@ -173,7 +173,7 @@ class _EntregadorPageState extends State<EntregadorPage> {
           children: [
             FaIcon(
               FontAwesomeIcons.triangleExclamation,
-              color: EntregadoresPalette.primary,
+              color: PaletaApp.primary,
               size: 20,
             ),
             SizedBox(width: 10),
@@ -181,20 +181,20 @@ class _EntregadorPageState extends State<EntregadorPage> {
               'Excluir entregador',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: EntregadoresPalette.text,
+                color: PaletaApp.text,
               ),
             ),
           ],
         ),
         content: Text(
           'Deseja excluir "${entregador.nome}"? O entregador será inativado e sairá desta lista.',
-          style: const TextStyle(color: EntregadoresPalette.text),
+          style: const TextStyle(color: PaletaApp.text),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
             style: TextButton.styleFrom(
-              foregroundColor: EntregadoresPalette.textMuted,
+              foregroundColor: PaletaApp.textMuted,
             ),
             child: const Text('Cancelar'),
           ),
@@ -227,7 +227,7 @@ class _EntregadorPageState extends State<EntregadorPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Entregador "${entregador.nome}" excluído.'),
-          backgroundColor: EntregadoresPalette.success,
+          backgroundColor: PaletaApp.success,
         ),
       );
       return true;
@@ -271,7 +271,7 @@ class _EntregadorPageState extends State<EntregadorPage> {
           SizedBox(height: 120),
           Center(
             child: CircularProgressIndicator(
-              color: EntregadoresPalette.primary,
+              color: PaletaApp.primary,
             ),
           ),
         ],
@@ -352,11 +352,11 @@ class _EntregadorPageState extends State<EntregadorPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: EntregadoresPalette.background,
+      backgroundColor: PaletaApp.background,
       floatingActionButton: FloatingActionButton(
         tooltip: 'Cadastrar entregador',
         onPressed: _openCreate,
-        backgroundColor: EntregadoresPalette.primary,
+        backgroundColor: PaletaApp.primary,
         foregroundColor: Colors.white,
         shape: const CircleBorder(),
         child: const Icon(Icons.add_rounded),
@@ -378,7 +378,7 @@ class _EntregadorPageState extends State<EntregadorPage> {
             ),
             Expanded(
               child: RefreshIndicator(
-                color: EntregadoresPalette.primary,
+                color: PaletaApp.primary,
                 onRefresh: _load,
                 child: _buildList(),
               ),

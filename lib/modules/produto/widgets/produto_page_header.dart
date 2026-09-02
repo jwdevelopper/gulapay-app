@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/theme/paleta_app.dart';
 
 import 'produto_header_icon_button.dart';
-import 'produtos_palette.dart';
 
 class ProdutoPageHeader extends StatelessWidget {
   final String title;
@@ -53,7 +53,7 @@ class ProdutoPageHeader extends StatelessWidget {
                 Text(
                   title,
                   style: const TextStyle(
-                    color: ProdutosPalette.text,
+                    color: PaletaApp.text,
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
                     height: 1.05,
@@ -63,7 +63,7 @@ class ProdutoPageHeader extends StatelessWidget {
                 Text(
                   subtitle,
                   style: const TextStyle(
-                    color: ProdutosPalette.textMuted,
+                    color: PaletaApp.textMuted,
                     fontSize: 12,
                     height: 1.15,
                   ),

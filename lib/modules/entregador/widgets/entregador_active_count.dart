@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/theme/paleta_app.dart';
 
-import 'entregadores_palette.dart';
 
 /// Resumo quantitativo exibido abaixo do AppBar global da Home.
 class EntregadorActiveCount extends StatelessWidget {
@@ -17,7 +17,7 @@ class EntregadorActiveCount extends StatelessWidget {
         child: Text(
           label,
           style: const TextStyle(
-            color: EntregadoresPalette.text,
+            color: PaletaApp.text,
             fontSize: 15,
             fontWeight: FontWeight.w800,
             height: 1.2,

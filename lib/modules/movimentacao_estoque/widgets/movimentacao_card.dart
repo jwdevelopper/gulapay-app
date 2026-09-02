@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/theme/paleta_app.dart';
 
-import 'estoque_palette.dart';
 
 class MovimentacaoCard extends StatelessWidget {
   final String insumoNome;
@@ -39,7 +39,7 @@ class MovimentacaoCard extends StatelessWidget {
       case 'AJUSTE_INVENTARIO':
         return const Color(0xFFF3E5F5);
       default:
-        return EstoquePalette.inputFill;
+        return PaletaApp.inputFill;
     }
   }
 
@@ -69,7 +69,7 @@ class MovimentacaoCard extends StatelessWidget {
       case 'ENTRADA_TROCA':
         return const Color(0xFF1565C0);
       case 'SAIDA_VENDA':
-        return EstoquePalette.primary;
+        return PaletaApp.primary;
       case 'SAIDA_PERDA_VALIDADE':
         return const Color(0xFFD32F2F);
       case 'SAIDA_PERDA_QUEBRA':
@@ -77,7 +77,7 @@ class MovimentacaoCard extends StatelessWidget {
       case 'AJUSTE_INVENTARIO':
         return const Color(0xFF7B1FA2);
       default:
-        return EstoquePalette.primary;
+        return PaletaApp.primary;
     }
   }
 
@@ -116,13 +116,13 @@ class MovimentacaoCard extends StatelessWidget {
   Color get _quantidadeColor {
     if (_isEntrada) return const Color(0xFF2E7D32);
     if (tipo == 'AJUSTE_INVENTARIO') return const Color(0xFF7B1FA2);
-    return EstoquePalette.error;
+    return PaletaApp.error;
   }
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: EstoquePalette.surface,
+      color: PaletaApp.surface,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onTap,
@@ -130,12 +130,12 @@ class MovimentacaoCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: EstoquePalette.surface,
+            color: PaletaApp.surface,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: EstoquePalette.border),
+            border: Border.all(color: PaletaApp.border),
             boxShadow: const [
               BoxShadow(
-                color: EstoquePalette.shadow,
+                color: PaletaApp.shadow,
                 blurRadius: 14,
                 offset: Offset(0, 6),
               ),
@@ -161,7 +161,7 @@ class MovimentacaoCard extends StatelessWidget {
                     Text(
                       insumoNome,
                       style: const TextStyle(
-                        color: EstoquePalette.text,
+                        color: PaletaApp.text,
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                       ),
@@ -174,7 +174,7 @@ class MovimentacaoCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: EstoquePalette.textMuted,
+                        color: PaletaApp.textMuted,
                         fontSize: 12,
                         height: 1.25,
                       ),
@@ -201,7 +201,7 @@ class MovimentacaoCard extends StatelessWidget {
                           .where((e) => e != null && e.isNotEmpty)
                           .join(' · '),
                       style: const TextStyle(
-                        color: EstoquePalette.textMuted,
+                        color: PaletaApp.textMuted,
                         fontSize: 10,
                         fontWeight: FontWeight.w500,
                       ),

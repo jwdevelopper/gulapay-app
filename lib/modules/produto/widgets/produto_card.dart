@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/theme/paleta_app.dart';
 import 'package:my_app_teste/core/widgets/app_menu_acoes.dart';
 import 'package:my_app_teste/modules/produto/dto/produto.dart';
 
 import 'produto_card_container.dart';
 import 'produto_tag.dart';
-import 'produtos_palette.dart';
 
 class ProdutoCard extends StatelessWidget {
   final Produto produto;
@@ -54,7 +54,7 @@ class ProdutoCard extends StatelessWidget {
               color: accentColor.withValues(alpha: 0.28),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(icon, color: ProdutosPalette.text, size: 26),
+            child: Icon(icon, color: PaletaApp.text, size: 26),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -64,7 +64,7 @@ class ProdutoCard extends StatelessWidget {
                 Text(
                   produto.nome,
                   style: const TextStyle(
-                    color: ProdutosPalette.text,
+                    color: PaletaApp.text,
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                   ),
@@ -77,7 +77,7 @@ class ProdutoCard extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: ProdutosPalette.textMuted,
+                    color: PaletaApp.textMuted,
                     fontSize: 12,
                     height: 1.25,
                   ),
@@ -91,7 +91,7 @@ class ProdutoCard extends StatelessWidget {
                     if (categoriaNome.isNotEmpty)
                       ProdutoTag(
                         label: categoriaNome,
-                        color: ProdutosPalette.primary,
+                        color: PaletaApp.primary,
                         filled: false,
                       ),
                   ],
@@ -107,7 +107,7 @@ class ProdutoCard extends StatelessWidget {
               Text(
                 priceText,
                 style: const TextStyle(
-                  color: ProdutosPalette.text,
+                  color: PaletaApp.text,
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                 ),

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/theme/decoracoes_app.dart';
+import 'package:my_app_teste/core/widgets/app_linha_resumo.dart';
+import 'package:my_app_teste/core/widgets/app_botao_icone.dart';
+import 'package:my_app_teste/core/theme/paleta_app.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/dto/insumo.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/dto/lote.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/dto/unidade_medida.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/service/movimentacao_estoque_service.dart';
-import 'package:my_app_teste/modules/movimentacao_estoque/widgets/estoque_palette.dart';
 
 class _ChoiceOption {
   final String label;
@@ -197,19 +200,19 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
       builder: (ctx) => FractionallySizedBox(
         heightFactor: 0.72,
         child: Container(
-          decoration: const BoxDecoration(color: EstoquePalette.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+          decoration: const BoxDecoration(color: PaletaApp.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
           child: SafeArea(top: false, child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: EstoquePalette.borderSoft, borderRadius: BorderRadius.circular(999)))),
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: PaletaApp.borderSoft, borderRadius: BorderRadius.circular(999)))),
               const SizedBox(height: 18),
               Row(children: [
-                const Expanded(child: Text('Escolher insumo', style: TextStyle(color: EstoquePalette.text, fontSize: 18, fontWeight: FontWeight.w700))),
-                IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close_rounded), color: EstoquePalette.text),
+                const Expanded(child: Text('Escolher insumo', style: TextStyle(color: PaletaApp.text, fontSize: 18, fontWeight: FontWeight.w700))),
+                IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close_rounded), color: PaletaApp.text),
               ]),
               const SizedBox(height: 8),
               Expanded(child: _insumos.isEmpty
-                ? const Center(child: Text('Sem insumos cadastrados', style: TextStyle(color: EstoquePalette.text, fontSize: 16, fontWeight: FontWeight.w700)))
+                ? const Center(child: Text('Sem insumos cadastrados', style: TextStyle(color: PaletaApp.text, fontSize: 16, fontWeight: FontWeight.w700)))
                 : ListView.separated(
                     itemCount: _insumos.length, separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
@@ -224,21 +227,21 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
                         borderRadius: BorderRadius.circular(18),
                         child: Container(padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: selected ? EstoquePalette.warningBg : EstoquePalette.surfaceAlt,
+                            color: selected ? PaletaApp.warningBg : PaletaApp.surfaceAlt,
                             borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: selected ? EstoquePalette.primary : EstoquePalette.border)),
+                            border: Border.all(color: selected ? PaletaApp.primary : PaletaApp.border)),
                           child: Row(children: [
                             Container(width: 40, height: 40,
-                              decoration: BoxDecoration(color: selected ? EstoquePalette.primary : EstoquePalette.inputFill, borderRadius: BorderRadius.circular(14)),
-                              child: Icon(Icons.inventory_2_rounded, color: selected ? Colors.white : EstoquePalette.primary, size: 20)),
+                              decoration: BoxDecoration(color: selected ? PaletaApp.primary : PaletaApp.inputFill, borderRadius: BorderRadius.circular(14)),
+                              child: Icon(Icons.inventory_2_rounded, color: selected ? Colors.white : PaletaApp.primary, size: 20)),
                             const SizedBox(width: 14),
                             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text(insumo.nome, style: const TextStyle(color: EstoquePalette.text, fontSize: 15, fontWeight: FontWeight.w700)),
+                              Text(insumo.nome, style: const TextStyle(color: PaletaApp.text, fontSize: 15, fontWeight: FontWeight.w700)),
                               const SizedBox(height: 2),
                               Text('Saldo atual: ${insumo.estoqueAtual?.toStringAsFixed(1) ?? '0'} ${insumo.unidadePadraoSimbolo ?? ''}',
-                                style: const TextStyle(color: EstoquePalette.textMuted, fontSize: 12)),
+                                style: const TextStyle(color: PaletaApp.textMuted, fontSize: 12)),
                             ])),
-                            if (selected) const Icon(Icons.check_rounded, color: EstoquePalette.primary) else const SizedBox(width: 18),
+                            if (selected) const Icon(Icons.check_rounded, color: PaletaApp.primary) else const SizedBox(width: 18),
                           ])));
                     })),
             ]),
@@ -276,24 +279,24 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
       builder: (ctx) => FractionallySizedBox(
         heightFactor: 0.55,
         child: Container(
-          decoration: const BoxDecoration(color: EstoquePalette.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+          decoration: const BoxDecoration(color: PaletaApp.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
           child: SafeArea(top: false, child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: EstoquePalette.borderSoft, borderRadius: BorderRadius.circular(999)))),
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: PaletaApp.borderSoft, borderRadius: BorderRadius.circular(999)))),
               const SizedBox(height: 18),
               Row(children: [
-                const Expanded(child: Text('Unidade de medida', style: TextStyle(color: EstoquePalette.text, fontSize: 18, fontWeight: FontWeight.w700))),
-                IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close_rounded), color: EstoquePalette.text),
+                const Expanded(child: Text('Unidade de medida', style: TextStyle(color: PaletaApp.text, fontSize: 18, fontWeight: FontWeight.w700))),
+                IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close_rounded), color: PaletaApp.text),
               ]),
               const SizedBox(height: 4),
               Text(
                 'Compatíveis com ${_selectedInsumo!.nome} (${_selectedInsumo!.unidadePadraoSimbolo ?? '-'})',
-                style: const TextStyle(color: EstoquePalette.textMuted, fontSize: 12, fontWeight: FontWeight.w500),
+                style: const TextStyle(color: PaletaApp.textMuted, fontSize: 12, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 8),
               Expanded(child: unidades.isEmpty
-                ? const Center(child: Text('Nenhuma unidade compatível cadastrada', style: TextStyle(color: EstoquePalette.textMuted, fontSize: 14, fontWeight: FontWeight.w600)))
+                ? const Center(child: Text('Nenhuma unidade compatível cadastrada', style: TextStyle(color: PaletaApp.textMuted, fontSize: 14, fontWeight: FontWeight.w600)))
                 : ListView.separated(
                 itemCount: unidades.length, separatorBuilder: (_, __) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
@@ -304,14 +307,14 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
                     borderRadius: BorderRadius.circular(18),
                     child: Container(padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: selected ? EstoquePalette.warningBg : EstoquePalette.surfaceAlt,
+                        color: selected ? PaletaApp.warningBg : PaletaApp.surfaceAlt,
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: selected ? EstoquePalette.primary : EstoquePalette.border)),
+                        border: Border.all(color: selected ? PaletaApp.primary : PaletaApp.border)),
                       child: Row(children: [
-                        Text(u.simbolo ?? u.nome, style: TextStyle(color: selected ? EstoquePalette.primary : EstoquePalette.text, fontSize: 16, fontWeight: FontWeight.w700)),
+                        Text(u.simbolo ?? u.nome, style: TextStyle(color: selected ? PaletaApp.primary : PaletaApp.text, fontSize: 16, fontWeight: FontWeight.w700)),
                         const SizedBox(width: 14),
-                        Expanded(child: Text(u.nome, style: const TextStyle(color: EstoquePalette.text, fontSize: 14, fontWeight: FontWeight.w600))),
-                        if (selected) const Icon(Icons.check_rounded, color: EstoquePalette.primary),
+                        Expanded(child: Text(u.nome, style: const TextStyle(color: PaletaApp.text, fontSize: 14, fontWeight: FontWeight.w600))),
+                        if (selected) const Icon(Icons.check_rounded, color: PaletaApp.primary),
                       ])));
                 })),
             ]),
@@ -324,7 +327,7 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
   Widget _buildHeader() {
     return Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _FormHeaderIconButton(icon: Icons.arrow_back_rounded, onTap: () {
+        AppBotaoIcone(icone: Icons.arrow_back_rounded, aoTocar: () {
           if (_step == 0) {
             Navigator.pop(context);
           } else {
@@ -333,9 +336,9 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
         }),
         const SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(_headerTitle, style: const TextStyle(color: EstoquePalette.text, fontSize: 20, fontWeight: FontWeight.w700, height: 1.05)),
+          Text(_headerTitle, style: const TextStyle(color: PaletaApp.text, fontSize: 20, fontWeight: FontWeight.w700, height: 1.05)),
           const SizedBox(height: 2),
-          Text('Etapa ${_step + 1} de 3 · $_stepLabel', style: const TextStyle(color: EstoquePalette.textMuted, fontSize: 12)),
+          Text('Etapa ${_step + 1} de 3 · $_stepLabel', style: const TextStyle(color: PaletaApp.textMuted, fontSize: 12)),
         ])),
       ]));
   }
@@ -344,43 +347,41 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
     return Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(children: List.generate(3, (i) => Expanded(
         child: Container(height: 4, margin: EdgeInsets.only(right: i == 2 ? 0 : 8),
-          decoration: BoxDecoration(color: i <= _step ? EstoquePalette.primary : EstoquePalette.borderSoft, borderRadius: BorderRadius.circular(999)))))));
+          decoration: BoxDecoration(color: i <= _step ? PaletaApp.primary : PaletaApp.borderSoft, borderRadius: BorderRadius.circular(999)))))));
   }
 
   Widget _buildTextField({required TextEditingController controller, required String hint, required ValueChanged<String> onChanged,
     int maxLines = 1, TextInputType keyboardType = TextInputType.text, bool error = false, bool price = false, bool largeText = false, String? suffix}) {
     final big = price || largeText;
     return Container(
-      decoration: BoxDecoration(color: EstoquePalette.surfaceAlt, borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: error ? EstoquePalette.error : EstoquePalette.border),
-        boxShadow: const [BoxShadow(color: Color(0x0F9C5A1E), blurRadius: 12, offset: Offset(0, 4))]),
+      decoration: DecoracoesApp.campo(erro: error),
       child: TextField(controller: controller, onChanged: onChanged, maxLines: maxLines, keyboardType: keyboardType,
-        style: TextStyle(color: EstoquePalette.text, fontSize: big ? 28 : 15, fontWeight: big ? FontWeight.w700 : FontWeight.w500),
-        decoration: InputDecoration(hintText: hint, hintStyle: const TextStyle(color: EstoquePalette.textMuted),
+        style: TextStyle(color: PaletaApp.text, fontSize: big ? 28 : 15, fontWeight: big ? FontWeight.w700 : FontWeight.w500),
+        decoration: InputDecoration(hintText: hint, hintStyle: const TextStyle(color: PaletaApp.textMuted),
           prefixText: price ? 'R\$ ' : null,
-          prefixStyle: const TextStyle(color: EstoquePalette.textMuted, fontSize: 20, fontWeight: FontWeight.w700),
-          suffixText: suffix, suffixStyle: const TextStyle(color: EstoquePalette.textMuted, fontSize: 14, fontWeight: FontWeight.w600),
+          prefixStyle: const TextStyle(color: PaletaApp.textMuted, fontSize: 20, fontWeight: FontWeight.w700),
+          suffixText: suffix, suffixStyle: const TextStyle(color: PaletaApp.textMuted, fontSize: 14, fontWeight: FontWeight.w600),
           border: InputBorder.none, contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: big ? 20 : 16))));
   }
 
   Widget _buildErrorBanner() {
     if (_validationMessage == null) return const SizedBox.shrink();
     return Container(width: double.infinity, padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: EstoquePalette.warningBg, borderRadius: BorderRadius.circular(16), border: Border.all(color: EstoquePalette.error)),
+      decoration: BoxDecoration(color: PaletaApp.warningBg, borderRadius: BorderRadius.circular(16), border: Border.all(color: PaletaApp.error)),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Padding(padding: EdgeInsets.only(top: 1), child: Icon(Icons.warning_amber_rounded, color: EstoquePalette.error, size: 18)),
+        const Padding(padding: EdgeInsets.only(top: 1), child: Icon(Icons.warning_amber_rounded, color: PaletaApp.error, size: 18)),
         const SizedBox(width: 10),
-        Expanded(child: Text(_validationMessage!, style: const TextStyle(color: EstoquePalette.text, fontSize: 12, fontWeight: FontWeight.w600, height: 1.35))),
+        Expanded(child: Text(_validationMessage!, style: const TextStyle(color: PaletaApp.text, fontSize: 12, fontWeight: FontWeight.w600, height: 1.35))),
       ]));
   }
 
   Widget _buildInfoCard(String text) {
     return Container(width: double.infinity, padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: EstoquePalette.warningBg, borderRadius: BorderRadius.circular(16), border: Border.all(color: EstoquePalette.warningBorder)),
+      decoration: BoxDecoration(color: PaletaApp.warningBg, borderRadius: BorderRadius.circular(16), border: Border.all(color: PaletaApp.warningBorder)),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Padding(padding: EdgeInsets.only(top: 1), child: Icon(Icons.lightbulb_outline_rounded, color: EstoquePalette.primary, size: 18)),
+        const Padding(padding: EdgeInsets.only(top: 1), child: Icon(Icons.lightbulb_outline_rounded, color: PaletaApp.primary, size: 18)),
         const SizedBox(width: 10),
-        Expanded(child: Text(text, style: const TextStyle(color: EstoquePalette.text, fontSize: 12, height: 1.35, fontWeight: FontWeight.w500))),
+        Expanded(child: Text(text, style: const TextStyle(color: PaletaApp.text, fontSize: 12, height: 1.35, fontWeight: FontWeight.w500))),
       ]));
   }
 
@@ -389,26 +390,26 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
     return InkWell(onTap: () => setState(() { _selectedTipo = option.value; _tipoError = false; _validationMessage = null; }),
       borderRadius: BorderRadius.circular(16),
       child: Container(padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: selected ? EstoquePalette.warningBg : EstoquePalette.surfaceAlt, borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: selected ? EstoquePalette.primary : EstoquePalette.border)),
+        decoration: BoxDecoration(color: selected ? PaletaApp.warningBg : PaletaApp.surfaceAlt, borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: selected ? PaletaApp.primary : PaletaApp.border)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             Container(width: 34, height: 34,
-              decoration: BoxDecoration(color: selected ? EstoquePalette.primary : EstoquePalette.inputFill, borderRadius: BorderRadius.circular(12)),
-              child: Icon(option.icon, color: selected ? Colors.white : EstoquePalette.primary, size: 18)),
+              decoration: BoxDecoration(color: selected ? PaletaApp.primary : PaletaApp.inputFill, borderRadius: BorderRadius.circular(12)),
+              child: Icon(option.icon, color: selected ? Colors.white : PaletaApp.primary, size: 18)),
             const Spacer(),
-            if (selected) const Icon(Icons.check_circle_rounded, color: EstoquePalette.primary, size: 18),
+            if (selected) const Icon(Icons.check_circle_rounded, color: PaletaApp.primary, size: 18),
           ]),
           const SizedBox(height: 14),
-          Text(option.label, style: const TextStyle(color: EstoquePalette.text, fontSize: 15, fontWeight: FontWeight.w700)),
+          Text(option.label, style: const TextStyle(color: PaletaApp.text, fontSize: 15, fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          Text(option.description, style: const TextStyle(color: EstoquePalette.textMuted, fontSize: 11, height: 1.2)),
+          Text(option.description, style: const TextStyle(color: PaletaApp.textMuted, fontSize: 11, height: 1.2)),
         ])));
   }
 
   Widget _buildStep0() {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('Tipo de movimentação *', style: TextStyle(color: EstoquePalette.text, fontSize: 13, fontWeight: FontWeight.w700)),
+      const Text('Tipo de movimentação *', style: TextStyle(color: PaletaApp.text, fontSize: 13, fontWeight: FontWeight.w700)),
       const SizedBox(height: 8),
       GridView.count(crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10, shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(), childAspectRatio: 1.25,
@@ -427,23 +428,21 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
     final has = _selectedInsumo != null;
     return InkWell(onTap: _openInsumoSelector, borderRadius: BorderRadius.circular(16),
       child: Container(padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: EstoquePalette.surfaceAlt, borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: _insumoError ? EstoquePalette.error : EstoquePalette.border),
-          boxShadow: const [BoxShadow(color: Color(0x0F9C5A1E), blurRadius: 12, offset: Offset(0, 4))]),
+        decoration: DecoracoesApp.campo(erro: _insumoError),
         child: Row(children: [
           Container(width: 42, height: 42,
-            decoration: BoxDecoration(color: has ? EstoquePalette.primary : EstoquePalette.inputFill, borderRadius: BorderRadius.circular(14)),
-            child: Icon(Icons.inventory_2_rounded, color: has ? Colors.white : EstoquePalette.primary, size: 20)),
+            decoration: BoxDecoration(color: has ? PaletaApp.primary : PaletaApp.inputFill, borderRadius: BorderRadius.circular(14)),
+            child: Icon(Icons.inventory_2_rounded, color: has ? Colors.white : PaletaApp.primary, size: 20)),
           const SizedBox(width: 14),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Insumo *', style: TextStyle(color: EstoquePalette.text, fontSize: 13, fontWeight: FontWeight.w700)),
+            const Text('Insumo *', style: TextStyle(color: PaletaApp.text, fontSize: 13, fontWeight: FontWeight.w700)),
             const SizedBox(height: 4),
             Text(has ? _selectedInsumo!.nome : 'Selecione o insumo',
-              style: TextStyle(color: has ? EstoquePalette.text : EstoquePalette.textMuted, fontSize: 14, fontWeight: FontWeight.w600)),
+              style: TextStyle(color: has ? PaletaApp.text : PaletaApp.textMuted, fontSize: 14, fontWeight: FontWeight.w600)),
             if (has) Text('Saldo atual: ${_selectedInsumo!.estoqueAtual?.toStringAsFixed(1) ?? '0'} ${_selectedInsumo!.unidadePadraoSimbolo ?? ''}',
-              style: const TextStyle(color: EstoquePalette.textMuted, fontSize: 11)),
+              style: const TextStyle(color: PaletaApp.textMuted, fontSize: 11)),
           ])),
-          const Icon(Icons.chevron_right_rounded, color: EstoquePalette.textMuted),
+          const Icon(Icons.chevron_right_rounded, color: PaletaApp.textMuted),
         ])));
   }
 
@@ -451,22 +450,22 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
     final has = _selectedUnidade != null;
     return InkWell(onTap: _openUnidadeSelector, borderRadius: BorderRadius.circular(16),
       child: Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(color: EstoquePalette.surfaceAlt, borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: _unidadeError ? EstoquePalette.error : EstoquePalette.border)),
+        decoration: BoxDecoration(color: PaletaApp.surfaceAlt, borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _unidadeError ? PaletaApp.error : PaletaApp.border)),
         child: Row(children: [
           Text(has ? (_selectedUnidade!.simbolo ?? _selectedUnidade!.nome) : 'Unidade',
-            style: TextStyle(color: has ? EstoquePalette.text : EstoquePalette.textMuted, fontSize: 14, fontWeight: FontWeight.w700)),
+            style: TextStyle(color: has ? PaletaApp.text : PaletaApp.textMuted, fontSize: 14, fontWeight: FontWeight.w700)),
           const SizedBox(width: 4),
-          const Icon(Icons.expand_more_rounded, color: EstoquePalette.textMuted, size: 20),
+          const Icon(Icons.expand_more_rounded, color: PaletaApp.textMuted, size: 20),
         ])));
   }
 
   Widget _buildStep1() {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _buildInsumoSelector(),
-      if (_insumoError) ...[const SizedBox(height: 6), const Text('Selecione um insumo.', style: TextStyle(color: EstoquePalette.error, fontSize: 11, fontWeight: FontWeight.w600))],
+      if (_insumoError) ...[const SizedBox(height: 6), const Text('Selecione um insumo.', style: TextStyle(color: PaletaApp.error, fontSize: 11, fontWeight: FontWeight.w600))],
       const SizedBox(height: 16),
-      const Text('Quantidade *', style: TextStyle(color: EstoquePalette.text, fontSize: 13, fontWeight: FontWeight.w700)),
+      const Text('Quantidade *', style: TextStyle(color: PaletaApp.text, fontSize: 13, fontWeight: FontWeight.w700)),
       const SizedBox(height: 8),
       Row(children: [
         Expanded(child: _buildTextField(controller: _quantidade, hint: '0', onChanged: (_) { if (_quantidadeError) setState(() { _quantidadeError = false; _validationMessage = null; }); },
@@ -474,7 +473,7 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
         const SizedBox(width: 10),
         _buildUnidadeSelector(),
       ]),
-      if (_quantidadeError) ...[const SizedBox(height: 6), const Text('Informe a quantidade.', style: TextStyle(color: EstoquePalette.error, fontSize: 11, fontWeight: FontWeight.w600))],
+      if (_quantidadeError) ...[const SizedBox(height: 6), const Text('Informe a quantidade.', style: TextStyle(color: PaletaApp.error, fontSize: 11, fontWeight: FontWeight.w600))],
       const SizedBox(height: 16),
       _buildErrorBanner(),
     ]);
@@ -484,9 +483,9 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
     if (_lotes.isEmpty) return const SizedBox.shrink();
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
-        const Text('Lote a baixar *', style: TextStyle(color: EstoquePalette.text, fontSize: 13, fontWeight: FontWeight.w700)),
+        const Text('Lote a baixar *', style: TextStyle(color: PaletaApp.text, fontSize: 13, fontWeight: FontWeight.w700)),
         const Spacer(),
-        Text('Ordenado por validade (FEFO)', style: TextStyle(color: EstoquePalette.textMuted, fontSize: 10, fontWeight: FontWeight.w500)),
+        Text('Ordenado por validade (FEFO)', style: TextStyle(color: PaletaApp.textMuted, fontSize: 10, fontWeight: FontWeight.w500)),
       ]),
       const SizedBox(height: 8),
       ..._lotes.map((lote) {
@@ -495,23 +494,23 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
         return Padding(padding: const EdgeInsets.only(bottom: 8),
           child: InkWell(onTap: () => setState(() => _selectedLote = lote), borderRadius: BorderRadius.circular(16),
             child: Container(padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: selected ? EstoquePalette.warningBg : EstoquePalette.surfaceAlt,
-                borderRadius: BorderRadius.circular(16), border: Border.all(color: selected ? EstoquePalette.primary : EstoquePalette.border)),
+              decoration: BoxDecoration(color: selected ? PaletaApp.warningBg : PaletaApp.surfaceAlt,
+                borderRadius: BorderRadius.circular(16), border: Border.all(color: selected ? PaletaApp.primary : PaletaApp.border)),
               child: Row(children: [
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Row(children: [
-                    Text(lote.codigo ?? 'L${lote.id}', style: const TextStyle(color: EstoquePalette.text, fontSize: 14, fontWeight: FontWeight.w700)),
+                    Text(lote.codigo ?? 'L${lote.id}', style: const TextStyle(color: PaletaApp.text, fontSize: 14, fontWeight: FontWeight.w700)),
                     if (vencido) ...[const SizedBox(width: 8),
                       Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: EstoquePalette.error, borderRadius: BorderRadius.circular(4)),
+                        decoration: BoxDecoration(color: PaletaApp.error, borderRadius: BorderRadius.circular(4)),
                         child: const Text('VENCIDO', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800)))],
                   ]),
                   const SizedBox(height: 4),
                   Text('${lote.quantidadeRestante?.toStringAsFixed(1) ?? '0'} ${lote.unidadePadraoSimbolo ?? ''} restantes · custo R\$ ${lote.custoUnitario?.toStringAsFixed(2).replaceAll('.', ',') ?? '0'}',
-                    style: const TextStyle(color: EstoquePalette.textMuted, fontSize: 11)),
+                    style: const TextStyle(color: PaletaApp.textMuted, fontSize: 11)),
                 ])),
-                if (selected) const Icon(Icons.check_circle_rounded, color: EstoquePalette.primary, size: 20)
-                  else const Icon(Icons.radio_button_unchecked_rounded, color: EstoquePalette.border, size: 20),
+                if (selected) const Icon(Icons.check_circle_rounded, color: PaletaApp.primary, size: 20)
+                  else const Icon(Icons.radio_button_unchecked_rounded, color: PaletaApp.border, size: 20),
               ]))));
       }),
     ]);
@@ -521,23 +520,23 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       if (!_isEntrada) ...[_buildLoteSelector(), const SizedBox(height: 16)],
       if (_isEntrada) ...[
-        const Text('Validade *', style: TextStyle(color: EstoquePalette.text, fontSize: 13, fontWeight: FontWeight.w700)),
+        const Text('Validade *', style: TextStyle(color: PaletaApp.text, fontSize: 13, fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),
         _buildTextField(controller: _validade, hint: '2026-12-31', onChanged: (_) {}, keyboardType: TextInputType.datetime),
         const SizedBox(height: 16),
-        const Text('Custo unitário *', style: TextStyle(color: EstoquePalette.text, fontSize: 13, fontWeight: FontWeight.w700)),
+        const Text('Custo unitário *', style: TextStyle(color: PaletaApp.text, fontSize: 13, fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),
         _buildTextField(controller: _custoUnitario, hint: '0,00', onChanged: (_) {},
           keyboardType: const TextInputType.numberWithOptions(decimal: true), price: true),
         const SizedBox(height: 16),
-        const Text('Código do lote', style: TextStyle(color: EstoquePalette.text, fontSize: 13, fontWeight: FontWeight.w700)),
+        const Text('Código do lote', style: TextStyle(color: PaletaApp.text, fontSize: 13, fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),
         _buildTextField(controller: _codigoLote, hint: 'Ex.: NF-8821', onChanged: (_) {}),
         const SizedBox(height: 16),
         _buildInfoCard('Novo lote será criado com a validade e custo informados.'),
         const SizedBox(height: 16),
       ],
-      const Text('Observação opcional', style: TextStyle(color: EstoquePalette.text, fontSize: 13, fontWeight: FontWeight.w700)),
+      const Text('Observação opcional', style: TextStyle(color: PaletaApp.text, fontSize: 13, fontWeight: FontWeight.w700)),
       const SizedBox(height: 8),
       _buildTextField(controller: _justificativa, hint: 'Motivo ou observação...', onChanged: (_) {}, maxLines: 3),
       const SizedBox(height: 16),
@@ -547,51 +546,51 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
 
   Widget _buildSummary() {
     return Container(width: double.infinity, padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: EstoquePalette.surface, borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: EstoquePalette.borderSoft),
-        boxShadow: const [BoxShadow(color: EstoquePalette.shadow, blurRadius: 12, offset: Offset(0, 4))]),
+      decoration: BoxDecoration(color: PaletaApp.surface, borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: PaletaApp.borderSoft),
+        boxShadow: const [BoxShadow(color: PaletaApp.shadow, blurRadius: 12, offset: Offset(0, 4))]),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('RESUMO', style: TextStyle(color: EstoquePalette.textMuted, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.4)),
+        const Text('RESUMO', style: TextStyle(color: PaletaApp.textMuted, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.4)),
         const SizedBox(height: 12),
-        _SummaryRow(label: 'Tipo', value: _tipoLabel),
-        const Divider(height: 18, color: EstoquePalette.borderSoft),
-        _SummaryRow(label: 'Insumo', value: _selectedInsumo?.nome ?? '-'),
-        const Divider(height: 18, color: EstoquePalette.borderSoft),
-        _SummaryRow(label: 'Quantidade', value: '${_quantidade.text.isEmpty ? '0' : _quantidade.text} ${_selectedUnidade?.simbolo ?? ''}'),
+        AppLinhaResumo(rotulo: 'Tipo', valor: _tipoLabel),
+        const Divider(height: 18, color: PaletaApp.borderSoft),
+        AppLinhaResumo(rotulo: 'Insumo', valor: _selectedInsumo?.nome ?? '-'),
+        const Divider(height: 18, color: PaletaApp.borderSoft),
+        AppLinhaResumo(rotulo: 'Quantidade', valor: '${_quantidade.text.isEmpty ? '0' : _quantidade.text} ${_selectedUnidade?.simbolo ?? ''}'),
         if (_selectedLote != null) ...[
-          const Divider(height: 18, color: EstoquePalette.borderSoft),
-          _SummaryRow(label: 'Lote', value: _selectedLote!.codigo ?? '#${_selectedLote!.id}'),
+          const Divider(height: 18, color: PaletaApp.borderSoft),
+          AppLinhaResumo(rotulo: 'Lote', valor: _selectedLote!.codigo ?? '#${_selectedLote!.id}'),
         ],
         if (_parseCusto() > 0) ...[
-          const Divider(height: 18, color: EstoquePalette.borderSoft),
-          _SummaryRow(label: 'Custo unitário', value: 'R\$ ${_parseCusto().toStringAsFixed(2).replaceAll('.', ',')}'),
+          const Divider(height: 18, color: PaletaApp.borderSoft),
+          AppLinhaResumo(rotulo: 'Custo unitário', valor: 'R\$ ${_parseCusto().toStringAsFixed(2).replaceAll('.', ',')}'),
         ],
       ]));
   }
 
   Widget _buildSuccessScreen() {
-    return Scaffold(backgroundColor: EstoquePalette.background,
+    return Scaffold(backgroundColor: PaletaApp.background,
       body: SafeArea(child: Padding(padding: const EdgeInsets.all(24),
         child: Column(children: [
           const Spacer(),
           Container(width: 80, height: 80,
-            decoration: BoxDecoration(color: EstoquePalette.primary, shape: BoxShape.circle),
+            decoration: BoxDecoration(color: PaletaApp.primary, shape: BoxShape.circle),
             child: const Icon(Icons.check_rounded, color: Colors.white, size: 44)),
           const SizedBox(height: 24),
-          const Text('Movimentação registrada!', style: TextStyle(color: EstoquePalette.text, fontSize: 22, fontWeight: FontWeight.w700)),
+          const Text('Movimentação registrada!', style: TextStyle(color: PaletaApp.text, fontSize: 22, fontWeight: FontWeight.w700)),
           const SizedBox(height: 12),
           _buildSummary(),
           const Spacer(),
           SafeArea(top: false, child: Row(children: [
             Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(context, true),
-              style: OutlinedButton.styleFrom(foregroundColor: EstoquePalette.text, backgroundColor: EstoquePalette.surfaceAlt,
-                side: const BorderSide(color: EstoquePalette.border), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              style: OutlinedButton.styleFrom(foregroundColor: PaletaApp.text, backgroundColor: PaletaApp.surfaceAlt,
+                side: const BorderSide(color: PaletaApp.border), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 padding: const EdgeInsets.symmetric(vertical: 16)),
               child: const Text('Voltar'))),
             const SizedBox(width: 12),
             Expanded(child: ElevatedButton.icon(onPressed: () => Navigator.pop(context, true),
-              style: ElevatedButton.styleFrom(backgroundColor: EstoquePalette.primary, foregroundColor: Colors.white,
-                elevation: 4, shadowColor: EstoquePalette.primaryPressed.withValues(alpha: 0.35),
+              style: ElevatedButton.styleFrom(backgroundColor: PaletaApp.primary, foregroundColor: Colors.white,
+                elevation: 4, shadowColor: PaletaApp.primaryPressed.withValues(alpha: 0.35),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 padding: const EdgeInsets.symmetric(vertical: 16)),
               icon: const Icon(Icons.check_rounded, size: 18), label: const Text('Concluído'))),
@@ -612,18 +611,18 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
         child: Row(children: [
           Expanded(child: OutlinedButton(
             onPressed: _step == 0 ? () => Navigator.pop(context) : _prev,
-            style: OutlinedButton.styleFrom(foregroundColor: EstoquePalette.text, backgroundColor: EstoquePalette.surfaceAlt,
-              side: const BorderSide(color: EstoquePalette.border),
+            style: OutlinedButton.styleFrom(foregroundColor: PaletaApp.text, backgroundColor: PaletaApp.surfaceAlt,
+              side: const BorderSide(color: PaletaApp.border),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               padding: const EdgeInsets.symmetric(vertical: 16)),
             child: Text(leftLabel))),
           const SizedBox(width: 12),
           Expanded(child: ElevatedButton(
             onPressed: _saving ? null : _next,
-            style: ElevatedButton.styleFrom(backgroundColor: EstoquePalette.primary, foregroundColor: Colors.white,
-              disabledBackgroundColor: EstoquePalette.primarySoft.withValues(alpha: 0.55),
+            style: ElevatedButton.styleFrom(backgroundColor: PaletaApp.primary, foregroundColor: Colors.white,
+              disabledBackgroundColor: PaletaApp.primarySoft.withValues(alpha: 0.55),
               disabledForegroundColor: Colors.white.withValues(alpha: 0.8),
-              elevation: 4, shadowColor: EstoquePalette.primaryPressed.withValues(alpha: 0.35),
+              elevation: 4, shadowColor: PaletaApp.primaryPressed.withValues(alpha: 0.35),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               padding: const EdgeInsets.symmetric(vertical: 16)),
             child: _saving
@@ -647,7 +646,7 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
   @override
   Widget build(BuildContext context) {
     if (_success) return _buildSuccessScreen();
-    return Scaffold(backgroundColor: EstoquePalette.background,
+    return Scaffold(backgroundColor: PaletaApp.background,
       body: SafeArea(child: Column(children: [
         _buildHeader(),
         _buildProgress(),
@@ -658,36 +657,6 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
           child: _buildStepBody())),
         _buildBottomButtons(),
       ])));
-  }
-}
-
-class _FormHeaderIconButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback? onTap;
-  const _FormHeaderIconButton({required this.icon, this.onTap});
-  @override
-  Widget build(BuildContext context) {
-    return Material(color: EstoquePalette.surface, borderRadius: BorderRadius.circular(16),
-      child: InkWell(onTap: onTap, borderRadius: BorderRadius.circular(16),
-        child: Container(width: 44, height: 44,
-          decoration: BoxDecoration(color: EstoquePalette.surface, borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: EstoquePalette.border)),
-          child: Icon(icon, color: EstoquePalette.text, size: 22))));
-  }
-}
-
-class _SummaryRow extends StatelessWidget {
-  final String label;
-  final String value;
-  const _SummaryRow({required this.label, required this.value});
-  @override
-  Widget build(BuildContext context) {
-    return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-      Text(label, style: const TextStyle(color: EstoquePalette.textMuted, fontSize: 13, fontWeight: FontWeight.w600)),
-      const SizedBox(width: 12),
-      Flexible(child: Text(value, textAlign: TextAlign.right,
-        style: const TextStyle(color: EstoquePalette.text, fontSize: 13, fontWeight: FontWeight.w700))),
-    ]);
   }
 }
 

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/widgets/app_data.dart';
+import 'package:my_app_teste/core/widgets/app_botao_icone.dart';
+import 'package:my_app_teste/core/theme/paleta_app.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/dto/insumo.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/dto/movimentacao_estoque.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/service/movimentacao_estoque_service.dart';
@@ -232,11 +235,12 @@ class _EstoquePageState extends State<EstoquePage>
 
           Future<void> pickDate(bool isFrom) async {
             final initial = isFrom ? (tempFrom ?? DateTime.now()) : (tempTo ?? DateTime.now());
-            final picked = await showDatePicker(
-              context: ctx,
-              initialDate: initial,
-              firstDate: DateTime(2020),
-              lastDate: DateTime(2100),
+            final picked = await abrirSeletorData(
+              ctx,
+              dataInicial: initial,
+              dataMinima: DateTime(2020),
+              dataMaxima: DateTime(2100),
+              textoAjuda: isFrom ? 'Data inicial' : 'Data final',
             );
             if (picked != null) {
               setSheet(() {
@@ -257,14 +261,14 @@ class _EstoquePageState extends State<EstoquePage>
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: selected ? EstoquePalette.primary : EstoquePalette.surfaceAlt,
+                  color: selected ? PaletaApp.primary : PaletaApp.surfaceAlt,
                   borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: selected ? EstoquePalette.primary : EstoquePalette.border),
+                  border: Border.all(color: selected ? PaletaApp.primary : PaletaApp.border),
                 ),
                 child: Text(
                   label,
                   style: TextStyle(
-                    color: selected ? Colors.white : EstoquePalette.text,
+                    color: selected ? Colors.white : PaletaApp.text,
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                   ),
@@ -277,7 +281,7 @@ class _EstoquePageState extends State<EstoquePage>
             heightFactor: 0.82,
             child: Container(
               decoration: const BoxDecoration(
-                color: EstoquePalette.surface,
+                color: PaletaApp.surface,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
               ),
               child: SafeArea(
@@ -292,7 +296,7 @@ class _EstoquePageState extends State<EstoquePage>
                           width: 40,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: EstoquePalette.borderSoft,
+                            color: PaletaApp.borderSoft,
                             borderRadius: BorderRadius.circular(999),
                           ),
                         ),
@@ -304,7 +308,7 @@ class _EstoquePageState extends State<EstoquePage>
                             child: Text(
                               'Filtros',
                               style: TextStyle(
-                                color: EstoquePalette.text,
+                                color: PaletaApp.text,
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -313,7 +317,7 @@ class _EstoquePageState extends State<EstoquePage>
                           IconButton(
                             onPressed: () => Navigator.pop(ctx),
                             icon: const Icon(Icons.close_rounded),
-                            color: EstoquePalette.text,
+                            color: PaletaApp.text,
                           ),
                         ],
                       ),
@@ -324,7 +328,7 @@ class _EstoquePageState extends State<EstoquePage>
                             const Text(
                               'TIPO',
                               style: TextStyle(
-                                color: EstoquePalette.textMuted,
+                                color: PaletaApp.textMuted,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 0.5,
@@ -345,7 +349,7 @@ class _EstoquePageState extends State<EstoquePage>
                             const Text(
                               'INSUMO',
                               style: TextStyle(
-                                color: EstoquePalette.textMuted,
+                                color: PaletaApp.textMuted,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 0.5,
@@ -357,19 +361,19 @@ class _EstoquePageState extends State<EstoquePage>
                               isExpanded: true,
                               decoration: InputDecoration(
                                 filled: true,
-                                fillColor: EstoquePalette.surfaceAlt,
+                                fillColor: PaletaApp.surfaceAlt,
                                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
-                                  borderSide: const BorderSide(color: EstoquePalette.border),
+                                  borderSide: const BorderSide(color: PaletaApp.border),
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
-                                  borderSide: const BorderSide(color: EstoquePalette.border),
+                                  borderSide: const BorderSide(color: PaletaApp.border),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
-                                  borderSide: const BorderSide(color: EstoquePalette.primary),
+                                  borderSide: const BorderSide(color: PaletaApp.primary),
                                 ),
                               ),
                               items: [
@@ -390,7 +394,7 @@ class _EstoquePageState extends State<EstoquePage>
                             const Text(
                               'PERÍODO',
                               style: TextStyle(
-                                color: EstoquePalette.textMuted,
+                                color: PaletaApp.textMuted,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 0.5,
@@ -434,9 +438,9 @@ class _EstoquePageState extends State<EstoquePage>
                                 });
                               },
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: EstoquePalette.text,
-                                backgroundColor: EstoquePalette.surfaceAlt,
-                                side: const BorderSide(color: EstoquePalette.border),
+                                foregroundColor: PaletaApp.text,
+                                backgroundColor: PaletaApp.surfaceAlt,
+                                side: const BorderSide(color: PaletaApp.border),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                 padding: const EdgeInsets.symmetric(vertical: 14),
                               ),
@@ -456,7 +460,7 @@ class _EstoquePageState extends State<EstoquePage>
                                 Navigator.pop(ctx);
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: EstoquePalette.primary,
+                                backgroundColor: PaletaApp.primary,
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -484,17 +488,17 @@ class _EstoquePageState extends State<EstoquePage>
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: EstoquePalette.borderSoft, width: 1.5),
+          bottom: BorderSide(color: PaletaApp.borderSoft, width: 1.5),
         ),
       ),
       child: TabBar(
         controller: _tabController,
-        labelColor: EstoquePalette.primary,
-        unselectedLabelColor: EstoquePalette.textMuted,
+        labelColor: PaletaApp.primary,
+        unselectedLabelColor: PaletaApp.textMuted,
         labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         unselectedLabelStyle:
             const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-        indicatorColor: EstoquePalette.primary,
+        indicatorColor: PaletaApp.primary,
         indicatorWeight: 2.5,
         tabs: [
           const Tab(text: 'Histórico'),
@@ -509,7 +513,7 @@ class _EstoquePageState extends State<EstoquePage>
                     padding:
                         const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                     decoration: BoxDecoration(
-                      color: EstoquePalette.primary,
+                      color: PaletaApp.primary,
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
@@ -535,7 +539,7 @@ class _EstoquePageState extends State<EstoquePage>
   Widget _buildHistoricoTab() {
     if (_loading) {
       return const Center(
-        child: CircularProgressIndicator(color: EstoquePalette.primary),
+        child: CircularProgressIndicator(color: PaletaApp.primary),
       );
     }
 
@@ -580,9 +584,9 @@ class _EstoquePageState extends State<EstoquePage>
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: EstoquePalette.surfaceAlt,
+              color: PaletaApp.surfaceAlt,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: EstoquePalette.border),
+              border: Border.all(color: PaletaApp.border),
             ),
             child: Column(
               children: [
@@ -590,12 +594,12 @@ class _EstoquePageState extends State<EstoquePage>
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: EstoquePalette.inputFill,
+                    color: PaletaApp.inputFill,
                     borderRadius: BorderRadius.circular(18),
                   ),
                   child: const Icon(
                     Icons.inbox_outlined,
-                    color: EstoquePalette.primary,
+                    color: PaletaApp.primary,
                     size: 28,
                   ),
                 ),
@@ -604,7 +608,7 @@ class _EstoquePageState extends State<EstoquePage>
                   message,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    color: EstoquePalette.text,
+                    color: PaletaApp.text,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     height: 1.35,
@@ -622,7 +626,7 @@ class _EstoquePageState extends State<EstoquePage>
                   },
                   icon: const Icon(Icons.refresh_rounded, size: 16),
                   label: const Text('Limpar filtros'),
-                  style: TextButton.styleFrom(foregroundColor: EstoquePalette.primary),
+                  style: TextButton.styleFrom(foregroundColor: PaletaApp.primary),
                 ),
               ],
             ),
@@ -660,7 +664,7 @@ class _EstoquePageState extends State<EstoquePage>
               child: Text(
                 header,
                 style: const TextStyle(
-                  color: EstoquePalette.textMuted,
+                  color: PaletaApp.textMuted,
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.5,
@@ -692,7 +696,7 @@ class _EstoquePageState extends State<EstoquePage>
   Widget _buildSaldosTab() {
     if (_loading) {
       return const Center(
-        child: CircularProgressIndicator(color: EstoquePalette.primary),
+        child: CircularProgressIndicator(color: PaletaApp.primary),
       );
     }
 
@@ -712,20 +716,20 @@ class _EstoquePageState extends State<EstoquePage>
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: EstoquePalette.warningBg,
+              color: PaletaApp.warningBg,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: EstoquePalette.warningBorder),
+              border: Border.all(color: PaletaApp.warningBorder),
             ),
             child: Row(
               children: [
                 const Icon(Icons.warning_amber_rounded,
-                    color: EstoquePalette.primary, size: 20),
+                    color: PaletaApp.primary, size: 20),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     '${abaixo.length} ${abaixo.length == 1 ? 'insumo abaixo' : 'insumos abaixo'} do estoque mínimo.\nToque para registrar entrada por compra.',
                     style: const TextStyle(
-                      color: EstoquePalette.text,
+                      color: PaletaApp.text,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       height: 1.35,
@@ -745,7 +749,7 @@ class _EstoquePageState extends State<EstoquePage>
             child: Text(
               'ABAIXO DO MÍNIMO',
               style: TextStyle(
-                color: EstoquePalette.textMuted,
+                color: PaletaApp.textMuted,
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.5,
@@ -773,7 +777,7 @@ class _EstoquePageState extends State<EstoquePage>
             child: Text(
               'EM ESTOQUE',
               style: TextStyle(
-                color: EstoquePalette.textMuted,
+                color: PaletaApp.textMuted,
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.5,
@@ -800,9 +804,9 @@ class _EstoquePageState extends State<EstoquePage>
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
         decoration: BoxDecoration(
-          color: EstoquePalette.surfaceAlt,
+          color: PaletaApp.surfaceAlt,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: EstoquePalette.border),
+          border: Border.all(color: PaletaApp.border),
           boxShadow: const [
             BoxShadow(
               color: Color(0x08A86D37),
@@ -815,17 +819,17 @@ class _EstoquePageState extends State<EstoquePage>
           controller: _searchController,
           onChanged: (value) => setState(() => _search = value),
           style: const TextStyle(
-            color: EstoquePalette.text,
+            color: PaletaApp.text,
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
           decoration: InputDecoration(
             prefixIcon: const Icon(
               Icons.search_rounded,
-              color: EstoquePalette.textMuted,
+              color: PaletaApp.textMuted,
             ),
             hintText: 'Buscar insumo...',
-            hintStyle: const TextStyle(color: EstoquePalette.textMuted),
+            hintStyle: const TextStyle(color: PaletaApp.textMuted),
             border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
@@ -849,10 +853,10 @@ class _EstoquePageState extends State<EstoquePage>
  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: EstoquePalette.background,
+      backgroundColor: PaletaApp.background,
       floatingActionButton: FloatingActionButton(
         onPressed: _openCreate,
-        backgroundColor: EstoquePalette.primary,
+        backgroundColor: PaletaApp.primary,
         foregroundColor: Colors.white,
         shape: const CircleBorder(),
         child: const Icon(Icons.add_rounded),
@@ -878,10 +882,9 @@ class _EstoquePageState extends State<EstoquePage>
                       ),
                     ),
                     const SizedBox(width: 12),
-                    _HeaderIconButton(
-                      icon: Icons.filter_alt_outlined,
-                      showBadge: _hasAdvancedFilters,
-                      onTap: _openFiltersSheet,
+                    AppBotaoIcone(icone: Icons.filter_alt_outlined,
+                      mostrarSelo: _hasAdvancedFilters,
+                      aoTocar: _openFiltersSheet,
                     ),
                   ],
                 ),
@@ -896,7 +899,7 @@ class _EstoquePageState extends State<EstoquePage>
 
             Expanded(
               child: RefreshIndicator(
-                color: EstoquePalette.primary,
+                color: PaletaApp.primary,
                 onRefresh: _loadData,
                 child: TabBarView(
                   controller: _tabController,
@@ -908,54 +911,6 @@ class _EstoquePageState extends State<EstoquePage>
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HeaderIconButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback? onTap;
-  final bool showBadge;
-
-  const _HeaderIconButton({required this.icon, this.onTap, this.showBadge = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: EstoquePalette.surface,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: EstoquePalette.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: EstoquePalette.border),
-          ),
-          child: Stack(
-            children: [
-              Center(child: Icon(icon, color: EstoquePalette.text, size: 22)),
-              if (showBadge)
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    width: 9,
-                    height: 9,
-                    decoration: BoxDecoration(
-                      color: EstoquePalette.primary,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: EstoquePalette.surface, width: 1.5),
-                    ),
-                  ),
-                ),
-            ],
-          ),
         ),
       ),
     );
@@ -978,9 +933,9 @@ class _DateBox extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: EstoquePalette.surfaceAlt,
+          color: PaletaApp.surfaceAlt,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: EstoquePalette.border),
+          border: Border.all(color: PaletaApp.border),
         ),
         child: Row(
           children: [
@@ -991,7 +946,7 @@ class _DateBox extends StatelessWidget {
                   Text(
                     label,
                     style: const TextStyle(
-                      color: EstoquePalette.textMuted,
+                      color: PaletaApp.textMuted,
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.4,
@@ -1001,7 +956,7 @@ class _DateBox extends StatelessWidget {
                   Text(
                     value,
                     style: const TextStyle(
-                      color: EstoquePalette.text,
+                      color: PaletaApp.text,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
@@ -1015,11 +970,11 @@ class _DateBox extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
                 child: const Padding(
                   padding: EdgeInsets.all(4),
-                  child: Icon(Icons.close_rounded, size: 16, color: EstoquePalette.textMuted),
+                  child: Icon(Icons.close_rounded, size: 16, color: PaletaApp.textMuted),
                 ),
               )
             else
-              const Icon(Icons.calendar_today_rounded, size: 16, color: EstoquePalette.textMuted),
+              const Icon(Icons.calendar_today_rounded, size: 16, color: PaletaApp.textMuted),
           ],
         ),
       ),
