@@ -321,63 +321,65 @@ class _UnidadeMedidaPageState extends State<UnidadeMedidaPage> {
           const SizedBox(height: 10),
           SizedBox(
             height: 36,
-            child: ListView.separated(
+            child: ListView(
               scrollDirection: Axis.horizontal,
-              itemCount: _statusOpcoes.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (_, i) {
-                final opcao = _statusOpcoes[i];
-                final selecionado = _filtroStatus == opcao;
-                return ChoiceChip(
-                  label: Text(opcao),
-                  selected: selecionado,
-                  onSelected: (_) =>
-                      setState(() => _filtroStatus = opcao),
-                  selectedColor: AppTema.primaria,
-                  backgroundColor: Colors.white,
-                  labelStyle: TextStyle(
-                    color:
-                        selecionado ? Colors.white : AppTema.textoEscuro,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  side: const BorderSide(color: AppTema.bordaCampo),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 36,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: _tipoOpcoes.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (_, i) {
-                final opcao = _tipoOpcoes[i];
-                final selecionado = _filtroTipo == opcao;
-                final cor = opcao == 'TODOS'
-                    ? AppTema.primaria
-                    : _tipoColor(opcao);
-                return ChoiceChip(
-                  label: Text(_tipoNome(opcao)),
-                  selected: selecionado,
-                  onSelected: (_) => setState(() => _filtroTipo = opcao),
-                  selectedColor: cor,
-                  backgroundColor: Colors.white,
-                  labelStyle: TextStyle(
-                    color:
-                        selecionado ? Colors.white : AppTema.textoEscuro,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  side: BorderSide(
-                      color:
-                          selecionado ? cor : AppTema.bordaCampo),
-                );
-              },
+              children: [
+                for (int i = 0; i < _statusOpcoes.length; i++) ...[
+                  _construirChipStatus(_statusOpcoes[i]),
+                  if (i < _statusOpcoes.length - 1)
+                    const SizedBox(width: 8),
+                ],
+                const SizedBox(width: 12),
+                Container(
+                  width: 1,
+                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  color: AppTema.bordaCampo,
+                ),
+                const SizedBox(width: 12),
+                for (int i = 0; i < _tipoOpcoes.length; i++) ...[
+                  _construirChipTipo(_tipoOpcoes[i]),
+                  if (i < _tipoOpcoes.length - 1)
+                    const SizedBox(width: 8),
+                ],
+              ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _construirChipStatus(String opcao) {
+    final selecionado = _filtroStatus == opcao;
+    return ChoiceChip(
+      label: Text(opcao),
+      selected: selecionado,
+      onSelected: (_) => setState(() => _filtroStatus = opcao),
+      selectedColor: AppTema.primaria,
+      backgroundColor: Colors.white,
+      labelStyle: TextStyle(
+        color: selecionado ? Colors.white : AppTema.textoEscuro,
+        fontWeight: FontWeight.w600,
+      ),
+      side: const BorderSide(color: AppTema.bordaCampo),
+    );
+  }
+
+  Widget _construirChipTipo(String opcao) {
+    final selecionado = _filtroTipo == opcao;
+    final cor =
+        opcao == 'TODOS' ? AppTema.primaria : _tipoColor(opcao);
+    return ChoiceChip(
+      label: Text(_tipoNome(opcao)),
+      selected: selecionado,
+      onSelected: (_) => setState(() => _filtroTipo = opcao),
+      selectedColor: cor,
+      backgroundColor: Colors.white,
+      labelStyle: TextStyle(
+        color: selecionado ? Colors.white : AppTema.textoEscuro,
+        fontWeight: FontWeight.w600,
+      ),
+      side: BorderSide(color: selecionado ? cor : AppTema.bordaCampo),
     );
   }
 
