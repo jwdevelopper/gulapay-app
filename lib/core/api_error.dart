@@ -1,5 +1,8 @@
 import 'package:dio/dio.dart';
 
+/// Representação padronizada de um erro de API.
+/// Converte `DioException` em uma mensagem legível,
+/// lendo o campo `detail` do ProblemDetail (RFC 7807) usado pelo backend.
 class ApiError implements Exception {
   final int? statusCode;
   final String message;

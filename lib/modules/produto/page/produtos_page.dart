@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/acoes_criacao.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/modules/categoria/dto/categoria.dart';
@@ -9,28 +10,14 @@ import 'package:my_app_teste/modules/produto/models/produto_sort_option.dart';
 import 'package:my_app_teste/modules/produto/service/produto_service.dart';
 import 'package:my_app_teste/modules/produto/widgets/produtos_palette.dart';
 import 'package:my_app_teste/modules/produto/widgets/produtos_widgets.dart';
-import 'package:my_app_teste/shared/bottom_bar/bottom_bar.dart';
-
 import 'produto_form_page.dart';
 
 class ProdutosPage extends StatefulWidget {
-  /// Mantido por compatibilidade com chamadas existentes (ex: [ProdutoPage]),
-  /// mas não usado mais — a AppBar da Home já fornece o botão de drawer.
-  final VoidCallback? onOpenDrawer;
-
-  const ProdutosPage({super.key, this.onOpenDrawer});
+  const ProdutosPage({super.key});
 
   @override
   State<ProdutosPage> createState() => _ProdutosPageState();
 }
-
-const List<BottomBarItem> _bottomBarItems = [
-  BottomBarItem(label: 'Inicio', icon: Icons.home_outlined),
-  BottomBarItem(label: 'Mesas', icon: Icons.grid_view_rounded),
-  BottomBarItem(label: 'Produtos', icon: Icons.inventory_2_outlined),
-  BottomBarItem(label: 'Clientes', icon: Icons.people_alt_outlined),
-  BottomBarItem(label: 'Mais', icon: Icons.more_horiz_rounded),
-];
 
 class _ProdutosPageState extends State<ProdutosPage> {
   final ProdutoService _service = ProdutoService();
@@ -46,6 +33,7 @@ class _ProdutosPageState extends State<ProdutosPage> {
   @override
   void initState() {
     super.initState();
+    AcoesCriacao.registrar('Produtos', _openCreate);
     _loadCategories();
     _load();
   }
@@ -133,6 +121,19 @@ class _ProdutosPageState extends State<ProdutosPage> {
     }
 
     return list;
+  }
+
+  String get _screenTitle => _selectedCategoria?.nome.isNotEmpty == true
+      ? _selectedCategoria!.nome
+      : 'Produtos';
+
+  String get _screenSubtitle {
+    if (_loading) return 'Carregando produtos...';
+    if (_selectedCategoria != null) {
+      return '${_filtered.length} itens • filtro ativo';
+    }
+    if (_produtos.isEmpty) return 'Comece a cadastrar';
+    return '${_produtos.length} itens • ${_categorias.length} categorias';
   }
 
   String get _sortLabel => produtoSortOptions
@@ -472,7 +473,7 @@ class _ProdutosPageState extends State<ProdutosPage> {
     if (_loading) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 28, 16, 140),
+        padding: const EdgeInsets.fromLTRB(16, 28, 16, 96),
         children: const [
           SizedBox(height: 120),
           Center(
@@ -485,7 +486,7 @@ class _ProdutosPageState extends State<ProdutosPage> {
     if (_produtos.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 140),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 96),
         children: [
           const SizedBox(height: 24),
           EmptyStateCard(
@@ -503,7 +504,7 @@ class _ProdutosPageState extends State<ProdutosPage> {
     if (_filtered.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 140),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 96),
         children: [
           const SizedBox(height: 24),
           EmptyStateCard(
@@ -521,7 +522,7 @@ class _ProdutosPageState extends State<ProdutosPage> {
 
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 140),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
       itemCount: _filtered.length,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) => _buildProductCard(_filtered[index]),
@@ -531,7 +532,6 @@ class _ProdutosPageState extends State<ProdutosPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ProdutosPalette.background,
       floatingActionButton: FloatingActionButton(
         onPressed: _openCreate,
         backgroundColor: ProdutosPalette.primary,
@@ -539,52 +539,39 @@ class _ProdutosPageState extends State<ProdutosPage> {
         shape: const CircleBorder(),
         child: const Icon(Icons.add_rounded),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      bottomNavigationBar: BottomBar(
-        items: _bottomBarItems,
-        selectedIndex: 2,
-        onTap: (_) {},
-        backgroundColor: ProdutosPalette.surface,
-        borderColor: ProdutosPalette.borderSoft,
-        activeColor: ProdutosPalette.primary,
-        inactiveColor: ProdutosPalette.textMuted,
-        activeIndicatorColor: ProdutosPalette.warningBg,
-      ),
-      // Sem SafeArea aqui — a Home já fornece a AppBar e o padding superior.
-      // Sem ProdutoPageHeader — o título "Produto" vem da AppBar da Home,
-      // eliminando a duplicação de topbar.
-      body: Column(
-        children: [
-          const SizedBox(height: 12),
-          ProdutoSearchField(
-            controller: _searchController,
-            search: _search,
-            onChanged: (value) => setState(() => _search = value),
-            onClear: () {
-              _searchController.clear();
-              setState(() => _search = '');
-            },
-          ),
-          const SizedBox(height: 10),
-          _buildCategoryChips(),
-          ProdutoResultsHeader(
-            resultCount: _filtered.isEmpty && _produtos.isNotEmpty
-                ? 0
-                : _filtered.length,
-            sortLabel: _sortLabel,
-            onSortTap: _openSortSheet,
-            onFilterTap: _openFilterSheet,
-            onClearFiltersTap: _clearSearchAndFilter,
-            hasActiveFilter: _hasActiveFilter,
-          ),
-          Expanded(
-            child: RefreshIndicator(
-              color: ProdutosPalette.primary,
-              onRefresh: _reload,
-              child: _buildList(),
+      backgroundColor: ProdutosPalette.background,
+      body: SafeArea(
+        child: Column(
+          children: [
+            const SizedBox(height: 16),
+            
+            ProdutoSearchField(
+              controller: _searchController,
+              search: _search,
+              onChanged: (value) => setState(() => _search = value),
+              onClear: () {
+                _searchController.clear();
+                setState(() => _search = '');
+              },
             ),
-          ),
-        ],
+            const SizedBox(height: 10),
+            _buildCategoryChips(),
+            ProdutoResultsHeader(
+              resultCount: _filtered.isEmpty && _produtos.isNotEmpty
+                  ? 0
+                  : _filtered.length,
+              sortLabel: _sortLabel,
+              onSortTap: _openSortSheet,
+            ),
+            Expanded(
+              child: RefreshIndicator(
+                color: ProdutosPalette.primary,
+                onRefresh: _reload,
+                child: _buildList(),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

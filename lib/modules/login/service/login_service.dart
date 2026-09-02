@@ -1,4 +1,4 @@
-import 'package:dio/dio.dart';
+﻿import 'package:dio/dio.dart';
 import 'package:my_app_teste/core/api_client.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/constants_api.dart';
