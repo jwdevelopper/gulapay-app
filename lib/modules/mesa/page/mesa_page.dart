@@ -9,40 +9,40 @@ import 'package:my_app_teste/modules/mesa/widget/table_editor_sheet.dart';
 import 'package:my_app_teste/modules/mesa/widget/table_info_sheet.dart';
 import 'package:my_app_teste/modules/mesa/widget/table_legend.dart';
 
-class MesaPage extends StatefulWidget {
-  const MesaPage({super.key});
+class MesaPagina extends StatefulWidget {
+  const MesaPagina({super.key});
 
   @override
-  State<MesaPage> createState() => _MesaPageState();
+  State<MesaPagina> createState() => _MesaPaginaState();
 }
 
-class _MesaPageState extends State<MesaPage> {
-  late final FloorPlanController _controller;
-  bool _isEditMode = false;
+class _MesaPaginaState extends State<MesaPagina> {
+  late final ControladorMapaMesas _controlador;
+  bool _modoEdicao = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = FloorPlanController()..load();
+    _controlador = ControladorMapaMesas()..carregar();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controlador.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _controller,
+      animation: _controlador,
       builder: (context, _) {
-        final area = _controller.selectedArea;
-        if (_controller.isLoading || area == null) {
+        final area = _controlador.areaSelecionada;
+        if (_controlador.estaCarregando || area == null) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final compact = MediaQuery.sizeOf(context).width < 520;
+        final compacto = MediaQuery.sizeOf(context).width < 520;
 
         return Scaffold(
           backgroundColor: GulaColors.background,
@@ -50,16 +50,16 @@ class _MesaPageState extends State<MesaPage> {
             top: false,
             child: Padding(
               padding: EdgeInsets.fromLTRB(
-                compact ? 12 : 16,
+                compacto ? 12 : 16,
                 10,
-                compact ? 12 : 16,
+                compacto ? 12 : 16,
                 12,
               ),
               child: Column(
                 children: [
-                  _buildAreaSelector(area, compact: compact),
+                  _construirSeletorArea(area, compacto: compacto),
                   const SizedBox(height: 10),
-                  Expanded(child: _buildOperationalMap(area)),
+                  Expanded(child: _construirMapaOperacional(area)),
                 ],
               ),
             ),
@@ -69,72 +69,75 @@ class _MesaPageState extends State<MesaPage> {
     );
   }
 
-  Widget _buildAreaSelector(
-    RestaurantArea selectedArea, {
-    required bool compact,
+  Widget _construirSeletorArea(
+    AreaRestaurante areaSelecionada, {
+    required bool compacto,
   }) {
     return Row(
       children: [
         Expanded(
           child: SizedBox(
-            height: compact ? 64 : 68,
+            height: compacto ? 64 : 68,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              itemCount: _controller.areas.length,
+              itemCount: _controlador.areas.length,
               separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
-                final item = _controller.areas[index];
-                return RestaurantAreaTab(
+                final item = _controlador.areas[index];
+                return AbaAreaRestaurante(
                   area: item,
-                  isSelected: item.id == selectedArea.id,
-                  compact: true,
-                  onTap: () => _controller.selectArea(item.id),
+                  selecionada: item.id == areaSelecionada.id,
+                  compacto: true,
+                  aoTocar: () => _controlador.selecionarArea(item.id),
                 );
               },
             ),
           ),
         ),
         const SizedBox(width: 8),
-        _MapMenuButton(onShowLegend: _showMapLegend, onReset: _resetMap),
+        _BotaoMenuMapa(
+          aoExibirLegenda: _exibirLegendaMapa,
+          aoRestaurar: _restaurarMapa,
+        ),
       ],
     );
   }
 
-  Widget _buildOperationalMap(RestaurantArea area) {
-    final occupied = area.occupancyCount;
-    final alerts = area.tables.where((table) {
-      final status = _controller.resolveStatus(table);
-      return status == TableStatus.noOrder30Min ||
-          status == TableStatus.awaitingRelease1H ||
-          status == TableStatus.attention;
+  Widget _construirMapaOperacional(AreaRestaurante area) {
+    final ocupadas = area.quantidadeOcupadas;
+    final alertas = area.mesas.where((mesa) {
+      final situacao = _controlador.resolverSituacao(mesa);
+      return situacao == SituacaoMesa.semPedidoHa30Min ||
+          situacao == SituacaoMesa.aguardandoLiberacaoHa1H ||
+          situacao == SituacaoMesa.atencao;
     }).length;
 
     return Stack(
       children: [
         Positioned.fill(
-          child: FloorPlanCanvas(
+          child: CanvasMapaMesas(
             area: area,
-            controller: _controller,
-            isEditMode: _isEditMode,
-            onToggleEditMode: () {
-              setState(() => _isEditMode = !_isEditMode);
+            controlador: _controlador,
+            modoEdicao: _modoEdicao,
+            aoAlternarModoEdicao: () {
+              setState(() => _modoEdicao = !_modoEdicao);
             },
-            onAddTable: () => _showTableEditor(),
-            onJoinSuggested: _joinSuggestedTables,
-            onEditTable: (table) => _showTableEditor(table: table),
-            onOpenTable: _showTableInfo,
-            onOpenOrder: (table) => _openOrder(table.id),
+            aoAdicionarMesa: () => _exibirEditorMesa(),
+            aoUnirSugeridas: _unirMesasSugeridas,
+            aoEditarMesa: (mesa) => _exibirEditorMesa(mesa: mesa),
+            aoAbrirMesa: _exibirInformacoesMesa,
+            aoAbrirComanda: (mesa) => _abrirComanda(mesa.id),
           ),
         ),
         Positioned(
           top: 12,
           left: 12,
           child: IgnorePointer(
-            child: _MapSummary(
-              areaName: area.name,
-              total: area.totalTables,
-              occupied: occupied,
-              alerts: alerts,
+            child: _ResumoMapa(
+              nomeArea: area.nome,
+              total: area.totalMesas,
+              ocupadas: ocupadas,
+              alertas: alertas,
             ),
           ),
         ),
@@ -142,21 +145,21 @@ class _MesaPageState extends State<MesaPage> {
     );
   }
 
-  Future<void> _showMapLegend() async {
+  Future<void> _exibirLegendaMapa() async {
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: TableLegend(compact: true),
+          child: LegendaMesas(compacto: true),
         ),
       ),
     );
   }
 
-  Future<void> _resetMap() async {
-    await _controller.resetSeed();
+  Future<void> _restaurarMapa() async {
+    await _controlador.restaurarDadosIniciais();
     if (!mounted) {
       return;
     }
@@ -165,15 +168,13 @@ class _MesaPageState extends State<MesaPage> {
     );
   }
 
-  Future<void> _joinSuggestedTables() async {
-    final error = await _controller.joinSuggestedTables();
+  Future<void> _unirMesasSugeridas() async {
+    final erro = await _controlador.unirMesasSugeridas();
     if (!mounted) {
       return;
     }
-    if (error != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error)));
+    if (erro != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(erro)));
       return;
     }
     ScaffoldMessenger.of(
@@ -181,105 +182,107 @@ class _MesaPageState extends State<MesaPage> {
     ).showSnackBar(const SnackBar(content: Text('Mesas unidas com sucesso.')));
   }
 
-  Future<void> _showTableEditor({RestaurantTable? table}) async {
-    final areaId = table?.areaId ?? (_controller.selectedArea?.id ?? '');
-    final draft = await showModalBottomSheet<TableDraft>(
+  Future<void> _exibirEditorMesa({MesaRestaurante? mesa}) async {
+    final idArea = mesa?.idArea ?? (_controlador.areaSelecionada?.id ?? '');
+    final rascunho = await showModalBottomSheet<RascunhoMesa>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => TableEditorSheet(
-        areas: _controller.areas,
-        initialAreaId: areaId,
-        table: table,
+      builder: (context) => PainelEditorMesa(
+        areas: _controlador.areas,
+        idAreaInicial: idArea,
+        mesa: mesa,
       ),
     );
 
-    if (draft == null) {
+    if (rascunho == null) {
       return;
     }
 
-    await _controller.saveTable(draft);
-    _showControllerErrorIfNeeded();
+    await _controlador.salvarMesa(rascunho);
+    _exibirErroControladorSeNecessario();
   }
 
-  Future<void> _showTableInfo(RestaurantTable table) async {
-    final refreshedTable = _controller.findTableById(table.id);
-    if (refreshedTable == null) {
+  Future<void> _exibirInformacoesMesa(MesaRestaurante mesa) async {
+    final mesaAtualizada = _controlador.buscarMesaPorId(mesa.id);
+    if (mesaAtualizada == null) {
       return;
     }
 
-    final area = _controller.areaById(refreshedTable.areaId);
+    final area = _controlador.buscarAreaPorId(mesaAtualizada.idArea);
     if (area == null) {
       return;
     }
 
-    final scopeTables = _controller.tablesForScope(refreshedTable.id);
-    final status = _controller.resolveStatus(refreshedTable);
+    final mesasDoContexto = _controlador.mesasDoContexto(mesaAtualizada.id);
+    final situacao = _controlador.resolverSituacao(mesaAtualizada);
 
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (sheetContext) => TableInfoSheet(
-        areaName: area.name,
-        table: refreshedTable,
-        status: status,
-        scopeTables: scopeTables,
-        totalChairs: _controller.groupChairsCount(refreshedTable.id),
-        seatedPeople: _controller.groupSeatedCount(refreshedTable.id),
-        itemsCount: _controller.groupItemsCount(refreshedTable.id),
-        partialTotal: _controller.groupPartialTotal(refreshedTable.id),
-        lastOrderAt: _controller.lastOrderAtForScope(refreshedTable.id),
-        customerName: _controller.groupCustomerName(refreshedTable.id),
-        joinableTables: _controller.joinableTablesFor(refreshedTable.id),
-        onOpenOrder: () {
-          Navigator.pop(sheetContext);
-          _openOrder(refreshedTable.id);
+      builder: (contextoPainel) => PainelInformacoesMesa(
+        nomeArea: area.nome,
+        mesa: mesaAtualizada,
+        situacao: situacao,
+        mesasDoContexto: mesasDoContexto,
+        totalCadeiras: _controlador.quantidadeCadeirasGrupo(mesaAtualizada.id),
+        pessoasSentadas: _controlador.quantidadePessoasGrupo(mesaAtualizada.id),
+        quantidadeItens: _controlador.quantidadeItensGrupo(mesaAtualizada.id),
+        totalParcial: _controlador.totalParcialGrupo(mesaAtualizada.id),
+        ultimoPedidoEm: _controlador.ultimoPedidoDoContexto(mesaAtualizada.id),
+        nomeCliente: _controlador.nomeClienteGrupo(mesaAtualizada.id),
+        mesasCompativeis: _controlador.mesasCompativeisParaUniao(
+          mesaAtualizada.id,
+        ),
+        aoAbrirComanda: () {
+          Navigator.pop(contextoPainel);
+          _abrirComanda(mesaAtualizada.id);
         },
-        onEdit: () {
-          Navigator.pop(sheetContext);
-          _showTableEditor(table: refreshedTable);
+        aoEditar: () {
+          Navigator.pop(contextoPainel);
+          _exibirEditorMesa(mesa: mesaAtualizada);
         },
-        onMarkFree: () {
-          Navigator.pop(sheetContext);
-          _confirmAndRelease(refreshedTable.id);
+        aoLiberar: () {
+          Navigator.pop(contextoPainel);
+          _confirmarELiberar(mesaAtualizada.id);
         },
-        onJoinWith: (targetTableId) async {
-          Navigator.pop(sheetContext);
-          final error = await _controller.joinTables(
-            sourceTableId: refreshedTable.id,
-            targetTableId: targetTableId,
+        aoUnirCom: (idMesaAlvo) async {
+          Navigator.pop(contextoPainel);
+          final erro = await _controlador.unirMesas(
+            idMesaOrigem: mesaAtualizada.id,
+            idMesaAlvo: idMesaAlvo,
           );
           if (!mounted) {
             return;
           }
-          if (error != null) {
+          if (erro != null) {
             ScaffoldMessenger.of(
               context,
-            ).showSnackBar(SnackBar(content: Text(error)));
+            ).showSnackBar(SnackBar(content: Text(erro)));
             return;
           }
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Mesas unidas com sucesso.')),
           );
         },
-        onSeparateGroup: refreshedTable.joinGroupId == null
+        aoSepararGrupo: mesaAtualizada.idGrupoUniao == null
             ? null
             : () {
-                Navigator.pop(sheetContext);
-                _confirmAndSeparate(refreshedTable.joinGroupId!);
+                Navigator.pop(contextoPainel);
+                _confirmarESeparar(mesaAtualizada.idGrupoUniao!);
               },
       ),
     );
   }
 
-  Future<void> _openOrder(String tableId) async {
-    final result = await _controller.openOrderForTable(tableId);
-    if (!mounted || result == null) {
+  Future<void> _abrirComanda(String idMesa) async {
+    final resultado = await _controlador.abrirComandaDaMesa(idMesa);
+    if (!mounted || resultado == null) {
       return;
     }
 
-    if (!result.reusedExistingOrder) {
+    if (!resultado.reutilizouComandaExistente) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Nova comanda aberta para a mesa.')),
       );
@@ -288,25 +291,25 @@ class _MesaPageState extends State<MesaPage> {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => MesaOrderPage(
-          controller: _controller,
-          tableId: result.tableIds.first,
+        builder: (context) => ComandaMesaPagina(
+          controlador: _controlador,
+          idMesa: resultado.idsMesas.first,
         ),
       ),
     );
   }
 
-  Future<void> _confirmAndRelease(String tableId) async {
-    final confirmed = await _confirmAction(
-      title: 'Liberar mesa',
-      body:
+  Future<void> _confirmarELiberar(String idMesa) async {
+    final confirmado = await _confirmarAcao(
+      titulo: 'Liberar mesa',
+      mensagem:
           'Essa ação encerra o estado atual da mesa e limpa a comanda em aberto.',
     );
-    if (confirmed != true) {
+    if (confirmado != true) {
       return;
     }
 
-    await _controller.markTableAsFree(tableId);
+    await _controlador.liberarMesa(idMesa);
     if (!mounted) {
       return;
     }
@@ -315,24 +318,22 @@ class _MesaPageState extends State<MesaPage> {
     ).showSnackBar(const SnackBar(content: Text('Mesa liberada com sucesso.')));
   }
 
-  Future<void> _confirmAndSeparate(String groupId) async {
-    final confirmed = await _confirmAction(
-      title: 'Separar grupo',
-      body:
+  Future<void> _confirmarESeparar(String idGrupo) async {
+    final confirmado = await _confirmarAcao(
+      titulo: 'Separar grupo',
+      mensagem:
           'As mesas voltarão a operar individualmente. A comanda do grupo será preservada.',
     );
-    if (confirmed != true) {
+    if (confirmado != true) {
       return;
     }
 
-    final error = await _controller.separateGroup(groupId);
+    final erro = await _controlador.separarGrupo(idGrupo);
     if (!mounted) {
       return;
     }
-    if (error != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error)));
+    if (erro != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(erro)));
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
@@ -340,7 +341,10 @@ class _MesaPageState extends State<MesaPage> {
     );
   }
 
-  Future<bool?> _confirmAction({required String title, required String body}) {
+  Future<bool?> _confirmarAcao({
+    required String titulo,
+    required String mensagem,
+  }) {
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -349,8 +353,8 @@ class _MesaPageState extends State<MesaPage> {
           borderRadius: BorderRadius.circular(24),
           side: const BorderSide(color: GulaColors.border),
         ),
-        title: Text(title),
-        content: Text(body),
+        title: Text(titulo),
+        content: Text(mensagem),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -365,27 +369,27 @@ class _MesaPageState extends State<MesaPage> {
     );
   }
 
-  void _showControllerErrorIfNeeded() {
-    final error = _controller.lastActionError;
-    if (error == null || error.isEmpty) {
+  void _exibirErroControladorSeNecessario() {
+    final erro = _controlador.erroUltimaAcao;
+    if (erro == null || erro.isEmpty) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(erro)));
   }
 }
 
-class _MapSummary extends StatelessWidget {
-  const _MapSummary({
-    required this.areaName,
+class _ResumoMapa extends StatelessWidget {
+  const _ResumoMapa({
+    required this.nomeArea,
     required this.total,
-    required this.occupied,
-    required this.alerts,
+    required this.ocupadas,
+    required this.alertas,
   });
 
-  final String areaName;
+  final String nomeArea;
   final int total;
-  final int occupied;
-  final int alerts;
+  final int ocupadas;
+  final int alertas;
 
   @override
   Widget build(BuildContext context) {
@@ -409,7 +413,7 @@ class _MapSummary extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            areaName,
+            nomeArea,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -423,19 +427,19 @@ class _MapSummary extends StatelessWidget {
             spacing: 8,
             runSpacing: 4,
             children: [
-              _MapSummaryValue(
-                icon: Icons.table_restaurant_outlined,
-                value: '$total mesas',
+              _ValorResumoMapa(
+                icone: Icons.table_restaurant_outlined,
+                valor: '$total mesas',
               ),
-              _MapSummaryValue(
-                icon: Icons.people_outline_rounded,
-                value: '$occupied em uso',
+              _ValorResumoMapa(
+                icone: Icons.people_outline_rounded,
+                valor: '$ocupadas em uso',
               ),
-              if (alerts > 0)
-                _MapSummaryValue(
-                  icon: Icons.priority_high_rounded,
-                  value: '$alerts alerta${alerts == 1 ? '' : 's'}',
-                  color: GulaColors.critical,
+              if (alertas > 0)
+                _ValorResumoMapa(
+                  icone: Icons.priority_high_rounded,
+                  valor: '$alertas alerta${alertas == 1 ? '' : 's'}',
+                  cor: GulaColors.critical,
                 ),
             ],
           ),
@@ -445,25 +449,25 @@ class _MapSummary extends StatelessWidget {
   }
 }
 
-class _MapSummaryValue extends StatelessWidget {
-  const _MapSummaryValue({required this.icon, required this.value, this.color});
+class _ValorResumoMapa extends StatelessWidget {
+  const _ValorResumoMapa({required this.icone, required this.valor, this.cor});
 
-  final IconData icon;
-  final String value;
-  final Color? color;
+  final IconData icone;
+  final String valor;
+  final Color? cor;
 
   @override
   Widget build(BuildContext context) {
-    final foreground = color ?? GulaColors.textMuted;
+    final corTexto = cor ?? GulaColors.textMuted;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 13, color: foreground),
+        Icon(icone, size: 13, color: corTexto),
         const SizedBox(width: 4),
         Text(
-          value,
+          valor,
           style: TextStyle(
-            color: foreground,
+            color: corTexto,
             fontSize: 11,
             fontWeight: FontWeight.w700,
           ),
@@ -473,27 +477,30 @@ class _MapSummaryValue extends StatelessWidget {
   }
 }
 
-class _MapMenuButton extends StatelessWidget {
-  const _MapMenuButton({required this.onShowLegend, required this.onReset});
+class _BotaoMenuMapa extends StatelessWidget {
+  const _BotaoMenuMapa({
+    required this.aoExibirLegenda,
+    required this.aoRestaurar,
+  });
 
-  final VoidCallback onShowLegend;
-  final VoidCallback onReset;
+  final VoidCallback aoExibirLegenda;
+  final VoidCallback aoRestaurar;
 
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<_MapMenuAction>(
+    return PopupMenuButton<_AcaoMenuMapa>(
       tooltip: 'Opções do mapa',
       onSelected: (action) {
         switch (action) {
-          case _MapMenuAction.legend:
-            onShowLegend();
-          case _MapMenuAction.reset:
-            onReset();
+          case _AcaoMenuMapa.legenda:
+            aoExibirLegenda();
+          case _AcaoMenuMapa.restaurar:
+            aoRestaurar();
         }
       },
       itemBuilder: (context) => const [
         PopupMenuItem(
-          value: _MapMenuAction.legend,
+          value: _AcaoMenuMapa.legenda,
           child: ListTile(
             dense: true,
             leading: Icon(Icons.info_outline_rounded),
@@ -501,7 +508,7 @@ class _MapMenuButton extends StatelessWidget {
           ),
         ),
         PopupMenuItem(
-          value: _MapMenuAction.reset,
+          value: _AcaoMenuMapa.restaurar,
           child: ListTile(
             dense: true,
             leading: Icon(Icons.restart_alt_rounded),
@@ -523,4 +530,7 @@ class _MapMenuButton extends StatelessWidget {
   }
 }
 
-enum _MapMenuAction { legend, reset }
+enum _AcaoMenuMapa { legenda, restaurar }
+
+// Compatibilidade com a rota registrada fora deste modulo.
+typedef MesaPage = MesaPagina;

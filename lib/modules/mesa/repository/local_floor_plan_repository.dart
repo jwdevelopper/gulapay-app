@@ -3,155 +3,157 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:my_app_teste/modules/mesa/model/restaurant_models.dart';
 
-class LocalFloorPlanRepository {
-  static const _storageKey = 'gulapay_floor_plan_v1';
+class RepositorioLocalMapaMesas {
+  static const _chaveArmazenamento = 'gulapay_floor_plan_v1';
 
-  Future<FloorPlanSnapshot?> load() async {
+  Future<EstadoMapaMesas?> carregar() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_storageKey);
+    final raw = prefs.getString(_chaveArmazenamento);
     if (raw == null || raw.isEmpty) {
       return null;
     }
 
     final map = jsonDecode(raw) as Map<String, dynamic>;
-    return FloorPlanSnapshot.fromMap(map);
+    return EstadoMapaMesas.deMapa(map);
   }
 
-  Future<bool> save(FloorPlanSnapshot snapshot) async {
+  Future<bool> salvar(EstadoMapaMesas estado) async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.setString(_storageKey, jsonEncode(snapshot.toMap()));
+    return prefs.setString(_chaveArmazenamento, jsonEncode(estado.paraMapa()));
   }
 
-  Future<void> clear() async {
+  Future<void> limpar() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_storageKey);
+    await prefs.remove(_chaveArmazenamento);
   }
 
-  FloorPlanSnapshot buildSeedData() {
+  EstadoMapaMesas construirDadosIniciais() {
     final now = DateTime.now();
 
-    return FloorPlanSnapshot(
-      selectedAreaId: 'salao',
+    return EstadoMapaMesas(
+      idAreaSelecionada: 'salao',
       areas: [
-        RestaurantArea(
+        AreaRestaurante(
           id: 'salao',
-          name: 'Salao interno',
-          type: 'interno',
-          tables: [
-            RestaurantTable(
+          nome: 'Salao interno',
+          tipo: 'interno',
+          mesas: [
+            MesaRestaurante(
               id: 'm1',
-              code: 'Mesa 01',
-              areaId: 'salao',
+              codigo: 'Mesa 01',
+              idArea: 'salao',
               x: 84,
               y: 132,
               width: 116,
               height: 86,
-              shape: TableShape.rectangular,
-              chairsCount: 6,
-              status: TableStatus.withOrder,
-              isJoined: false,
-              activeOrderId: 'ORD-1001',
-              lastOrderAt: now.subtract(const Duration(minutes: 12)),
-              seatedPeople: 4,
-              customerName: 'Marina',
-              orderItemsCount: 8,
-              partialTotal: 186.40,
+              formato: FormatoMesa.retangular,
+              quantidadeCadeiras: 6,
+              situacao: SituacaoMesa.comPedido,
+              estaUnida: false,
+              idComandaAtiva: 'ORD-1001',
+              ultimoPedidoEm: now.subtract(const Duration(minutes: 12)),
+              pessoasSentadas: 4,
+              nomeCliente: 'Marina',
+              quantidadeItensPedido: 8,
+              totalParcial: 186.40,
             ),
-            RestaurantTable(
+            MesaRestaurante(
               id: 'm2',
-              code: 'Mesa 02',
-              areaId: 'salao',
+              codigo: 'Mesa 02',
+              idArea: 'salao',
               x: 286,
               y: 132,
               width: 88,
               height: 88,
-              shape: TableShape.round,
-              chairsCount: 4,
-              status: TableStatus.occupied,
-              isJoined: false,
-              lastOrderAt: now.subtract(const Duration(minutes: 38)),
-              seatedPeople: 3,
+              formato: FormatoMesa.redonda,
+              quantidadeCadeiras: 4,
+              situacao: SituacaoMesa.ocupada,
+              estaUnida: false,
+              ultimoPedidoEm: now.subtract(const Duration(minutes: 38)),
+              pessoasSentadas: 3,
             ),
-            RestaurantTable(
+            MesaRestaurante(
               id: 'm3',
-              code: 'Mesa 03',
-              areaId: 'salao',
+              codigo: 'Mesa 03',
+              idArea: 'salao',
               x: 468,
               y: 294,
               width: 120,
               height: 74,
-              shape: TableShape.oval,
-              chairsCount: 6,
-              status: TableStatus.free,
-              isJoined: false,
+              formato: FormatoMesa.oval,
+              quantidadeCadeiras: 6,
+              situacao: SituacaoMesa.livre,
+              estaUnida: false,
             ),
           ],
         ),
-        RestaurantArea(
+        AreaRestaurante(
           id: 'varanda',
-          name: 'Varanda',
-          type: 'externo',
-          tables: [
-            RestaurantTable(
+          nome: 'Varanda',
+          tipo: 'externo',
+          mesas: [
+            MesaRestaurante(
               id: 'm4',
-              code: 'Mesa 04',
-              areaId: 'varanda',
+              codigo: 'Mesa 04',
+              idArea: 'varanda',
               x: 112,
               y: 150,
               width: 86,
               height: 86,
-              shape: TableShape.square,
-              chairsCount: 4,
-              status: TableStatus.free,
-              isJoined: false,
+              formato: FormatoMesa.quadrada,
+              quantidadeCadeiras: 4,
+              situacao: SituacaoMesa.livre,
+              estaUnida: false,
             ),
-            RestaurantTable(
+            MesaRestaurante(
               id: 'm5',
-              code: 'Mesa 05',
-              areaId: 'varanda',
+              codigo: 'Mesa 05',
+              idArea: 'varanda',
               x: 332,
               y: 274,
               width: 120,
               height: 74,
-              shape: TableShape.rectangular,
-              chairsCount: 6,
-              status: TableStatus.occupied,
-              isJoined: false,
-              lastOrderAt: now.subtract(const Duration(hours: 1, minutes: 10)),
-              seatedPeople: 5,
+              formato: FormatoMesa.retangular,
+              quantidadeCadeiras: 6,
+              situacao: SituacaoMesa.ocupada,
+              estaUnida: false,
+              ultimoPedidoEm: now.subtract(
+                const Duration(hours: 1, minutes: 10),
+              ),
+              pessoasSentadas: 5,
             ),
           ],
         ),
-        RestaurantArea(
+        AreaRestaurante(
           id: 'vip',
-          name: 'Area VIP',
-          type: 'premium',
-          tables: [
-            RestaurantTable(
+          nome: 'Area VIP',
+          tipo: 'premium',
+          mesas: [
+            MesaRestaurante(
               id: 'm6',
-              code: 'Mesa 06',
-              areaId: 'vip',
+              codigo: 'Mesa 06',
+              idArea: 'vip',
               x: 274,
               y: 164,
               width: 132,
               height: 80,
-              shape: TableShape.oval,
-              chairsCount: 6,
-              status: TableStatus.free,
-              isJoined: false,
+              formato: FormatoMesa.oval,
+              quantidadeCadeiras: 6,
+              situacao: SituacaoMesa.livre,
+              estaUnida: false,
             ),
-            RestaurantTable(
+            MesaRestaurante(
               id: 'm7',
-              code: 'Mesa 07',
-              areaId: 'vip',
+              codigo: 'Mesa 07',
+              idArea: 'vip',
               x: 474,
               y: 164,
               width: 132,
               height: 80,
-              shape: TableShape.oval,
-              chairsCount: 6,
-              status: TableStatus.free,
-              isJoined: false,
+              formato: FormatoMesa.oval,
+              quantidadeCadeiras: 6,
+              situacao: SituacaoMesa.livre,
+              estaUnida: false,
             ),
           ],
         ),

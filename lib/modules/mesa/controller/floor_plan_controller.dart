@@ -5,362 +5,369 @@ import 'package:flutter/foundation.dart';
 import 'package:my_app_teste/modules/mesa/model/restaurant_models.dart';
 import 'package:my_app_teste/modules/mesa/repository/local_floor_plan_repository.dart';
 
-class TableDraft {
-  TableDraft({
+class RascunhoMesa {
+  RascunhoMesa({
     this.id,
-    required this.code,
-    required this.areaId,
-    required this.shape,
-    required this.chairsCount,
+    required this.codigo,
+    required this.idArea,
+    required this.formato,
+    required this.quantidadeCadeiras,
     required this.width,
     required this.height,
-    this.seatedPeople,
+    this.pessoasSentadas,
   });
 
   final String? id;
-  final String code;
-  final String areaId;
-  final TableShape shape;
-  final int chairsCount;
+  final String codigo;
+  final String idArea;
+  final FormatoMesa formato;
+  final int quantidadeCadeiras;
   final double width;
   final double height;
-  final int? seatedPeople;
+  final int? pessoasSentadas;
 }
 
-class TableOrderOpenResult {
-  TableOrderOpenResult({
-    required this.orderId,
-    required this.reusedExistingOrder,
-    required this.tableIds,
+class ResultadoAberturaComandaMesa {
+  ResultadoAberturaComandaMesa({
+    required this.idComanda,
+    required this.reutilizouComandaExistente,
+    required this.idsMesas,
   });
 
-  final String orderId;
-  final bool reusedExistingOrder;
-  final List<String> tableIds;
+  final String idComanda;
+  final bool reutilizouComandaExistente;
+  final List<String> idsMesas;
 }
 
-class FloorPlanController extends ChangeNotifier {
-  FloorPlanController({LocalFloorPlanRepository? repository})
-    : _repository = repository ?? LocalFloorPlanRepository();
+class ControladorMapaMesas extends ChangeNotifier {
+  ControladorMapaMesas({RepositorioLocalMapaMesas? repositorio})
+    : _repositorio = repositorio ?? RepositorioLocalMapaMesas();
 
-  static const double _canvasEdgePadding = 36;
-  static const double _snapInterval = 12;
-  static const double _minTableWidth = 72;
-  static const double _minTableHeight = 56;
-  static const double _maxTableWidth = 220;
-  static const double _maxTableHeight = 180;
+  static const double _margemCanvas = 36;
+  static const double _intervaloGrade = 12;
+  static const double _larguraMinimaMesa = 72;
+  static const double _alturaMinimaMesa = 56;
+  static const double _larguraMaximaMesa = 220;
+  static const double _alturaMaximaMesa = 180;
 
-  final LocalFloorPlanRepository _repository;
-  final ValueNotifier<int> _moveTick = ValueNotifier<int>(0);
+  final RepositorioLocalMapaMesas _repositorio;
+  final ValueNotifier<int> _atualizacaoMovimento = ValueNotifier<int>(0);
 
-  List<RestaurantArea> _areas = const [];
-  String? _selectedAreaId;
-  bool _isLoading = true;
-  bool _isSaving = false;
-  String? _movingTableId;
-  String? _suggestedJoinTargetId;
-  String? _suggestedJoinSourceId;
-  String? _lastActionError;
-  String? _lastOpenedScopeId;
-  DateTime? _lastOrderOpenAt;
+  List<AreaRestaurante> _areas = const [];
+  String? _idAreaSelecionada;
+  bool _estaCarregando = true;
+  bool _estaSalvando = false;
+  String? _idMesaEmMovimento;
+  String? _idAlvoUniaoSugerida;
+  String? _idOrigemUniaoSugerida;
+  String? _erroUltimaAcao;
+  String? _idUltimoContextoAberto;
+  DateTime? _ultimaAberturaComandaEm;
 
-  List<RestaurantArea> get areas => _areas;
-  bool get isLoading => _isLoading;
-  bool get isSaving => _isSaving;
-  String? get lastActionError => _lastActionError;
-  Listenable get moveListenable => _moveTick;
+  List<AreaRestaurante> get areas => _areas;
+  bool get estaCarregando => _estaCarregando;
+  bool get estaSalvando => _estaSalvando;
+  String? get erroUltimaAcao => _erroUltimaAcao;
+  Listenable get observavelMovimento => _atualizacaoMovimento;
 
-  RestaurantArea? get selectedArea {
-    if (_selectedAreaId == null) {
+  AreaRestaurante? get areaSelecionada {
+    if (_idAreaSelecionada == null) {
       return _areas.isEmpty ? null : _areas.first;
     }
 
     for (final area in _areas) {
-      if (area.id == _selectedAreaId) {
+      if (area.id == _idAreaSelecionada) {
         return area;
       }
     }
     return _areas.isEmpty ? null : _areas.first;
   }
 
-  String? get movingTableId => _movingTableId;
-  String? get suggestedJoinTargetId => _suggestedJoinTargetId;
-  String? get suggestedJoinSourceId => _suggestedJoinSourceId;
+  String? get idMesaEmMovimento => _idMesaEmMovimento;
+  String? get idAlvoUniaoSugerida => _idAlvoUniaoSugerida;
+  String? get idOrigemUniaoSugerida => _idOrigemUniaoSugerida;
 
   @override
   void dispose() {
-    _moveTick.dispose();
+    _atualizacaoMovimento.dispose();
     super.dispose();
   }
 
-  Future<void> load() async {
-    _isLoading = true;
+  Future<void> carregar() async {
+    _estaCarregando = true;
     notifyListeners();
 
-    final snapshot = await _repository.load() ?? _repository.buildSeedData();
-    _areas = snapshot.areas;
-    _selectedAreaId = snapshot.selectedAreaId;
-    _isLoading = false;
-    notifyListeners();
-  }
-
-  Future<void> resetSeed() async {
-    final snapshot = _repository.buildSeedData();
-    _areas = snapshot.areas;
-    _selectedAreaId = snapshot.selectedAreaId;
-    await _persist();
+    final estado =
+        await _repositorio.carregar() ?? _repositorio.construirDadosIniciais();
+    _areas = estado.areas;
+    _idAreaSelecionada = estado.idAreaSelecionada;
+    _estaCarregando = false;
     notifyListeners();
   }
 
-  void selectArea(String areaId) {
-    if (_selectedAreaId == areaId) {
+  Future<void> restaurarDadosIniciais() async {
+    final estado = _repositorio.construirDadosIniciais();
+    _areas = estado.areas;
+    _idAreaSelecionada = estado.idAreaSelecionada;
+    await _persistir();
+    notifyListeners();
+  }
+
+  void selecionarArea(String idArea) {
+    if (_idAreaSelecionada == idArea) {
       return;
     }
 
-    _selectedAreaId = areaId;
-    unselectJoinSuggestion();
+    _idAreaSelecionada = idArea;
+    limparSugestaoUniao();
     notifyListeners();
-    _persist();
+    _persistir();
   }
 
-  TableStatus resolveStatus(RestaurantTable table) {
-    if (table.activeOrderId != null) {
-      return TableStatus.withOrder;
+  SituacaoMesa resolverSituacao(MesaRestaurante mesa) {
+    if (mesa.idComandaAtiva != null) {
+      return SituacaoMesa.comPedido;
     }
 
-    if ((table.seatedPeople ?? 0) > 0) {
-      if (table.lastOrderAt != null) {
-        final elapsed = DateTime.now().difference(table.lastOrderAt!);
-        if (elapsed >= const Duration(hours: 1)) {
-          return TableStatus.awaitingRelease1H;
+    if ((mesa.pessoasSentadas ?? 0) > 0) {
+      if (mesa.ultimoPedidoEm != null) {
+        final tempoDecorrido = DateTime.now().difference(mesa.ultimoPedidoEm!);
+        if (tempoDecorrido >= const Duration(hours: 1)) {
+          return SituacaoMesa.aguardandoLiberacaoHa1H;
         }
-        if (elapsed >= const Duration(minutes: 30)) {
-          return TableStatus.noOrder30Min;
+        if (tempoDecorrido >= const Duration(minutes: 30)) {
+          return SituacaoMesa.semPedidoHa30Min;
         }
       }
 
-      return TableStatus.occupied;
+      return SituacaoMesa.ocupada;
     }
 
-    return table.status == TableStatus.attention
-        ? TableStatus.attention
-        : TableStatus.free;
+    return mesa.situacao == SituacaoMesa.atencao
+        ? SituacaoMesa.atencao
+        : SituacaoMesa.livre;
   }
 
-  List<RestaurantTable> tablesForScope(String tableId) {
-    final table = findTableById(tableId);
-    if (table == null) {
+  List<MesaRestaurante> mesasDoContexto(String idMesa) {
+    final mesa = buscarMesaPorId(idMesa);
+    if (mesa == null) {
       return const [];
     }
 
-    if (!table.isJoined || table.joinGroupId == null) {
-      return [table];
+    if (!mesa.estaUnida || mesa.idGrupoUniao == null) {
+      return [mesa];
     }
 
-    final area = areaById(table.areaId);
+    final area = buscarAreaPorId(mesa.idArea);
     if (area == null) {
-      return [table];
+      return [mesa];
     }
 
-    return area.tables
-        .where((item) => item.joinGroupId == table.joinGroupId)
+    return area.mesas
+        .where((item) => item.idGrupoUniao == mesa.idGrupoUniao)
         .toList();
   }
 
-  int groupChairsCount(String tableId) {
-    return tablesForScope(
-      tableId,
-    ).fold<int>(0, (total, table) => total + table.chairsCount);
+  int quantidadeCadeirasGrupo(String idMesa) {
+    return mesasDoContexto(
+      idMesa,
+    ).fold<int>(0, (total, mesa) => total + mesa.quantidadeCadeiras);
   }
 
-  int groupSeatedCount(String tableId) {
-    return tablesForScope(
-      tableId,
-    ).fold<int>(0, (total, table) => total + (table.seatedPeople ?? 0));
+  int quantidadePessoasGrupo(String idMesa) {
+    return mesasDoContexto(
+      idMesa,
+    ).fold<int>(0, (total, mesa) => total + (mesa.pessoasSentadas ?? 0));
   }
 
-  int groupItemsCount(String tableId) {
-    return tablesForScope(
-      tableId,
-    ).fold<int>(0, (total, table) => max(total, table.orderItemsCount));
+  int quantidadeItensGrupo(String idMesa) {
+    return mesasDoContexto(
+      idMesa,
+    ).fold<int>(0, (total, mesa) => max(total, mesa.quantidadeItensPedido));
   }
 
-  double groupPartialTotal(String tableId) {
-    return tablesForScope(tableId).fold<double>(
+  double totalParcialGrupo(String idMesa) {
+    return mesasDoContexto(idMesa).fold<double>(
       0,
-      (total, table) => max(total, table.partialTotal).toDouble(),
+      (total, mesa) => max(total, mesa.totalParcial).toDouble(),
     );
   }
 
-  String? groupCustomerName(String tableId) {
-    for (final table in tablesForScope(tableId)) {
-      if ((table.customerName ?? '').trim().isNotEmpty) {
-        return table.customerName;
+  String? nomeClienteGrupo(String idMesa) {
+    for (final mesa in mesasDoContexto(idMesa)) {
+      if ((mesa.nomeCliente ?? '').trim().isNotEmpty) {
+        return mesa.nomeCliente;
       }
     }
     return null;
   }
 
-  DateTime? lastOrderAtForScope(String tableId) {
-    DateTime? latest;
-    for (final table in tablesForScope(tableId)) {
-      if (table.lastOrderAt == null) {
+  DateTime? ultimoPedidoDoContexto(String idMesa) {
+    DateTime? maisRecente;
+    for (final mesa in mesasDoContexto(idMesa)) {
+      if (mesa.ultimoPedidoEm == null) {
         continue;
       }
-      if (latest == null || table.lastOrderAt!.isAfter(latest)) {
-        latest = table.lastOrderAt;
+      if (maisRecente == null || mesa.ultimoPedidoEm!.isAfter(maisRecente)) {
+        maisRecente = mesa.ultimoPedidoEm;
       }
     }
-    return latest;
+    return maisRecente;
   }
 
-  String? activeOrderIdForScope(String tableId) {
-    for (final table in tablesForScope(tableId)) {
-      if (table.activeOrderId != null) {
-        return table.activeOrderId;
+  String? idComandaAtivaDoContexto(String idMesa) {
+    for (final mesa in mesasDoContexto(idMesa)) {
+      if (mesa.idComandaAtiva != null) {
+        return mesa.idComandaAtiva;
       }
     }
     return null;
   }
 
-  List<RestaurantTable> joinableTablesFor(String tableId) {
-    final table = findTableById(tableId);
-    if (table == null) {
+  List<MesaRestaurante> mesasCompativeisParaUniao(String idMesa) {
+    final mesa = buscarMesaPorId(idMesa);
+    if (mesa == null) {
       return const [];
     }
 
-    final area = areaById(table.areaId);
+    final area = buscarAreaPorId(mesa.idArea);
     if (area == null) {
       return const [];
     }
 
-    final candidates = <RestaurantTable>[];
-    final seenKeys = <String>{};
+    final candidates = <MesaRestaurante>[];
+    final chavesVisitadas = <String>{};
 
-    for (final candidate in area.tables) {
-      if (candidate.id == tableId) {
+    for (final candidata in area.mesas) {
+      if (candidata.id == idMesa) {
         continue;
       }
 
-      final candidateKey = candidate.joinGroupId ?? candidate.id;
-      if (!seenKeys.add(candidateKey)) {
+      final chaveCandidata = candidata.idGrupoUniao ?? candidata.id;
+      if (!chavesVisitadas.add(chaveCandidata)) {
         continue;
       }
 
-      if (table.joinGroupId != null &&
-          candidate.joinGroupId == table.joinGroupId) {
+      if (mesa.idGrupoUniao != null &&
+          candidata.idGrupoUniao == mesa.idGrupoUniao) {
         continue;
       }
 
-      if (!_canJoinScopes(table.id, candidate.id)) {
+      if (!_podeUnirContextos(mesa.id, candidata.id)) {
         continue;
       }
 
-      candidates.add(candidate);
+      candidates.add(candidata);
     }
 
     return candidates;
   }
 
-  RestaurantArea? areaById(String areaId) {
+  AreaRestaurante? buscarAreaPorId(String idArea) {
     for (final area in _areas) {
-      if (area.id == areaId) {
+      if (area.id == idArea) {
         return area;
       }
     }
     return null;
   }
 
-  RestaurantTable? findTableById(String tableId) {
+  MesaRestaurante? buscarMesaPorId(String idMesa) {
     for (final area in _areas) {
-      for (final table in area.tables) {
-        if (table.id == tableId) {
-          return table;
+      for (final mesa in area.mesas) {
+        if (mesa.id == idMesa) {
+          return mesa;
         }
       }
     }
     return null;
   }
 
-  Future<void> saveTable(TableDraft draft) async {
-    final targetArea = areaById(draft.areaId);
-    if (targetArea == null) {
-      _setError('Selecione uma area valida para a mesa.');
+  Future<void> salvarMesa(RascunhoMesa rascunho) async {
+    final areaAlvo = buscarAreaPorId(rascunho.idArea);
+    if (areaAlvo == null) {
+      _definirErro('Selecione uma area valida para a mesa.');
       return;
     }
 
-    final trimmedCode = draft.code.trim();
-    if (trimmedCode.isEmpty) {
-      _setError('A mesa precisa ter um nome ou codigo.');
+    final codigoNormalizado = rascunho.codigo.trim();
+    if (codigoNormalizado.isEmpty) {
+      _definirErro('A mesa precisa ter um nome ou codigo.');
       return;
     }
-    if (draft.chairsCount < 1 || draft.chairsCount > 12) {
-      _setError('A quantidade de cadeiras deve ficar entre 1 e 12.');
+    if (rascunho.quantidadeCadeiras < 1 || rascunho.quantidadeCadeiras > 12) {
+      _definirErro('A quantidade de cadeiras deve ficar entre 1 e 12.');
       return;
     }
-    if ((draft.seatedPeople ?? 0) > draft.chairsCount) {
-      _setError('Pessoas sentadas nao podem ultrapassar a capacidade da mesa.');
-      return;
-    }
-    if (draft.width < _minTableWidth || draft.height < _minTableHeight) {
-      _setError('A mesa precisa ter dimensoes minimas para leitura.');
-      return;
-    }
-    if (draft.width > _maxTableWidth || draft.height > _maxTableHeight) {
-      _setError('A mesa ultrapassa o tamanho maximo permitido no mapa.');
-      return;
-    }
-
-    final duplicatedCode = targetArea.tables.any(
-      (table) =>
-          table.id != draft.id &&
-          table.code.trim().toLowerCase() == trimmedCode.toLowerCase(),
-    );
-    if (duplicatedCode) {
-      _setError('Ja existe uma mesa com esse codigo nessa area.');
-      return;
-    }
-
-    if (draft.id == null) {
-      final tables = [...targetArea.tables];
-      final position = _nextAvailablePosition(
-        targetArea,
-        Size(draft.width, draft.height),
+    if ((rascunho.pessoasSentadas ?? 0) > rascunho.quantidadeCadeiras) {
+      _definirErro(
+        'Pessoas sentadas nao podem ultrapassar a capacidade da mesa.',
       );
-      tables.add(
-        RestaurantTable(
+      return;
+    }
+    if (rascunho.width < _larguraMinimaMesa ||
+        rascunho.height < _alturaMinimaMesa) {
+      _definirErro('A mesa precisa ter dimensoes minimas para leitura.');
+      return;
+    }
+    if (rascunho.width > _larguraMaximaMesa ||
+        rascunho.height > _alturaMaximaMesa) {
+      _definirErro('A mesa ultrapassa o tamanho maximo permitido no mapa.');
+      return;
+    }
+
+    final codigoDuplicado = areaAlvo.mesas.any(
+      (mesa) =>
+          mesa.id != rascunho.id &&
+          mesa.codigo.trim().toLowerCase() == codigoNormalizado.toLowerCase(),
+    );
+    if (codigoDuplicado) {
+      _definirErro('Ja existe uma mesa com esse codigo nessa area.');
+      return;
+    }
+
+    if (rascunho.id == null) {
+      final mesas = [...areaAlvo.mesas];
+      final position = _proximaPosicaoDisponivel(
+        areaAlvo,
+        Size(rascunho.width, rascunho.height),
+      );
+      mesas.add(
+        MesaRestaurante(
           id: 'm${DateTime.now().microsecondsSinceEpoch}',
-          code: trimmedCode,
-          areaId: draft.areaId,
+          codigo: codigoNormalizado,
+          idArea: rascunho.idArea,
           x: position.dx,
           y: position.dy,
-          width: draft.width,
-          height: draft.height,
-          shape: draft.shape,
-          chairsCount: draft.chairsCount,
-          status: draft.seatedPeople != null && draft.seatedPeople! > 0
-              ? TableStatus.occupied
-              : TableStatus.free,
-          isJoined: false,
-          seatedPeople: draft.seatedPeople,
-          lastOrderAt: draft.seatedPeople != null && draft.seatedPeople! > 0
+          width: rascunho.width,
+          height: rascunho.height,
+          formato: rascunho.formato,
+          quantidadeCadeiras: rascunho.quantidadeCadeiras,
+          situacao:
+              rascunho.pessoasSentadas != null && rascunho.pessoasSentadas! > 0
+              ? SituacaoMesa.ocupada
+              : SituacaoMesa.livre,
+          estaUnida: false,
+          pessoasSentadas: rascunho.pessoasSentadas,
+          ultimoPedidoEm:
+              rascunho.pessoasSentadas != null && rascunho.pessoasSentadas! > 0
               ? DateTime.now()
               : null,
         ),
       );
-      _replaceArea(targetArea.copyWith(tables: tables));
-      await _persist();
+      _substituirArea(areaAlvo.copiarCom(mesas: mesas));
+      await _persistir();
       notifyListeners();
       return;
     }
 
-    RestaurantArea? sourceArea;
-    RestaurantTable? current;
+    AreaRestaurante? areaOrigem;
+    MesaRestaurante? current;
     for (final area in _areas) {
-      for (final table in area.tables) {
-        if (table.id == draft.id) {
-          sourceArea = area;
-          current = table;
+      for (final mesa in area.mesas) {
+        if (mesa.id == rascunho.id) {
+          areaOrigem = area;
+          current = mesa;
           break;
         }
       }
@@ -369,489 +376,496 @@ class FloorPlanController extends ChangeNotifier {
       }
     }
 
-    if (sourceArea == null || current == null) {
-      _setError('Nao foi possivel localizar a mesa para edicao.');
+    if (areaOrigem == null || current == null) {
+      _definirErro('Nao foi possivel localizar a mesa para edicao.');
       return;
     }
 
-    final sourceAreaValue = sourceArea;
-    final currentTable = current;
+    final areaOrigemValor = areaOrigem;
+    final mesaAtual = current;
 
-    if (currentTable.isJoined && draft.areaId != currentTable.areaId) {
-      _setError('Separe a mesa antes de mover o grupo para outra area.');
+    if (mesaAtual.estaUnida && rascunho.idArea != mesaAtual.idArea) {
+      _definirErro('Separe a mesa antes de mover o grupo para outra area.');
       return;
     }
-    if (currentTable.activeOrderId != null &&
-        draft.areaId != currentTable.areaId) {
-      _setError('Encerre a comanda antes de mover a mesa para outra area.');
+    if (mesaAtual.idComandaAtiva != null &&
+        rascunho.idArea != mesaAtual.idArea) {
+      _definirErro('Encerre a comanda antes de mover a mesa para outra area.');
       return;
     }
-    if (currentTable.activeOrderId != null && (draft.seatedPeople ?? 0) < 1) {
-      _setError(
+    if (mesaAtual.idComandaAtiva != null &&
+        (rascunho.pessoasSentadas ?? 0) < 1) {
+      _definirErro(
         'Mesa com comanda ativa precisa manter ao menos uma pessoa sentada.',
       );
       return;
     }
 
-    final updatedTable = currentTable.copyWith(
-      code: trimmedCode,
-      areaId: draft.areaId,
-      width: draft.width,
-      height: draft.height,
-      shape: draft.shape,
-      chairsCount: draft.chairsCount,
-      seatedPeople: draft.seatedPeople,
-      status: (draft.seatedPeople ?? 0) > 0
-          ? (currentTable.activeOrderId != null
-                ? TableStatus.withOrder
-                : TableStatus.occupied)
-          : (currentTable.activeOrderId != null
-                ? TableStatus.withOrder
-                : TableStatus.free),
-      lastOrderAt: (draft.seatedPeople ?? 0) > 0
-          ? (currentTable.lastOrderAt ?? DateTime.now())
-          : currentTable.lastOrderAt,
-      clearSeatedPeople: draft.seatedPeople == null,
+    final mesaAtualizada = mesaAtual.copiarCom(
+      codigo: codigoNormalizado,
+      idArea: rascunho.idArea,
+      width: rascunho.width,
+      height: rascunho.height,
+      formato: rascunho.formato,
+      quantidadeCadeiras: rascunho.quantidadeCadeiras,
+      pessoasSentadas: rascunho.pessoasSentadas,
+      situacao: (rascunho.pessoasSentadas ?? 0) > 0
+          ? (mesaAtual.idComandaAtiva != null
+                ? SituacaoMesa.comPedido
+                : SituacaoMesa.ocupada)
+          : (mesaAtual.idComandaAtiva != null
+                ? SituacaoMesa.comPedido
+                : SituacaoMesa.livre),
+      ultimoPedidoEm: (rascunho.pessoasSentadas ?? 0) > 0
+          ? (mesaAtual.ultimoPedidoEm ?? DateTime.now())
+          : mesaAtual.ultimoPedidoEm,
+      limparPessoasSentadas: rascunho.pessoasSentadas == null,
     );
 
-    final sourceTables = sourceAreaValue.tables
-        .where((table) => table.id != currentTable.id)
+    final mesasOrigem = areaOrigemValor.mesas
+        .where((mesa) => mesa.id != mesaAtual.id)
         .toList();
-    _replaceArea(sourceAreaValue.copyWith(tables: sourceTables));
+    _substituirArea(areaOrigemValor.copiarCom(mesas: mesasOrigem));
 
-    final targetTables = [
-      ...targetArea.tables.where((table) => table.id != currentTable.id),
-      updatedTable,
+    final mesasAlvo = [
+      ...areaAlvo.mesas.where((mesa) => mesa.id != mesaAtual.id),
+      mesaAtualizada,
     ];
-    _replaceArea(targetArea.copyWith(tables: targetTables));
-    await _persist();
+    _substituirArea(areaAlvo.copiarCom(mesas: mesasAlvo));
+    await _persistir();
     notifyListeners();
   }
 
-  void beginMove(String tableId) {
-    _movingTableId = tableId;
-    _suggestedJoinSourceId = null;
-    _suggestedJoinTargetId = null;
+  void iniciarMovimento(String idMesa) {
+    _idMesaEmMovimento = idMesa;
+    _idOrigemUniaoSugerida = null;
+    _idAlvoUniaoSugerida = null;
     notifyListeners();
   }
 
-  void unselectJoinSuggestion() {
-    _movingTableId = null;
-    _suggestedJoinTargetId = null;
-    _suggestedJoinSourceId = null;
+  void limparSugestaoUniao() {
+    _idMesaEmMovimento = null;
+    _idAlvoUniaoSugerida = null;
+    _idOrigemUniaoSugerida = null;
   }
 
-  Future<void> moveTable(String tableId, Offset delta, Size canvasSize) async {
-    final table = findTableById(tableId);
-    final area = table == null ? null : areaById(table.areaId);
-    if (table == null || area == null) {
+  Future<void> moverMesa(
+    String idMesa,
+    Offset delta,
+    Size tamanhoCanvas,
+  ) async {
+    final mesa = buscarMesaPorId(idMesa);
+    final area = mesa == null ? null : buscarAreaPorId(mesa.idArea);
+    if (mesa == null || area == null) {
       return;
     }
 
-    if (table.isJoined && table.joinGroupId != null) {
-      _moveJoinGroup(table.joinGroupId!, delta, canvasSize);
+    if (mesa.estaUnida && mesa.idGrupoUniao != null) {
+      _moverGrupo(mesa.idGrupoUniao!, delta, tamanhoCanvas);
       return;
     }
 
-    final minX = _canvasEdgePadding;
-    final minY = _canvasEdgePadding;
-    final maxX = max(minX, canvasSize.width - table.width - _canvasEdgePadding);
-    final maxY = max(
-      minY,
-      canvasSize.height - table.height - _canvasEdgePadding,
-    );
-    final nextX = (table.x + delta.dx).clamp(minX, maxX).toDouble();
-    final nextY = (table.y + delta.dy).clamp(minY, maxY).toDouble();
+    final minX = _margemCanvas;
+    final minY = _margemCanvas;
+    final maxX = max(minX, tamanhoCanvas.width - mesa.width - _margemCanvas);
+    final maxY = max(minY, tamanhoCanvas.height - mesa.height - _margemCanvas);
+    final proximoX = (mesa.x + delta.dx).clamp(minX, maxX).toDouble();
+    final proximoY = (mesa.y + delta.dy).clamp(minY, maxY).toDouble();
 
-    if ((nextX - table.x).abs() < 0.1 && (nextY - table.y).abs() < 0.1) {
+    if ((proximoX - mesa.x).abs() < 0.1 && (proximoY - mesa.y).abs() < 0.1) {
       return;
     }
 
-    final updatedTable = table.copyWith(x: nextX, y: nextY);
-    final updatedTables = area.tables
-        .map((item) => item.id == tableId ? updatedTable : item)
+    final mesaAtualizada = mesa.copiarCom(x: proximoX, y: proximoY);
+    final mesasAtualizadas = area.mesas
+        .map((item) => item.id == idMesa ? mesaAtualizada : item)
         .toList();
 
-    _replaceArea(area.copyWith(tables: updatedTables));
-    _updateJoinSuggestion(updatedTable);
-    _moveTick.value = _moveTick.value + 1;
+    _substituirArea(area.copiarCom(mesas: mesasAtualizadas));
+    _atualizarSugestaoUniao(mesaAtualizada);
+    _atualizacaoMovimento.value = _atualizacaoMovimento.value + 1;
   }
 
-  Future<void> finishMove() async {
-    final tableId = _movingTableId;
-    if (tableId != null) {
-      final table = findTableById(tableId);
-      if (table != null && table.isJoined && table.joinGroupId != null) {
-        _snapJoinGroupToGrid(table.joinGroupId!);
+  Future<void> finalizarMovimento() async {
+    final idMesa = _idMesaEmMovimento;
+    if (idMesa != null) {
+      final mesa = buscarMesaPorId(idMesa);
+      if (mesa != null && mesa.estaUnida && mesa.idGrupoUniao != null) {
+        _ajustarGrupoAGrade(mesa.idGrupoUniao!);
       } else {
-        _snapTableToGrid(tableId);
+        _ajustarMesaAGrade(idMesa);
       }
     }
-    _movingTableId = null;
-    await _persist();
+    _idMesaEmMovimento = null;
+    await _persistir();
     notifyListeners();
   }
 
-  Future<String?> joinSuggestedTables() async {
-    final sourceId = _suggestedJoinSourceId ?? _movingTableId;
-    final targetId = _suggestedJoinTargetId;
-    if (sourceId == null || targetId == null) {
-      return _setError('Aproxime duas mesas validas para uniao.');
+  Future<String?> unirMesasSugeridas() async {
+    final idOrigem = _idOrigemUniaoSugerida ?? _idMesaEmMovimento;
+    final idAlvo = _idAlvoUniaoSugerida;
+    if (idOrigem == null || idAlvo == null) {
+      return _definirErro('Aproxime duas mesas validas para uniao.');
     }
 
-    return joinTables(sourceTableId: sourceId, targetTableId: targetId);
+    return unirMesas(idMesaOrigem: idOrigem, idMesaAlvo: idAlvo);
   }
 
-  Future<String?> joinTables({
-    required String sourceTableId,
-    required String targetTableId,
+  Future<String?> unirMesas({
+    required String idMesaOrigem,
+    required String idMesaAlvo,
   }) async {
-    final source = findTableById(sourceTableId);
-    final target = findTableById(targetTableId);
-    if (source == null || target == null) {
-      return _setError('Nao foi possivel localizar as mesas para uniao.');
+    final origem = buscarMesaPorId(idMesaOrigem);
+    final alvo = buscarMesaPorId(idMesaAlvo);
+    if (origem == null || alvo == null) {
+      return _definirErro('Nao foi possivel localizar as mesas para uniao.');
     }
-    if (source.areaId != target.areaId) {
-      return _setError('Mesas de areas diferentes nao podem ser unidas.');
+    if (origem.idArea != alvo.idArea) {
+      return _definirErro('Mesas de areas diferentes nao podem ser unidas.');
     }
 
-    final area = areaById(source.areaId);
+    final area = buscarAreaPorId(origem.idArea);
     if (area == null) {
-      return _setError('Area da mesa nao encontrada.');
+      return _definirErro('Area da mesa nao encontrada.');
     }
 
-    final sourceGroupId = source.joinGroupId;
-    final targetGroupId = target.joinGroupId;
-    if (sourceGroupId != null && sourceGroupId == targetGroupId) {
-      return _setError('As mesas ja estao no mesmo grupo.');
+    final idGrupoOrigem = origem.idGrupoUniao;
+    final idGrupoAlvo = alvo.idGrupoUniao;
+    if (idGrupoOrigem != null && idGrupoOrigem == idGrupoAlvo) {
+      return _definirErro('As mesas ja estao no mesmo grupo.');
     }
 
-    if (!_canJoinScopes(sourceTableId, targetTableId)) {
-      return _setError(
+    if (!_podeUnirContextos(idMesaOrigem, idMesaAlvo)) {
+      return _definirErro(
         'As mesas possuem pedidos diferentes e nao podem ser unidas agora.',
       );
     }
 
-    final sourceScope = tablesForScope(sourceTableId);
-    final targetScope = tablesForScope(targetTableId);
-    final tablesMap = <String, RestaurantTable>{
-      for (final table in sourceScope) table.id: table,
-      for (final table in targetScope) table.id: table,
+    final contextoOrigem = mesasDoContexto(idMesaOrigem);
+    final contextoAlvo = mesasDoContexto(idMesaAlvo);
+    final tablesMap = <String, MesaRestaurante>{
+      for (final mesa in contextoOrigem) mesa.id: mesa,
+      for (final mesa in contextoAlvo) mesa.id: mesa,
     };
-    final mergedTables = tablesMap.values.toList();
+    final mesasUnificadas = tablesMap.values.toList();
 
-    final oldGroupIds = <String>{
-      if (sourceGroupId != null) sourceGroupId,
-      if (targetGroupId != null) targetGroupId,
+    final idsGruposAnteriores = <String>{
+      if (idGrupoOrigem != null) idGrupoOrigem,
+      if (idGrupoAlvo != null) idGrupoAlvo,
     };
 
-    final originalPositions = _collectOriginalPositions(
+    final posicoesOriginais = _coletarPosicoesOriginais(
       area,
-      mergedTables,
-      oldGroupIds,
+      mesasUnificadas,
+      idsGruposAnteriores,
     );
 
-    final joinGroupId = 'jg-${DateTime.now().millisecondsSinceEpoch}';
-    final mergedOrderCarrier = _selectOrderCarrier(mergedTables);
+    final idGrupoUniao = 'jg-${DateTime.now().millisecondsSinceEpoch}';
+    final mesaComandaUnificada = _selecionarMesaComanda(mesasUnificadas);
 
-    final updatedTables = area.tables.map((table) {
-      if (!tablesMap.containsKey(table.id)) {
-        return table;
+    final mesasAtualizadas = area.mesas.map((mesa) {
+      if (!tablesMap.containsKey(mesa.id)) {
+        return mesa;
       }
 
-      return table.copyWith(
-        isJoined: true,
-        joinGroupId: joinGroupId,
-        activeOrderId: mergedOrderCarrier.activeOrderId,
-        lastOrderAt: mergedOrderCarrier.lastOrderAt,
-        customerName: mergedOrderCarrier.customerName,
-        orderItemsCount: mergedOrderCarrier.orderItemsCount,
-        partialTotal: mergedOrderCarrier.partialTotal,
-        status: mergedOrderCarrier.activeOrderId != null
-            ? TableStatus.withOrder
-            : (table.seatedPeople ?? 0) > 0
-            ? TableStatus.occupied
-            : TableStatus.free,
+      return mesa.copiarCom(
+        estaUnida: true,
+        idGrupoUniao: idGrupoUniao,
+        idComandaAtiva: mesaComandaUnificada.idComandaAtiva,
+        ultimoPedidoEm: mesaComandaUnificada.ultimoPedidoEm,
+        nomeCliente: mesaComandaUnificada.nomeCliente,
+        quantidadeItensPedido: mesaComandaUnificada.quantidadeItensPedido,
+        totalParcial: mesaComandaUnificada.totalParcial,
+        situacao: mesaComandaUnificada.idComandaAtiva != null
+            ? SituacaoMesa.comPedido
+            : (mesa.pessoasSentadas ?? 0) > 0
+            ? SituacaoMesa.ocupada
+            : SituacaoMesa.livre,
       );
     }).toList();
 
-    final updatedGroups = area.joinGroups
-        .where((group) => !oldGroupIds.contains(group.id))
+    final gruposAtualizados = area.gruposUniao
+        .where((grupo) => !idsGruposAnteriores.contains(grupo.id))
         .toList();
-    updatedGroups.add(
-      TableJoinGroup(
-        id: joinGroupId,
-        areaId: area.id,
-        tableIds: mergedTables.map((table) => table.id).toList(),
-        originalPositions: originalPositions,
+    gruposAtualizados.add(
+      GrupoUniaoMesas(
+        id: idGrupoUniao,
+        idArea: area.id,
+        idsMesas: mesasUnificadas.map((mesa) => mesa.id).toList(),
+        posicoesOriginais: posicoesOriginais,
       ),
     );
 
-    final snappedTables = mergedTables.length == 2
-        ? _snapJoinedTables(
-            updatedTables,
-            sourceTableId,
-            targetTableId,
-          )
-        : updatedTables;
+    final mesasEncaixadas = mesasUnificadas.length == 2
+        ? _encaixarMesasUnidas(mesasAtualizadas, idMesaOrigem, idMesaAlvo)
+        : mesasAtualizadas;
 
-    _replaceArea(
-      area.copyWith(tables: snappedTables, joinGroups: updatedGroups),
+    _substituirArea(
+      area.copiarCom(mesas: mesasEncaixadas, gruposUniao: gruposAtualizados),
     );
-    unselectJoinSuggestion();
-    await _persist();
+    limparSugestaoUniao();
+    await _persistir();
     notifyListeners();
     return null;
   }
 
-  Future<String?> separateGroup(String groupId) async {
-    RestaurantArea? area;
-    for (final candidate in _areas) {
-      if (candidate.joinGroups.any((group) => group.id == groupId)) {
-        area = candidate;
+  Future<String?> separarGrupo(String idGrupo) async {
+    AreaRestaurante? area;
+    for (final candidata in _areas) {
+      if (candidata.gruposUniao.any((grupo) => grupo.id == idGrupo)) {
+        area = candidata;
         break;
       }
     }
 
     if (area == null) {
-      return _setError('Grupo de mesas nao encontrado.');
+      return _definirErro('Grupo de mesas nao encontrado.');
     }
 
-    final currentArea = area;
+    final areaAtual = area;
 
-    final group = currentArea.joinGroups.firstWhere(
-      (group) => group.id == groupId,
-      orElse: () => TableJoinGroup(
-        id: groupId,
-        areaId: currentArea.id,
-        tableIds: const [],
+    final grupo = areaAtual.gruposUniao.firstWhere(
+      (grupo) => grupo.id == idGrupo,
+      orElse: () => GrupoUniaoMesas(
+        id: idGrupo,
+        idArea: areaAtual.id,
+        idsMesas: const [],
       ),
     );
-    final originalPositions = {
-      for (final entry in group.originalPositions) entry.tableId: entry,
+    final posicoesOriginais = {
+      for (final entry in grupo.posicoesOriginais) entry.idMesa: entry,
     };
 
-    final groupTables = currentArea.tables
-        .where((table) => table.joinGroupId == groupId)
+    final mesasGrupo = areaAtual.mesas
+        .where((mesa) => mesa.idGrupoUniao == idGrupo)
         .toList();
-    final anchorWithOrder = groupTables.firstWhere(
-      (table) => table.activeOrderId != null,
-      orElse: () => groupTables.first,
+    final ancoraComComanda = mesasGrupo.firstWhere(
+      (mesa) => mesa.idComandaAtiva != null,
+      orElse: () => mesasGrupo.first,
     );
 
-    final updatedTables = currentArea.tables.map((table) {
-      if (table.joinGroupId != groupId) {
-        return table;
+    final mesasAtualizadas = areaAtual.mesas.map((mesa) {
+      if (mesa.idGrupoUniao != idGrupo) {
+        return mesa;
       }
 
-      final keepOrder = table.id == anchorWithOrder.id;
-      final original = originalPositions[table.id];
+      final manterComanda = mesa.id == ancoraComComanda.id;
+      final original = posicoesOriginais[mesa.id];
 
-      return table.copyWith(
-        isJoined: false,
-        clearJoinGroup: true,
+      return mesa.copiarCom(
+        estaUnida: false,
+        limparGrupoUniao: true,
         x: original?.x,
         y: original?.y,
-        status: keepOrder && anchorWithOrder.activeOrderId != null
-            ? TableStatus.withOrder
-            : (table.seatedPeople ?? 0) > 0
-            ? TableStatus.occupied
-            : TableStatus.free,
-        activeOrderId: keepOrder ? anchorWithOrder.activeOrderId : null,
-        lastOrderAt: keepOrder
-            ? anchorWithOrder.lastOrderAt
-            : table.lastOrderAt,
-        customerName: keepOrder ? anchorWithOrder.customerName : null,
-        orderItemsCount: keepOrder ? anchorWithOrder.orderItemsCount : 0,
-        partialTotal: keepOrder ? anchorWithOrder.partialTotal : 0,
-        clearActiveOrder: !keepOrder,
-        clearCustomerName: !keepOrder,
+        situacao: manterComanda && ancoraComComanda.idComandaAtiva != null
+            ? SituacaoMesa.comPedido
+            : (mesa.pessoasSentadas ?? 0) > 0
+            ? SituacaoMesa.ocupada
+            : SituacaoMesa.livre,
+        idComandaAtiva: manterComanda ? ancoraComComanda.idComandaAtiva : null,
+        ultimoPedidoEm: manterComanda
+            ? ancoraComComanda.ultimoPedidoEm
+            : mesa.ultimoPedidoEm,
+        nomeCliente: manterComanda ? ancoraComComanda.nomeCliente : null,
+        quantidadeItensPedido: manterComanda
+            ? ancoraComComanda.quantidadeItensPedido
+            : 0,
+        totalParcial: manterComanda ? ancoraComComanda.totalParcial : 0,
+        limparComandaAtiva: !manterComanda,
+        limparNomeCliente: !manterComanda,
       );
     }).toList();
 
-    final updatedGroups = currentArea.joinGroups
-        .where((group) => group.id != groupId)
+    final gruposAtualizados = areaAtual.gruposUniao
+        .where((grupo) => grupo.id != idGrupo)
         .toList();
 
-    _replaceArea(
-      currentArea.copyWith(tables: updatedTables, joinGroups: updatedGroups),
+    _substituirArea(
+      areaAtual.copiarCom(
+        mesas: mesasAtualizadas,
+        gruposUniao: gruposAtualizados,
+      ),
     );
-    await _persist();
+    await _persistir();
     notifyListeners();
     return null;
   }
 
-  Future<TableOrderOpenResult?> openOrderForTable(String tableId) async {
-    final scopeTables = tablesForScope(tableId);
-    if (scopeTables.isEmpty) {
-      _setError('Mesa nao encontrada para abrir pedido.');
+  Future<ResultadoAberturaComandaMesa?> abrirComandaDaMesa(
+    String idMesa,
+  ) async {
+    final mesasContexto = mesasDoContexto(idMesa);
+    if (mesasContexto.isEmpty) {
+      _definirErro('Mesa nao encontrada para abrir pedido.');
       return null;
     }
 
-    final scopeId = scopeTables.first.joinGroupId ?? scopeTables.first.id;
+    final idContexto =
+        mesasContexto.first.idGrupoUniao ?? mesasContexto.first.id;
     final now = DateTime.now();
-    if (_lastOpenedScopeId == scopeId &&
-        _lastOrderOpenAt != null &&
-        now.difference(_lastOrderOpenAt!) < const Duration(milliseconds: 900)) {
+    if (_idUltimoContextoAberto == idContexto &&
+        _ultimaAberturaComandaEm != null &&
+        now.difference(_ultimaAberturaComandaEm!) <
+            const Duration(milliseconds: 900)) {
       return null;
     }
 
-    _lastOpenedScopeId = scopeId;
-    _lastOrderOpenAt = now;
+    _idUltimoContextoAberto = idContexto;
+    _ultimaAberturaComandaEm = now;
 
-    final existingOrderId = activeOrderIdForScope(tableId);
-    if (existingOrderId != null) {
-      return TableOrderOpenResult(
-        orderId: existingOrderId,
-        reusedExistingOrder: true,
-        tableIds: scopeTables.map((table) => table.id).toList(),
+    final idComandaExistente = idComandaAtivaDoContexto(idMesa);
+    if (idComandaExistente != null) {
+      return ResultadoAberturaComandaMesa(
+        idComanda: idComandaExistente,
+        reutilizouComandaExistente: true,
+        idsMesas: mesasContexto.map((mesa) => mesa.id).toList(),
       );
     }
 
-    final area = areaById(scopeTables.first.areaId);
+    final area = buscarAreaPorId(mesasContexto.first.idArea);
     if (area == null) {
-      _setError('Area da mesa nao encontrada para abrir pedido.');
+      _definirErro('Area da mesa nao encontrada para abrir pedido.');
       return null;
     }
 
-    final orderId = 'ORD-${DateTime.now().millisecondsSinceEpoch}';
-    final updatedTables = area.tables.map((table) {
-      if (!scopeTables.any((scopeTable) => scopeTable.id == table.id)) {
-        return table;
+    final idComanda = 'ORD-${DateTime.now().millisecondsSinceEpoch}';
+    final mesasAtualizadas = area.mesas.map((mesa) {
+      if (!mesasContexto.any((mesaContexto) => mesaContexto.id == mesa.id)) {
+        return mesa;
       }
 
-      return table.copyWith(
-        activeOrderId: orderId,
-        lastOrderAt: now,
-        status: TableStatus.withOrder,
-        orderItemsCount: max(table.orderItemsCount, 1),
-        partialTotal: max(table.partialTotal, 0),
-        seatedPeople: max(table.seatedPeople ?? 0, 1),
+      return mesa.copiarCom(
+        idComandaAtiva: idComanda,
+        ultimoPedidoEm: now,
+        situacao: SituacaoMesa.comPedido,
+        quantidadeItensPedido: max(mesa.quantidadeItensPedido, 1),
+        totalParcial: max(mesa.totalParcial, 0),
+        pessoasSentadas: max(mesa.pessoasSentadas ?? 0, 1),
       );
     }).toList();
 
-    _replaceArea(area.copyWith(tables: updatedTables));
-    await _persist();
+    _substituirArea(area.copiarCom(mesas: mesasAtualizadas));
+    await _persistir();
     notifyListeners();
 
-    return TableOrderOpenResult(
-      orderId: orderId,
-      reusedExistingOrder: false,
-      tableIds: scopeTables.map((table) => table.id).toList(),
+    return ResultadoAberturaComandaMesa(
+      idComanda: idComanda,
+      reutilizouComandaExistente: false,
+      idsMesas: mesasContexto.map((mesa) => mesa.id).toList(),
     );
   }
 
-  Future<void> addSimulatedItem(String tableId) async {
-    final scopeTables = tablesForScope(tableId);
-    if (scopeTables.isEmpty) {
+  Future<void> adicionarItemSimulado(String idMesa) async {
+    final mesasContexto = mesasDoContexto(idMesa);
+    if (mesasContexto.isEmpty) {
       return;
     }
 
-    final area = areaById(scopeTables.first.areaId);
-    final activeOrderId = activeOrderIdForScope(tableId);
-    if (area == null || activeOrderId == null) {
+    final area = buscarAreaPorId(mesasContexto.first.idArea);
+    final idComandaAtiva = idComandaAtivaDoContexto(idMesa);
+    if (area == null || idComandaAtiva == null) {
       return;
     }
 
     final now = DateTime.now();
-    final nextItems = groupItemsCount(tableId) + 1;
-    final nextTotal = groupPartialTotal(tableId) + 24.90;
+    final proximaQuantidadeItens = quantidadeItensGrupo(idMesa) + 1;
+    final proximoTotal = totalParcialGrupo(idMesa) + 24.90;
 
-    final updatedTables = area.tables.map((table) {
-      if (!scopeTables.any((scopeTable) => scopeTable.id == table.id)) {
-        return table;
+    final mesasAtualizadas = area.mesas.map((mesa) {
+      if (!mesasContexto.any((mesaContexto) => mesaContexto.id == mesa.id)) {
+        return mesa;
       }
 
-      return table.copyWith(
-        activeOrderId: activeOrderId,
-        lastOrderAt: now,
-        status: TableStatus.withOrder,
-        orderItemsCount: nextItems,
-        partialTotal: nextTotal,
+      return mesa.copiarCom(
+        idComandaAtiva: idComandaAtiva,
+        ultimoPedidoEm: now,
+        situacao: SituacaoMesa.comPedido,
+        quantidadeItensPedido: proximaQuantidadeItens,
+        totalParcial: proximoTotal,
       );
     }).toList();
 
-    _replaceArea(area.copyWith(tables: updatedTables));
-    await _persist();
+    _substituirArea(area.copiarCom(mesas: mesasAtualizadas));
+    await _persistir();
     notifyListeners();
   }
 
-  Future<void> markTableAsFree(String tableId) async {
-    final scopeTables = tablesForScope(tableId);
-    if (scopeTables.isEmpty) {
+  Future<void> liberarMesa(String idMesa) async {
+    final mesasContexto = mesasDoContexto(idMesa);
+    if (mesasContexto.isEmpty) {
       return;
     }
 
-    final area = areaById(scopeTables.first.areaId);
+    final area = buscarAreaPorId(mesasContexto.first.idArea);
     if (area == null) {
       return;
     }
 
-    final updatedTables = area.tables.map((table) {
-      if (!scopeTables.any((scopeTable) => scopeTable.id == table.id)) {
-        return table;
+    final mesasAtualizadas = area.mesas.map((mesa) {
+      if (!mesasContexto.any((mesaContexto) => mesaContexto.id == mesa.id)) {
+        return mesa;
       }
 
-      return table.copyWith(
-        status: TableStatus.free,
-        clearActiveOrder: true,
-        clearLastOrderAt: true,
-        clearSeatedPeople: true,
-        clearCustomerName: true,
-        orderItemsCount: 0,
-        partialTotal: 0,
+      return mesa.copiarCom(
+        situacao: SituacaoMesa.livre,
+        limparComandaAtiva: true,
+        limparUltimoPedido: true,
+        limparPessoasSentadas: true,
+        limparNomeCliente: true,
+        quantidadeItensPedido: 0,
+        totalParcial: 0,
       );
     }).toList();
 
-    _replaceArea(area.copyWith(tables: updatedTables));
-    await _persist();
+    _substituirArea(area.copiarCom(mesas: mesasAtualizadas));
+    await _persistir();
     notifyListeners();
   }
 
-  double _snapValue(double value, double interval) {
+  double _ajustarValorAGrade(double value, double interval) {
     return (value / interval).round() * interval;
   }
 
-  void _replaceArea(RestaurantArea nextArea) {
+  void _substituirArea(AreaRestaurante nextArea) {
     _areas = _areas
         .map((area) => area.id == nextArea.id ? nextArea : area)
         .toList(growable: false);
   }
 
-  void _updateJoinSuggestion(RestaurantTable movingTable) {
-    final area = areaById(movingTable.areaId);
-    if (area == null || movingTable.isJoined) {
-      _suggestedJoinTargetId = null;
-      _suggestedJoinSourceId = null;
+  void _atualizarSugestaoUniao(MesaRestaurante mesaEmMovimento) {
+    final area = buscarAreaPorId(mesaEmMovimento.idArea);
+    if (area == null || mesaEmMovimento.estaUnida) {
+      _idAlvoUniaoSugerida = null;
+      _idOrigemUniaoSugerida = null;
       return;
     }
 
-    _updateJoinSuggestionForTables(area, [movingTable]);
+    _atualizarSugestaoUniaoParaMesas(area, [mesaEmMovimento]);
   }
 
-  void _snapTableToGrid(String tableId) {
-    final table = findTableById(tableId);
-    final area = table == null ? null : areaById(table.areaId);
-    if (table == null || area == null) {
+  void _ajustarMesaAGrade(String idMesa) {
+    final mesa = buscarMesaPorId(idMesa);
+    final area = mesa == null ? null : buscarAreaPorId(mesa.idArea);
+    if (mesa == null || area == null) {
       return;
     }
 
-    final updatedTable = table.copyWith(
-      x: _snapValue(table.x, _snapInterval),
-      y: _snapValue(table.y, _snapInterval),
+    final mesaAtualizada = mesa.copiarCom(
+      x: _ajustarValorAGrade(mesa.x, _intervaloGrade),
+      y: _ajustarValorAGrade(mesa.y, _intervaloGrade),
     );
-    final updatedTables = area.tables
-        .map((item) => item.id == tableId ? updatedTable : item)
+    final mesasAtualizadas = area.mesas
+        .map((item) => item.id == idMesa ? mesaAtualizada : item)
         .toList();
-    _replaceArea(area.copyWith(tables: updatedTables));
-    _updateJoinSuggestion(updatedTable);
+    _substituirArea(area.copiarCom(mesas: mesasAtualizadas));
+    _atualizarSugestaoUniao(mesaAtualizada);
   }
 
-  void _snapJoinGroupToGrid(String groupId) {
-    RestaurantArea? area;
-    for (final candidate in _areas) {
-      if (candidate.tables.any((table) => table.joinGroupId == groupId)) {
-        area = candidate;
+  void _ajustarGrupoAGrade(String idGrupo) {
+    AreaRestaurante? area;
+    for (final candidata in _areas) {
+      if (candidata.mesas.any((mesa) => mesa.idGrupoUniao == idGrupo)) {
+        area = candidata;
         break;
       }
     }
@@ -859,205 +873,210 @@ class FloorPlanController extends ChangeNotifier {
       return;
     }
 
-    final updatedTables = area.tables.map((table) {
-      if (table.joinGroupId != groupId) {
-        return table;
+    final mesasAtualizadas = area.mesas.map((mesa) {
+      if (mesa.idGrupoUniao != idGrupo) {
+        return mesa;
       }
 
-      return table.copyWith(
-        x: _snapValue(table.x, _snapInterval),
-        y: _snapValue(table.y, _snapInterval),
+      return mesa.copiarCom(
+        x: _ajustarValorAGrade(mesa.x, _intervaloGrade),
+        y: _ajustarValorAGrade(mesa.y, _intervaloGrade),
       );
     }).toList();
 
-    _replaceArea(area.copyWith(tables: updatedTables));
+    _substituirArea(area.copiarCom(mesas: mesasAtualizadas));
   }
 
-  void _moveJoinGroup(String groupId, Offset delta, Size canvasSize) {
-    RestaurantArea? area;
-    List<RestaurantTable> groupTables = const [];
+  void _moverGrupo(String idGrupo, Offset delta, Size tamanhoCanvas) {
+    AreaRestaurante? area;
+    List<MesaRestaurante> mesasGrupo = const [];
 
-    for (final candidate in _areas) {
-      final matches = candidate.tables
-          .where((table) => table.joinGroupId == groupId)
+    for (final candidata in _areas) {
+      final matches = candidata.mesas
+          .where((mesa) => mesa.idGrupoUniao == idGrupo)
           .toList();
       if (matches.isNotEmpty) {
-        area = candidate;
-        groupTables = matches;
+        area = candidata;
+        mesasGrupo = matches;
         break;
       }
     }
 
-    if (area == null || groupTables.length < 2) {
+    if (area == null || mesasGrupo.length < 2) {
       return;
     }
 
-    final bounds = _groupBounds(groupTables);
-    final minX = _canvasEdgePadding;
-    final minY = _canvasEdgePadding;
-    final maxX = max(minX, canvasSize.width - bounds.width - _canvasEdgePadding);
-    final maxY = max(minY, canvasSize.height - bounds.height - _canvasEdgePadding);
+    final bounds = _limitesGrupo(mesasGrupo);
+    final minX = _margemCanvas;
+    final minY = _margemCanvas;
+    final maxX = max(minX, tamanhoCanvas.width - bounds.width - _margemCanvas);
+    final maxY = max(
+      minY,
+      tamanhoCanvas.height - bounds.height - _margemCanvas,
+    );
 
-    final nextLeft = (bounds.left + delta.dx).clamp(minX, maxX).toDouble();
-    final nextTop = (bounds.top + delta.dy).clamp(minY, maxY).toDouble();
-    final adjustedDelta = Offset(nextLeft - bounds.left, nextTop - bounds.top);
+    final proximaEsquerda = (bounds.left + delta.dx)
+        .clamp(minX, maxX)
+        .toDouble();
+    final proximoTopo = (bounds.top + delta.dy).clamp(minY, maxY).toDouble();
+    final deslocamentoAjustado = Offset(
+      proximaEsquerda - bounds.left,
+      proximoTopo - bounds.top,
+    );
 
-    if (adjustedDelta.dx.abs() < 0.1 && adjustedDelta.dy.abs() < 0.1) {
+    if (deslocamentoAjustado.dx.abs() < 0.1 &&
+        deslocamentoAjustado.dy.abs() < 0.1) {
       return;
     }
 
-    final updatedTables = area.tables.map((table) {
-      if (table.joinGroupId != groupId) {
-        return table;
+    final mesasAtualizadas = area.mesas.map((mesa) {
+      if (mesa.idGrupoUniao != idGrupo) {
+        return mesa;
       }
 
-      return table.copyWith(
-        x: table.x + adjustedDelta.dx,
-        y: table.y + adjustedDelta.dy,
+      return mesa.copiarCom(
+        x: mesa.x + deslocamentoAjustado.dx,
+        y: mesa.y + deslocamentoAjustado.dy,
       );
     }).toList();
 
-    final updatedArea = area.copyWith(tables: updatedTables);
-    final updatedGroupTables = updatedTables
-        .where((table) => table.joinGroupId == groupId)
+    final areaAtualizada = area.copiarCom(mesas: mesasAtualizadas);
+    final mesasGrupoAtualizadas = mesasAtualizadas
+        .where((mesa) => mesa.idGrupoUniao == idGrupo)
         .toList();
 
-    _replaceArea(updatedArea);
-    _updateJoinSuggestionForTables(updatedArea, updatedGroupTables);
-    _moveTick.value = _moveTick.value + 1;
+    _substituirArea(areaAtualizada);
+    _atualizarSugestaoUniaoParaMesas(areaAtualizada, mesasGrupoAtualizadas);
+    _atualizacaoMovimento.value = _atualizacaoMovimento.value + 1;
   }
 
-  Rect _groupBounds(List<RestaurantTable> tables) {
-    var minX = tables.first.x;
-    var minY = tables.first.y;
-    var maxX = tables.first.x + tables.first.width;
-    var maxY = tables.first.y + tables.first.height;
+  Rect _limitesGrupo(List<MesaRestaurante> mesas) {
+    var minX = mesas.first.x;
+    var minY = mesas.first.y;
+    var maxX = mesas.first.x + mesas.first.width;
+    var maxY = mesas.first.y + mesas.first.height;
 
-    for (final table in tables.skip(1)) {
-      minX = min(minX, table.x);
-      minY = min(minY, table.y);
-      maxX = max(maxX, table.x + table.width);
-      maxY = max(maxY, table.y + table.height);
+    for (final mesa in mesas.skip(1)) {
+      minX = min(minX, mesa.x);
+      minY = min(minY, mesa.y);
+      maxX = max(maxX, mesa.x + mesa.width);
+      maxY = max(maxY, mesa.y + mesa.height);
     }
 
     return Rect.fromLTRB(minX, minY, maxX, maxY);
   }
 
-  void _updateJoinSuggestionForTables(
-    RestaurantArea area,
-    List<RestaurantTable> movingTables,
+  void _atualizarSugestaoUniaoParaMesas(
+    AreaRestaurante area,
+    List<MesaRestaurante> mesasEmMovimento,
   ) {
-    if (movingTables.isEmpty) {
-      _suggestedJoinTargetId = null;
-      _suggestedJoinSourceId = null;
+    if (mesasEmMovimento.isEmpty) {
+      _idAlvoUniaoSugerida = null;
+      _idOrigemUniaoSugerida = null;
       return;
     }
 
-    final movingAnchor = _selectOrderCarrier(movingTables);
-    final movingGroupId = movingAnchor.joinGroupId;
-    final movingRect = _groupBounds(movingTables);
+    final ancoraEmMovimento = _selecionarMesaComanda(mesasEmMovimento);
+    final idGrupoEmMovimento = ancoraEmMovimento.idGrupoUniao;
+    final retanguloMovimento = _limitesGrupo(mesasEmMovimento);
 
-    RestaurantTable? bestCandidate;
-    double shortestDistance = double.infinity;
-    final seenKeys = <String>{};
+    MesaRestaurante? melhorCandidata;
+    double menorDistancia = double.infinity;
+    final chavesVisitadas = <String>{};
 
-    for (final candidate in area.tables) {
-      if (candidate.id == movingAnchor.id) {
+    for (final candidata in area.mesas) {
+      if (candidata.id == ancoraEmMovimento.id) {
         continue;
       }
-      if (movingGroupId != null && candidate.joinGroupId == movingGroupId) {
-        continue;
-      }
-
-      final candidateKey = candidate.joinGroupId ?? candidate.id;
-      if (!seenKeys.add(candidateKey)) {
+      if (idGrupoEmMovimento != null &&
+          candidata.idGrupoUniao == idGrupoEmMovimento) {
         continue;
       }
 
-      if (!_canJoinScopes(movingAnchor.id, candidate.id)) {
+      final chaveCandidata = candidata.idGrupoUniao ?? candidata.id;
+      if (!chavesVisitadas.add(chaveCandidata)) {
         continue;
       }
 
-      final candidateTables = candidate.joinGroupId == null
-          ? <RestaurantTable>[candidate]
-          : area.tables
-              .where((table) => table.joinGroupId == candidate.joinGroupId)
-              .toList();
+      if (!_podeUnirContextos(ancoraEmMovimento.id, candidata.id)) {
+        continue;
+      }
 
-      final distance = _edgeDistanceRects(
-        movingRect,
-        _groupBounds(candidateTables),
+      final mesasCandidatas = candidata.idGrupoUniao == null
+          ? <MesaRestaurante>[candidata]
+          : area.mesas
+                .where((mesa) => mesa.idGrupoUniao == candidata.idGrupoUniao)
+                .toList();
+
+      final distance = _distanciaEntreRetangulos(
+        retanguloMovimento,
+        _limitesGrupo(mesasCandidatas),
       );
-      if (distance < 30 && distance < shortestDistance) {
-        shortestDistance = distance;
-        bestCandidate = _selectOrderCarrier(candidateTables);
+      if (distance < 30 && distance < menorDistancia) {
+        menorDistancia = distance;
+        melhorCandidata = _selecionarMesaComanda(mesasCandidatas);
       }
     }
 
-    _suggestedJoinTargetId = bestCandidate?.id;
-    _suggestedJoinSourceId = bestCandidate == null ? null : movingAnchor.id;
+    _idAlvoUniaoSugerida = melhorCandidata?.id;
+    _idOrigemUniaoSugerida = melhorCandidata == null
+        ? null
+        : ancoraEmMovimento.id;
   }
 
-  bool _canJoinScopes(String sourceTableId, String targetTableId) {
-    final activeOrderIds = <String>{
-      ...tablesForScope(
-        sourceTableId,
-      ).map((table) => table.activeOrderId).whereType<String>(),
-      ...tablesForScope(
-        targetTableId,
-      ).map((table) => table.activeOrderId).whereType<String>(),
+  bool _podeUnirContextos(String idMesaOrigem, String idMesaAlvo) {
+    final idsComandasAtivas = <String>{
+      ...mesasDoContexto(
+        idMesaOrigem,
+      ).map((mesa) => mesa.idComandaAtiva).whereType<String>(),
+      ...mesasDoContexto(
+        idMesaAlvo,
+      ).map((mesa) => mesa.idComandaAtiva).whereType<String>(),
     };
-    return activeOrderIds.length <= 1;
+    return idsComandasAtivas.length <= 1;
   }
 
-  List<TableOriginalPosition> _collectOriginalPositions(
-    RestaurantArea area,
-    List<RestaurantTable> tables,
+  List<PosicaoOriginalMesa> _coletarPosicoesOriginais(
+    AreaRestaurante area,
+    List<MesaRestaurante> mesas,
     Set<String> groupIds,
   ) {
-    final positions = <String, TableOriginalPosition>{};
+    final positions = <String, PosicaoOriginalMesa>{};
 
-    for (final group in area.joinGroups) {
-      if (!groupIds.contains(group.id)) {
+    for (final grupo in area.gruposUniao) {
+      if (!groupIds.contains(grupo.id)) {
         continue;
       }
-      for (final entry in group.originalPositions) {
-        positions[entry.tableId] = entry;
+      for (final entry in grupo.posicoesOriginais) {
+        positions[entry.idMesa] = entry;
       }
     }
 
-    for (final table in tables) {
+    for (final mesa in mesas) {
       positions.putIfAbsent(
-        table.id,
-        () => TableOriginalPosition(tableId: table.id, x: table.x, y: table.y),
+        mesa.id,
+        () => PosicaoOriginalMesa(idMesa: mesa.id, x: mesa.x, y: mesa.y),
       );
     }
 
     return positions.values.toList();
   }
 
-  RestaurantTable _selectOrderCarrier(List<RestaurantTable> tables) {
-    for (final table in tables) {
-      if (table.activeOrderId != null) {
-        return table;
+  MesaRestaurante _selecionarMesaComanda(List<MesaRestaurante> mesas) {
+    for (final mesa in mesas) {
+      if (mesa.idComandaAtiva != null) {
+        return mesa;
       }
     }
-    for (final table in tables) {
-      if ((table.seatedPeople ?? 0) > 0) {
-        return table;
+    for (final mesa in mesas) {
+      if ((mesa.pessoasSentadas ?? 0) > 0) {
+        return mesa;
       }
     }
-    return tables.first;
+    return mesas.first;
   }
 
-  double _edgeDistance(RestaurantTable a, RestaurantTable b) {
-    return _edgeDistanceRects(
-      Rect.fromLTWH(a.x, a.y, a.width, a.height),
-      Rect.fromLTWH(b.x, b.y, b.width, b.height),
-    );
-  }
-
-  double _edgeDistanceRects(Rect aRect, Rect bRect) {
+  double _distanciaEntreRetangulos(Rect aRect, Rect bRect) {
     final dx = max(
       0.0,
       max(aRect.left - bRect.right, bRect.left - aRect.right),
@@ -1069,30 +1088,30 @@ class FloorPlanController extends ChangeNotifier {
     return sqrt((dx * dx) + (dy * dy));
   }
 
-  Offset _nextAvailablePosition(RestaurantArea area, Size tableSize) {
+  Offset _proximaPosicaoDisponivel(AreaRestaurante area, Size tamanhoMesa) {
     const columns = 4;
-    const start = _canvasEdgePadding;
+    const start = _margemCanvas;
     const gap = 34.0;
 
     for (var index = 0; index < 24; index++) {
       final column = index % columns;
       final row = index ~/ columns;
       final position = Offset(
-        start + column * (_maxTableWidth + gap),
-        start + row * (_maxTableHeight + gap),
+        start + column * (_larguraMaximaMesa + gap),
+        start + row * (_alturaMaximaMesa + gap),
       );
       final proposed = Rect.fromLTWH(
         position.dx,
         position.dy,
-        tableSize.width,
-        tableSize.height,
+        tamanhoMesa.width,
+        tamanhoMesa.height,
       ).inflate(18);
-      final overlaps = area.tables.any((table) {
+      final overlaps = area.mesas.any((mesa) {
         final current = Rect.fromLTWH(
-          table.x,
-          table.y,
-          table.width,
-          table.height,
+          mesa.x,
+          mesa.y,
+          mesa.width,
+          mesa.height,
         ).inflate(18);
         return proposed.overlaps(current);
       });
@@ -1103,63 +1122,63 @@ class FloorPlanController extends ChangeNotifier {
 
     return Offset(
       start,
-      start + (area.tables.length * (_minTableHeight + gap)),
+      start + (area.mesas.length * (_alturaMinimaMesa + gap)),
     );
   }
 
-  List<RestaurantTable> _snapJoinedTables(
-    List<RestaurantTable> tables,
-    String sourceTableId,
-    String targetTableId,
+  List<MesaRestaurante> _encaixarMesasUnidas(
+    List<MesaRestaurante> mesas,
+    String idMesaOrigem,
+    String idMesaAlvo,
   ) {
-    final sourceIndex = tables.indexWhere((table) => table.id == sourceTableId);
-    final targetIndex = tables.indexWhere((table) => table.id == targetTableId);
-    if (sourceIndex < 0 || targetIndex < 0) {
-      return tables;
+    final indiceOrigem = mesas.indexWhere((mesa) => mesa.id == idMesaOrigem);
+    final indiceAlvo = mesas.indexWhere((mesa) => mesa.id == idMesaAlvo);
+    if (indiceOrigem < 0 || indiceAlvo < 0) {
+      return mesas;
     }
 
-    final source = tables[sourceIndex];
-    final target = tables[targetIndex];
-    final sourceCenter = Offset(
-      source.x + (source.width / 2),
-      source.y + (source.height / 2),
+    final origem = mesas[indiceOrigem];
+    final alvo = mesas[indiceAlvo];
+    final centroOrigem = Offset(
+      origem.x + (origem.width / 2),
+      origem.y + (origem.height / 2),
     );
-    final targetCenter = Offset(
-      target.x + (target.width / 2),
-      target.y + (target.height / 2),
+    final centroAlvo = Offset(
+      alvo.x + (alvo.width / 2),
+      alvo.y + (alvo.height / 2),
     );
 
-    final shouldStackHorizontally =
-        (sourceCenter.dx - targetCenter.dx).abs() >=
-        (sourceCenter.dy - targetCenter.dy).abs();
+    final deveAgruparHorizontalmente =
+        (centroOrigem.dx - centroAlvo.dx).abs() >=
+        (centroOrigem.dy - centroAlvo.dy).abs();
 
-    final snappedTarget = shouldStackHorizontally
-        ? target.copyWith(x: source.x + source.width + 18, y: source.y)
-        : target.copyWith(x: source.x, y: source.y + source.height + 18);
+    final alvoEncaixado = deveAgruparHorizontalmente
+        ? alvo.copiarCom(x: origem.x + origem.width + 18, y: origem.y)
+        : alvo.copiarCom(x: origem.x, y: origem.y + origem.height + 18);
 
-    final result = [...tables];
-    result[targetIndex] = snappedTarget;
+    final result = [...mesas];
+    result[indiceAlvo] = alvoEncaixado;
     return result;
   }
 
-  String _setError(String message) {
-    _lastActionError = message;
+  String _definirErro(String message) {
+    _erroUltimaAcao = message;
     notifyListeners();
     return message;
   }
 
-  Future<void> _persist() async {
-    if (_selectedAreaId == null) {
+  Future<void> _persistir() async {
+    if (_idAreaSelecionada == null) {
       return;
     }
 
-    _isSaving = true;
+    _estaSalvando = true;
     notifyListeners();
-    await _repository.save(
-      FloorPlanSnapshot(selectedAreaId: _selectedAreaId!, areas: _areas),
+    await _repositorio.salvar(
+      EstadoMapaMesas(idAreaSelecionada: _idAreaSelecionada!, areas: _areas),
     );
-    _isSaving = false;
-    _lastActionError = null;
+    _estaSalvando = false;
+    _erroUltimaAcao = null;
     notifyListeners();
   }
 }

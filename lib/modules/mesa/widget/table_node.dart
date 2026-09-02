@@ -6,86 +6,86 @@ import 'package:my_app_teste/core/theme/gula_theme.dart';
 import 'package:my_app_teste/modules/mesa/model/restaurant_models.dart';
 import 'package:my_app_teste/modules/mesa/widget/table_status_badge.dart';
 
-class TableNode extends StatelessWidget {
-  const TableNode({
+class ElementoMesa extends StatelessWidget {
+  const ElementoMesa({
     super.key,
-    required this.table,
-    required this.status,
-    required this.isMoving,
-    required this.isSuggestedJoin,
-    required this.canDrag,
-    required this.areaName,
-    this.lastEventAt,
-    required this.onTap,
-    required this.onDoubleTap,
-    required this.onPanStart,
-    required this.onPanUpdate,
-    required this.onPanEnd,
+    required this.mesa,
+    required this.situacao,
+    required this.emMovimento,
+    required this.uniaoSugerida,
+    required this.podeArrastar,
+    required this.nomeArea,
+    this.ultimoEventoEm,
+    required this.aoTocar,
+    required this.aoToqueDuplo,
+    required this.aoIniciarArraste,
+    required this.aoAtualizarArraste,
+    required this.aoFinalizarArraste,
   });
 
-  final RestaurantTable table;
-  final TableStatus status;
-  final bool isMoving;
-  final bool isSuggestedJoin;
-  final bool canDrag;
-  final String areaName;
-  final DateTime? lastEventAt;
-  final VoidCallback onTap;
-  final VoidCallback onDoubleTap;
-  final VoidCallback onPanStart;
-  final ValueChanged<Offset> onPanUpdate;
-  final VoidCallback onPanEnd;
+  final MesaRestaurante mesa;
+  final SituacaoMesa situacao;
+  final bool emMovimento;
+  final bool uniaoSugerida;
+  final bool podeArrastar;
+  final String nomeArea;
+  final DateTime? ultimoEventoEm;
+  final VoidCallback aoTocar;
+  final VoidCallback aoToqueDuplo;
+  final VoidCallback aoIniciarArraste;
+  final ValueChanged<Offset> aoAtualizarArraste;
+  final VoidCallback aoFinalizarArraste;
 
   @override
   Widget build(BuildContext context) {
-    final decoration = _buildDecoration();
-    final chairOffsets = _chairOffsets(
-      Size(table.width, table.height),
-      table.shape,
-      table.chairsCount,
+    final decoration = _construirDecoracao();
+    final chairOffsets = _posicoesCadeiras(
+      Size(mesa.width, mesa.height),
+      mesa.formato,
+      mesa.quantidadeCadeiras,
     );
 
     final semanticsLabel = [
-      table.code,
-      areaName,
-      tableStatusLabel(status),
-      '${table.chairsCount} cadeiras',
-      if (table.isJoined) 'mesa agrupada',
+      mesa.codigo,
+      nomeArea,
+      rotuloSituacaoMesa(situacao),
+      '${mesa.quantidadeCadeiras} cadeiras',
+      if (mesa.estaUnida) 'mesa agrupada',
     ].join(', ');
 
     return Semantics(
       button: true,
       label: semanticsLabel,
-      hint: canDrag
+      hint: podeArrastar
           ? 'Toque para detalhes ou arraste para reposicionar.'
           : 'Toque para detalhes.',
       child: Listener(
         behavior: HitTestBehavior.translucent,
-        onPointerUp: canDrag ? null : (_) => onTap(),
+        onPointerUp: podeArrastar ? null : (_) => aoTocar(),
         child: Tooltip(
-          message: canDrag
-              ? '${table.code} - arraste para reposicionar'
-              : '${table.code} - ${tableStatusLabel(status)}',
+          message: podeArrastar
+              ? '${mesa.codigo} - arraste para reposicionar'
+              : '${mesa.codigo} - ${rotuloSituacaoMesa(situacao)}',
           child: MouseRegion(
-            cursor: canDrag
+            cursor: podeArrastar
                 ? SystemMouseCursors.grab
                 : SystemMouseCursors.click,
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
               dragStartBehavior: DragStartBehavior.down,
-              onTap: onTap,
-              onDoubleTap: onDoubleTap,
-              onPanStart: canDrag ? (_) => onPanStart() : null,
-              onPanUpdate: canDrag
-                  ? (details) => onPanUpdate(details.delta)
+              onTap: aoTocar,
+              onDoubleTap: aoToqueDuplo,
+              onPanStart: podeArrastar ? (_) => aoIniciarArraste() : null,
+              onPanUpdate: podeArrastar
+                  ? (details) => aoAtualizarArraste(details.delta)
                   : null,
-              onPanEnd: canDrag ? (_) => onPanEnd() : null,
+              onPanEnd: podeArrastar ? (_) => aoFinalizarArraste() : null,
               child: AnimatedScale(
                 duration: const Duration(milliseconds: 160),
-                scale: isMoving ? 1.04 : 1,
+                scale: emMovimento ? 1.04 : 1,
                 child: SizedBox(
-                  width: table.width,
-                  height: table.height,
+                  width: mesa.width,
+                  height: mesa.height,
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
@@ -118,7 +118,7 @@ class TableNode extends StatelessWidget {
                           padding: const EdgeInsets.all(8),
                           child: LayoutBuilder(
                             builder: (context, constraints) {
-                              final compact =
+                              final compacto =
                                   constraints.maxWidth < 106 ||
                                   constraints.maxHeight < 78;
                               final veryCompact = constraints.maxHeight < 70;
@@ -132,7 +132,7 @@ class TableNode extends StatelessWidget {
                                     children: [
                                       Flexible(
                                         child: Text(
-                                          table.code,
+                                          mesa.codigo,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           textAlign: TextAlign.center,
@@ -143,7 +143,7 @@ class TableNode extends StatelessWidget {
                                           ),
                                         ),
                                       ),
-                                      if (table.isJoined) ...[
+                                      if (mesa.estaUnida) ...[
                                         const SizedBox(width: 4),
                                         const Icon(
                                           Icons.link,
@@ -154,14 +154,16 @@ class TableNode extends StatelessWidget {
                                     ],
                                   ),
                                   const SizedBox(height: 5),
-                                  _NodeStatusPill(
-                                    status: status,
-                                    compact: compact,
-                                    lastEventAt: lastEventAt,
+                                  _IndicadorSituacaoElemento(
+                                    situacao: situacao,
+                                    compacto: compacto,
+                                    ultimoEventoEm: ultimoEventoEm,
                                   ),
                                   if (!veryCompact) ...[
                                     const SizedBox(height: 5),
-                                    _CapacityLine(count: table.chairsCount),
+                                    _LinhaCapacidade(
+                                      count: mesa.quantidadeCadeiras,
+                                    ),
                                   ],
                                 ],
                               );
@@ -169,7 +171,7 @@ class TableNode extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (canDrag)
+                      if (podeArrastar)
                         const Positioned(
                           right: 7,
                           bottom: 6,
@@ -179,13 +181,13 @@ class TableNode extends StatelessWidget {
                             color: GulaColors.textMuted,
                           ),
                         ),
-                      if (isSuggestedJoin)
+                      if (uniaoSugerida)
                         Positioned.fill(
                           child: IgnorePointer(
                             child: DecoratedBox(
                               decoration: BoxDecoration(
-                                borderRadius: _borderRadiusForShape(
-                                  table.shape,
+                                borderRadius: _raioBordaParaFormato(
+                                  mesa.formato,
                                 ),
                                 border: Border.all(
                                   color: GulaColors.primary,
@@ -206,17 +208,17 @@ class TableNode extends StatelessWidget {
     );
   }
 
-  BoxDecoration _buildDecoration() {
-    final color = tableStatusColor(status);
-    final borderRadius = _borderRadiusForShape(table.shape);
+  BoxDecoration _construirDecoracao() {
+    final color = corSituacaoMesa(situacao);
+    final borderRadius = _raioBordaParaFormato(mesa.formato);
 
-    if (table.shape == TableShape.round) {
+    if (mesa.formato == FormatoMesa.redonda) {
       return BoxDecoration(
         color: color,
         shape: BoxShape.circle,
         border: Border.all(
-          color: isSuggestedJoin ? GulaColors.primary : GulaColors.border,
-          width: isSuggestedJoin ? 2.2 : 1.1,
+          color: uniaoSugerida ? GulaColors.primary : GulaColors.border,
+          width: uniaoSugerida ? 2.2 : 1.1,
         ),
         boxShadow: [
           BoxShadow(
@@ -232,8 +234,8 @@ class TableNode extends StatelessWidget {
       color: color,
       borderRadius: borderRadius,
       border: Border.all(
-        color: isSuggestedJoin ? GulaColors.primary : GulaColors.border,
-        width: isSuggestedJoin ? 2.2 : 1.1,
+        color: uniaoSugerida ? GulaColors.primary : GulaColors.border,
+        width: uniaoSugerida ? 2.2 : 1.1,
       ),
       boxShadow: [
         BoxShadow(
@@ -245,22 +247,26 @@ class TableNode extends StatelessWidget {
     );
   }
 
-  BorderRadius _borderRadiusForShape(TableShape shape) {
-    switch (shape) {
-      case TableShape.round:
+  BorderRadius _raioBordaParaFormato(FormatoMesa formato) {
+    switch (formato) {
+      case FormatoMesa.redonda:
         return BorderRadius.circular(999);
-      case TableShape.square:
+      case FormatoMesa.quadrada:
         return BorderRadius.circular(24);
-      case TableShape.rectangular:
+      case FormatoMesa.retangular:
         return BorderRadius.circular(22);
-      case TableShape.oval:
+      case FormatoMesa.oval:
         return BorderRadius.circular(999);
     }
   }
 
-  List<Offset> _chairOffsets(Size size, TableShape shape, int chairsCount) {
-    final seats = chairsCount.clamp(1, 12).toInt();
-    if (shape == TableShape.round || shape == TableShape.oval) {
+  List<Offset> _posicoesCadeiras(
+    Size size,
+    FormatoMesa formato,
+    int quantidadeCadeiras,
+  ) {
+    final seats = quantidadeCadeiras.clamp(1, 12).toInt();
+    if (formato == FormatoMesa.redonda || formato == FormatoMesa.oval) {
       return List<Offset>.generate(seats, (index) {
         final angle = (2 * pi * index) / seats;
         final radiusX = (size.width / 2) + 8;
@@ -298,16 +304,16 @@ class TableNode extends StatelessWidget {
   }
 }
 
-class _NodeStatusPill extends StatelessWidget {
-  const _NodeStatusPill({
-    required this.status,
-    required this.compact,
-    this.lastEventAt,
+class _IndicadorSituacaoElemento extends StatelessWidget {
+  const _IndicadorSituacaoElemento({
+    required this.situacao,
+    required this.compacto,
+    this.ultimoEventoEm,
   });
 
-  final TableStatus status;
-  final bool compact;
-  final DateTime? lastEventAt;
+  final SituacaoMesa situacao;
+  final bool compacto;
+  final DateTime? ultimoEventoEm;
 
   @override
   Widget build(BuildContext context) {
@@ -315,14 +321,14 @@ class _NodeStatusPill extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(
-          tableStatusIcon(status),
-          size: compact ? 13 : 12,
+          iconeSituacaoMesa(situacao),
+          size: compacto ? 13 : 12,
           color: GulaColors.text,
         ),
-        if (!compact) ...[
+        if (!compacto) ...[
           const SizedBox(width: 4),
           Text(
-            _shortLabel(status, lastEventAt),
+            _rotuloCurto(situacao, ultimoEventoEm),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -336,12 +342,12 @@ class _NodeStatusPill extends StatelessWidget {
     );
 
     return Container(
-      constraints: compact
+      constraints: compacto
           ? const BoxConstraints.tightFor(width: 26, height: 24)
           : const BoxConstraints(maxWidth: 88),
       padding: EdgeInsets.symmetric(
-        horizontal: compact ? 0 : 8,
-        vertical: compact ? 0 : 4,
+        horizontal: compacto ? 0 : 8,
+        vertical: compacto ? 0 : 4,
       ),
       decoration: BoxDecoration(
         color: GulaColors.surfaceAlt.withValues(alpha: 0.76),
@@ -353,40 +359,40 @@ class _NodeStatusPill extends StatelessWidget {
     );
   }
 
-  String _shortLabel(TableStatus status, DateTime? lastEventAt) {
-    switch (status) {
-      case TableStatus.free:
+  String _rotuloCurto(SituacaoMesa situacao, DateTime? ultimoEventoEm) {
+    switch (situacao) {
+      case SituacaoMesa.livre:
         return 'Livre';
-      case TableStatus.occupied:
+      case SituacaoMesa.ocupada:
         return 'Ocupada';
-      case TableStatus.noOrder30Min:
-        return _elapsedLabel(lastEventAt, fallback: '30 min');
-      case TableStatus.awaitingRelease1H:
-        return _elapsedLabel(lastEventAt, fallback: '1 h');
-      case TableStatus.withOrder:
-        return _elapsedLabel(lastEventAt, fallback: 'Pedido');
-      case TableStatus.attention:
+      case SituacaoMesa.semPedidoHa30Min:
+        return _rotuloTempoDecorrido(ultimoEventoEm, fallback: '30 min');
+      case SituacaoMesa.aguardandoLiberacaoHa1H:
+        return _rotuloTempoDecorrido(ultimoEventoEm, fallback: '1 h');
+      case SituacaoMesa.comPedido:
+        return _rotuloTempoDecorrido(ultimoEventoEm, fallback: 'Pedido');
+      case SituacaoMesa.atencao:
         return 'Atencao';
     }
   }
 
-  String _elapsedLabel(DateTime? value, {required String fallback}) {
+  String _rotuloTempoDecorrido(DateTime? value, {required String fallback}) {
     if (value == null) {
       return fallback;
     }
-    final elapsed = DateTime.now().difference(value);
-    if (elapsed.inMinutes < 1) {
+    final tempoDecorrido = DateTime.now().difference(value);
+    if (tempoDecorrido.inMinutes < 1) {
       return 'Agora';
     }
-    if (elapsed.inMinutes < 60) {
-      return '${elapsed.inMinutes} min';
+    if (tempoDecorrido.inMinutes < 60) {
+      return '${tempoDecorrido.inMinutes} min';
     }
-    return '${elapsed.inHours} h';
+    return '${tempoDecorrido.inHours} h';
   }
 }
 
-class _CapacityLine extends StatelessWidget {
-  const _CapacityLine({required this.count});
+class _LinhaCapacidade extends StatelessWidget {
+  const _LinhaCapacidade({required this.count});
 
   final int count;
 

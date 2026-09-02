@@ -4,75 +4,75 @@ import 'package:my_app_teste/core/theme/gula_theme.dart';
 import 'package:my_app_teste/modules/mesa/controller/floor_plan_controller.dart';
 import 'package:my_app_teste/modules/mesa/model/restaurant_models.dart';
 
-class TableEditorSheet extends StatefulWidget {
-  const TableEditorSheet({
+class PainelEditorMesa extends StatefulWidget {
+  const PainelEditorMesa({
     super.key,
     required this.areas,
-    required this.initialAreaId,
-    this.table,
+    required this.idAreaInicial,
+    this.mesa,
   });
 
-  final List<RestaurantArea> areas;
-  final String initialAreaId;
-  final RestaurantTable? table;
+  final List<AreaRestaurante> areas;
+  final String idAreaInicial;
+  final MesaRestaurante? mesa;
 
   @override
-  State<TableEditorSheet> createState() => _TableEditorSheetState();
+  State<PainelEditorMesa> createState() => _PainelEditorMesaState();
 }
 
-class _TableEditorSheetState extends State<TableEditorSheet> {
-  final _formKey = GlobalKey<FormState>();
+class _PainelEditorMesaState extends State<PainelEditorMesa> {
+  final _chaveFormulario = GlobalKey<FormState>();
 
-  late final TextEditingController _codeController;
-  late final TextEditingController _chairsController;
-  late final TextEditingController _widthController;
-  late final TextEditingController _heightController;
-  late final TextEditingController _seatedController;
+  late final TextEditingController _controleCodigo;
+  late final TextEditingController _controleCadeiras;
+  late final TextEditingController _controleLargura;
+  late final TextEditingController _controleAltura;
+  late final TextEditingController _controlePessoasSentadas;
 
-  late String _selectedAreaId;
-  late TableShape _selectedShape;
-  late double _selectedWidth;
-  late double _selectedHeight;
+  late String _idAreaSelecionada;
+  late FormatoMesa _formatoSelecionado;
+  late double _larguraSelecionada;
+  late double _alturaSelecionada;
 
   @override
   void initState() {
     super.initState();
-    final table = widget.table;
-    _codeController = TextEditingController(text: table?.code ?? '');
-    _chairsController = TextEditingController(
-      text: (table?.chairsCount ?? 4).toString(),
+    final mesa = widget.mesa;
+    _controleCodigo = TextEditingController(text: mesa?.codigo ?? '');
+    _controleCadeiras = TextEditingController(
+      text: (mesa?.quantidadeCadeiras ?? 4).toString(),
     );
-    _widthController = TextEditingController(
-      text: (table?.width ?? 112).toStringAsFixed(0),
+    _controleLargura = TextEditingController(
+      text: (mesa?.width ?? 112).toStringAsFixed(0),
     );
-    _heightController = TextEditingController(
-      text: (table?.height ?? 84).toStringAsFixed(0),
+    _controleAltura = TextEditingController(
+      text: (mesa?.height ?? 84).toStringAsFixed(0),
     );
-    _seatedController = TextEditingController(
-      text: table?.seatedPeople?.toString() ?? '',
+    _controlePessoasSentadas = TextEditingController(
+      text: mesa?.pessoasSentadas?.toString() ?? '',
     );
-    _selectedAreaId = table?.areaId ?? widget.initialAreaId;
-    _selectedShape = table?.shape ?? TableShape.rectangular;
-    _selectedWidth = table?.width ?? 112;
-    _selectedHeight = table?.height ?? 84;
+    _idAreaSelecionada = mesa?.idArea ?? widget.idAreaInicial;
+    _formatoSelecionado = mesa?.formato ?? FormatoMesa.retangular;
+    _larguraSelecionada = mesa?.width ?? 112;
+    _alturaSelecionada = mesa?.height ?? 84;
   }
 
   @override
   void dispose() {
-    _codeController.dispose();
-    _chairsController.dispose();
-    _widthController.dispose();
-    _heightController.dispose();
-    _seatedController.dispose();
+    _controleCodigo.dispose();
+    _controleCadeiras.dispose();
+    _controleLargura.dispose();
+    _controleAltura.dispose();
+    _controlePessoasSentadas.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final viewInsets = MediaQuery.of(context).viewInsets;
-    final table = widget.table;
-    final hasActiveOrder = table?.activeOrderId != null;
-    final isJoined = table?.isJoined ?? false;
+    final mesa = widget.mesa;
+    final temComandaAtiva = mesa?.idComandaAtiva != null;
+    final estaUnida = mesa?.estaUnida ?? false;
 
     return Container(
       decoration: const BoxDecoration(
@@ -82,7 +82,7 @@ class _TableEditorSheetState extends State<TableEditorSheet> {
       padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + viewInsets.bottom),
       child: SingleChildScrollView(
         child: Form(
-          key: _formKey,
+          key: _chaveFormulario,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -97,7 +97,7 @@ class _TableEditorSheetState extends State<TableEditorSheet> {
                 ),
               ),
               Text(
-                widget.table == null ? 'Nova mesa' : 'Editar mesa',
+                widget.mesa == null ? 'Nova mesa' : 'Editar mesa',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 8),
@@ -107,18 +107,18 @@ class _TableEditorSheetState extends State<TableEditorSheet> {
               ),
               const SizedBox(height: 20),
               Center(
-                child: _TableEditPreview(
-                  shape: _selectedShape,
-                  width: _selectedWidth,
-                  height: _selectedHeight,
-                  label: _codeController.text.trim().isEmpty
+                child: _PreviaEdicaoMesa(
+                  formato: _formatoSelecionado,
+                  width: _larguraSelecionada,
+                  height: _alturaSelecionada,
+                  rotulo: _controleCodigo.text.trim().isEmpty
                       ? 'Mesa'
-                      : _codeController.text.trim(),
+                      : _controleCodigo.text.trim(),
                 ),
               ),
               const SizedBox(height: 18),
               TextFormField(
-                controller: _codeController,
+                controller: _controleCodigo,
                 decoration: const InputDecoration(labelText: 'Codigo da mesa'),
                 onChanged: (_) => setState(() {}),
                 validator: (value) {
@@ -130,12 +130,12 @@ class _TableEditorSheetState extends State<TableEditorSheet> {
               ),
               const SizedBox(height: 14),
               DropdownButtonFormField<String>(
-                initialValue: _selectedAreaId,
+                initialValue: _idAreaSelecionada,
                 decoration: InputDecoration(
                   labelText: 'Area',
-                  helperText: isJoined
+                  helperText: estaUnida
                       ? 'Separe o grupo para mover de area.'
-                      : hasActiveOrder
+                      : temComandaAtiva
                       ? 'Encerre a comanda para mover de area.'
                       : null,
                 ),
@@ -143,18 +143,18 @@ class _TableEditorSheetState extends State<TableEditorSheet> {
                     .map(
                       (area) => DropdownMenuItem<String>(
                         value: area.id,
-                        child: Text(area.name),
+                        child: Text(area.nome),
                       ),
                     )
                     .toList(),
-                onChanged: isJoined || hasActiveOrder
+                onChanged: estaUnida || temComandaAtiva
                     ? null
                     : (value) {
                         if (value == null) {
                           return;
                         }
                         setState(() {
-                          _selectedAreaId = value;
+                          _idAreaSelecionada = value;
                         });
                       },
               ),
@@ -170,16 +170,16 @@ class _TableEditorSheetState extends State<TableEditorSheet> {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: TableShape.values
+                children: FormatoMesa.values
                     .map(
-                      (shape) => ChoiceChip(
-                        selected: _selectedShape == shape,
-                        label: Text(_shapeLabel(shape)),
-                        avatar: Icon(_shapeIcon(shape), size: 16),
+                      (formato) => ChoiceChip(
+                        selected: _formatoSelecionado == formato,
+                        label: Text(_rotuloFormato(formato)),
+                        avatar: Icon(_iconeFormato(formato), size: 16),
                         onSelected: (_) {
                           setState(() {
-                            _selectedShape = shape;
-                            _applyShapePreset(shape);
+                            _formatoSelecionado = formato;
+                            _aplicarDimensoesFormato(formato);
                           });
                         },
                       ),
@@ -191,17 +191,17 @@ class _TableEditorSheetState extends State<TableEditorSheet> {
                 children: [
                   Expanded(
                     child: TextFormField(
-                      controller: _chairsController,
+                      controller: _controleCadeiras,
                       decoration: const InputDecoration(labelText: 'Cadeiras'),
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      validator: _validatePositiveNumber,
+                      validator: _validarNumeroPositivo,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: TextFormField(
-                      controller: _seatedController,
+                      controller: _controlePessoasSentadas,
                       decoration: const InputDecoration(
                         labelText: 'Pessoas sentadas',
                       ),
@@ -211,7 +211,7 @@ class _TableEditorSheetState extends State<TableEditorSheet> {
                         if (value == null || value.trim().isEmpty) {
                           return null;
                         }
-                        return _validatePositiveNumber(value);
+                        return _validarNumeroPositivo(value);
                       },
                     ),
                   ),
@@ -222,7 +222,7 @@ class _TableEditorSheetState extends State<TableEditorSheet> {
                 children: [
                   Expanded(
                     child: TextFormField(
-                      controller: _widthController,
+                      controller: _controleLargura,
                       decoration: const InputDecoration(labelText: 'Largura'),
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -232,16 +232,16 @@ class _TableEditorSheetState extends State<TableEditorSheet> {
                           return;
                         }
                         setState(() {
-                          _selectedWidth = next;
+                          _larguraSelecionada = next;
                         });
                       },
-                      validator: _validatePositiveNumber,
+                      validator: _validarNumeroPositivo,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: TextFormField(
-                      controller: _heightController,
+                      controller: _controleAltura,
                       decoration: const InputDecoration(labelText: 'Altura'),
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -251,10 +251,10 @@ class _TableEditorSheetState extends State<TableEditorSheet> {
                           return;
                         }
                         setState(() {
-                          _selectedHeight = next;
+                          _alturaSelecionada = next;
                         });
                       },
-                      validator: _validatePositiveNumber,
+                      validator: _validarNumeroPositivo,
                     ),
                   ),
                 ],
@@ -264,17 +264,17 @@ class _TableEditorSheetState extends State<TableEditorSheet> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _PresetChip(
-                    label: 'Compacta',
-                    onTap: () => _setDimensions(88, 74),
+                  _OpcaoPredefinida(
+                    rotulo: 'Compacta',
+                    aoTocar: () => _definirDimensoes(88, 74),
                   ),
-                  _PresetChip(
-                    label: 'Padrao',
-                    onTap: () => _setDimensions(112, 84),
+                  _OpcaoPredefinida(
+                    rotulo: 'Padrao',
+                    aoTocar: () => _definirDimensoes(112, 84),
                   ),
-                  _PresetChip(
-                    label: 'Grande',
-                    onTap: () => _setDimensions(148, 92),
+                  _OpcaoPredefinida(
+                    rotulo: 'Grande',
+                    aoTocar: () => _definirDimensoes(148, 92),
                   ),
                 ],
               ),
@@ -282,7 +282,7 @@ class _TableEditorSheetState extends State<TableEditorSheet> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _submit,
+                  onPressed: _salvar,
                   child: const Text('Salvar mesa'),
                 ),
               ),
@@ -293,7 +293,7 @@ class _TableEditorSheetState extends State<TableEditorSheet> {
     );
   }
 
-  String? _validatePositiveNumber(String? value) {
+  String? _validarNumeroPositivo(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Campo obrigatorio.';
     }
@@ -304,19 +304,19 @@ class _TableEditorSheetState extends State<TableEditorSheet> {
     return null;
   }
 
-  void _submit() {
-    if (!_formKey.currentState!.validate()) {
+  void _salvar() {
+    if (!_chaveFormulario.currentState!.validate()) {
       return;
     }
 
-    final seatedPeople = _seatedController.text.trim().isEmpty
+    final pessoasSentadas = _controlePessoasSentadas.text.trim().isEmpty
         ? null
-        : int.tryParse(_seatedController.text.trim());
-    final chairsCount = int.parse(_chairsController.text.trim());
-    final width = double.parse(_widthController.text.trim());
-    final height = double.parse(_heightController.text.trim());
+        : int.tryParse(_controlePessoasSentadas.text.trim());
+    final quantidadeCadeiras = int.parse(_controleCadeiras.text.trim());
+    final width = double.parse(_controleLargura.text.trim());
+    final height = double.parse(_controleAltura.text.trim());
 
-    if (seatedPeople != null && seatedPeople > chairsCount) {
+    if (pessoasSentadas != null && pessoasSentadas > quantidadeCadeiras) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Pessoas sentadas nao podem passar da capacidade.'),
@@ -324,7 +324,7 @@ class _TableEditorSheetState extends State<TableEditorSheet> {
       );
       return;
     }
-    if (widget.table?.activeOrderId != null && (seatedPeople ?? 0) < 1) {
+    if (widget.mesa?.idComandaAtiva != null && (pessoasSentadas ?? 0) < 1) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -337,83 +337,83 @@ class _TableEditorSheetState extends State<TableEditorSheet> {
 
     Navigator.pop(
       context,
-      TableDraft(
-        id: widget.table?.id,
-        code: _codeController.text.trim(),
-        areaId: _selectedAreaId,
-        shape: _selectedShape,
-        chairsCount: chairsCount,
+      RascunhoMesa(
+        id: widget.mesa?.id,
+        codigo: _controleCodigo.text.trim(),
+        idArea: _idAreaSelecionada,
+        formato: _formatoSelecionado,
+        quantidadeCadeiras: quantidadeCadeiras,
         width: width,
         height: height,
-        seatedPeople: seatedPeople,
+        pessoasSentadas: pessoasSentadas,
       ),
     );
   }
 
-  void _applyShapePreset(TableShape shape) {
-    switch (shape) {
-      case TableShape.round:
-      case TableShape.square:
-        _setDimensions(92, 92, notify: false);
+  void _aplicarDimensoesFormato(FormatoMesa formato) {
+    switch (formato) {
+      case FormatoMesa.redonda:
+      case FormatoMesa.quadrada:
+        _definirDimensoes(92, 92, notificar: false);
         break;
-      case TableShape.rectangular:
-        _setDimensions(124, 84, notify: false);
+      case FormatoMesa.retangular:
+        _definirDimensoes(124, 84, notificar: false);
         break;
-      case TableShape.oval:
-        _setDimensions(132, 82, notify: false);
+      case FormatoMesa.oval:
+        _definirDimensoes(132, 82, notificar: false);
         break;
     }
   }
 
-  void _setDimensions(double width, double height, {bool notify = true}) {
-    _selectedWidth = width;
-    _selectedHeight = height;
-    _widthController.text = width.toStringAsFixed(0);
-    _heightController.text = height.toStringAsFixed(0);
-    if (notify) {
+  void _definirDimensoes(double width, double height, {bool notificar = true}) {
+    _larguraSelecionada = width;
+    _alturaSelecionada = height;
+    _controleLargura.text = width.toStringAsFixed(0);
+    _controleAltura.text = height.toStringAsFixed(0);
+    if (notificar) {
       setState(() {});
     }
   }
 
-  String _shapeLabel(TableShape shape) {
-    switch (shape) {
-      case TableShape.round:
+  String _rotuloFormato(FormatoMesa formato) {
+    switch (formato) {
+      case FormatoMesa.redonda:
         return 'Redonda';
-      case TableShape.square:
+      case FormatoMesa.quadrada:
         return 'Quadrada';
-      case TableShape.rectangular:
+      case FormatoMesa.retangular:
         return 'Retangular';
-      case TableShape.oval:
+      case FormatoMesa.oval:
         return 'Oval';
     }
   }
 
-  IconData _shapeIcon(TableShape shape) {
-    switch (shape) {
-      case TableShape.round:
+  IconData _iconeFormato(FormatoMesa formato) {
+    switch (formato) {
+      case FormatoMesa.redonda:
         return Icons.circle_outlined;
-      case TableShape.square:
+      case FormatoMesa.quadrada:
         return Icons.crop_square_rounded;
-      case TableShape.rectangular:
+      case FormatoMesa.retangular:
         return Icons.rectangle_outlined;
-      case TableShape.oval:
+      case FormatoMesa.oval:
         return Icons.radio_button_unchecked_rounded;
     }
   }
 }
 
-class _TableEditPreview extends StatelessWidget {
-  const _TableEditPreview({
-    required this.shape,
+class _PreviaEdicaoMesa extends StatelessWidget {
+  const _PreviaEdicaoMesa({
+    required this.formato,
     required this.width,
     required this.height,
-    required this.label,
+    required this.rotulo,
   });
 
-  final TableShape shape;
+  final FormatoMesa formato;
   final double width;
   final double height;
-  final String label;
+  final String rotulo;
 
   @override
   Widget build(BuildContext context) {
@@ -436,12 +436,12 @@ class _TableEditPreview extends StatelessWidget {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: GulaColors.free,
-          shape: shape == TableShape.round
+          shape: formato == FormatoMesa.redonda
               ? BoxShape.circle
               : BoxShape.rectangle,
-          borderRadius: shape == TableShape.round
+          borderRadius: formato == FormatoMesa.redonda
               ? null
-              : BorderRadius.circular(shape == TableShape.oval ? 999 : 18),
+              : BorderRadius.circular(formato == FormatoMesa.oval ? 999 : 18),
           border: Border.all(color: GulaColors.border),
           boxShadow: [
             BoxShadow(
@@ -452,7 +452,7 @@ class _TableEditPreview extends StatelessWidget {
           ],
         ),
         child: Text(
-          label,
+          rotulo,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
@@ -465,18 +465,18 @@ class _TableEditPreview extends StatelessWidget {
   }
 }
 
-class _PresetChip extends StatelessWidget {
-  const _PresetChip({required this.label, required this.onTap});
+class _OpcaoPredefinida extends StatelessWidget {
+  const _OpcaoPredefinida({required this.rotulo, required this.aoTocar});
 
-  final String label;
-  final VoidCallback onTap;
+  final String rotulo;
+  final VoidCallback aoTocar;
 
   @override
   Widget build(BuildContext context) {
     return ActionChip(
       avatar: const Icon(Icons.straighten_rounded, size: 16),
-      label: Text(label),
-      onPressed: onTap,
+      label: Text(rotulo),
+      onPressed: aoTocar,
     );
   }
 }

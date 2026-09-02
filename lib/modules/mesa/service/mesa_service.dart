@@ -4,61 +4,65 @@ import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/constants_api.dart';
 import 'package:my_app_teste/modules/mesa/dto/mesa_dto.dart';
 
-class MesaService {
+class MesaServico {
   final _dio = ApiClient.dio;
 
-  Future<List<MesaDto>> listarMesas() async {
+  Future<List<MesaResposta>> listar() async {
     try {
-      final response = await _dio.get(ConstantsApi.urlMesas);
-      
-      final List<dynamic> data = response.data;
-      return data.map((json) => MesaDto.fromJson(json)).toList();
+      final resposta = await _dio.get(ConstantsApi.urlMesas);
+      final lista = (resposta.data as List).cast<Map<String, dynamic>>();
+      return lista.map(MesaResposta.deJson).toList();
     } on DioException catch (e) {
       throw ApiError.fromDioException(e);
     }
   }
 
-  Future<MesaDto> buscarMesaPorId(int id) async {
+  Future<MesaResposta> buscarPorId(int id) async {
     try {
-      final response = await _dio.get('${ConstantsApi.urlMesas}/$id');
-      
-      return MesaDto.fromJson(response.data);
+      final resposta = await _dio.get('${ConstantsApi.urlMesas}/$id');
+      return MesaResposta.deJson(resposta.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw ApiError.fromDioException(e);
     }
   }
 
-  Future<MesaDto> criarMesa(MesaDto mesa) async {
+  Future<MesaResposta> criar(MesaSalvarRequisicao requisicao) async {
     try {
-      final response = await _dio.post(
+      final resposta = await _dio.post(
         ConstantsApi.urlMesas,
-        data: mesa.toJson(),
+        data: requisicao.paraJson(),
       );
-      
-      return MesaDto.fromJson(response.data);
+      return MesaResposta.deJson(resposta.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw ApiError.fromDioException(e);
     }
   }
 
-  Future<MesaDto> atualizarMesa(int id, MesaDto mesa) async {
+  Future<MesaResposta> atualizar(
+    int id,
+    MesaSalvarRequisicao requisicao,
+  ) async {
     try {
-      final response = await _dio.put(
+      final resposta = await _dio.put(
         '${ConstantsApi.urlMesas}/$id',
-        data: mesa.toJson(),
+        data: requisicao.paraJson(),
       );
-      
-      return MesaDto.fromJson(response.data);
+      return MesaResposta.deJson(resposta.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw ApiError.fromDioException(e);
     }
   }
 
-  Future<void> inativarMesa(int id) async {
+  Future<void> inativar(int id) async {
     try {
       await _dio.delete('${ConstantsApi.urlMesas}/$id');
     } on DioException catch (e) {
       throw ApiError.fromDioException(e);
     }
   }
+
+  // Mantem a API usada pela tela de comandas sem alterar codigo fora de mesas.
+  Future<List<MesaResposta>> listarMesas() => listar();
 }
+
+typedef MesaService = MesaServico;

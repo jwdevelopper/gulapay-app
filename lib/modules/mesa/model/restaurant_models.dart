@@ -1,339 +1,373 @@
-enum TableShape { round, square, rectangular, oval }
+enum FormatoMesa { redonda, quadrada, retangular, oval }
 
-enum TableStatus {
-  free,
-  occupied,
-  noOrder30Min,
-  awaitingRelease1H,
-  withOrder,
-  attention,
+enum SituacaoMesa {
+  livre,
+  ocupada,
+  semPedidoHa30Min,
+  aguardandoLiberacaoHa1H,
+  comPedido,
+  atencao,
 }
 
-class RestaurantTable {
-  RestaurantTable({
+extension on FormatoMesa {
+  String get valorPersistencia => switch (this) {
+    FormatoMesa.redonda => 'round',
+    FormatoMesa.quadrada => 'square',
+    FormatoMesa.retangular => 'rectangular',
+    FormatoMesa.oval => 'oval',
+  };
+}
+
+extension on SituacaoMesa {
+  String get valorPersistencia => switch (this) {
+    SituacaoMesa.livre => 'free',
+    SituacaoMesa.ocupada => 'occupied',
+    SituacaoMesa.semPedidoHa30Min => 'noOrder30Min',
+    SituacaoMesa.aguardandoLiberacaoHa1H => 'awaitingRelease1H',
+    SituacaoMesa.comPedido => 'withOrder',
+    SituacaoMesa.atencao => 'attention',
+  };
+}
+
+FormatoMesa _formatoMesaDeValor(String valor) => switch (valor) {
+  'round' || 'redonda' => FormatoMesa.redonda,
+  'square' || 'quadrada' => FormatoMesa.quadrada,
+  'rectangular' || 'retangular' => FormatoMesa.retangular,
+  'oval' => FormatoMesa.oval,
+  _ => FormatoMesa.retangular,
+};
+
+SituacaoMesa _situacaoMesaDeValor(String valor) => switch (valor) {
+  'free' || 'livre' => SituacaoMesa.livre,
+  'occupied' || 'ocupada' => SituacaoMesa.ocupada,
+  'noOrder30Min' || 'semPedidoHa30Min' => SituacaoMesa.semPedidoHa30Min,
+  'awaitingRelease1H' ||
+  'aguardandoLiberacaoHa1H' => SituacaoMesa.aguardandoLiberacaoHa1H,
+  'withOrder' || 'comPedido' => SituacaoMesa.comPedido,
+  'attention' || 'atencao' => SituacaoMesa.atencao,
+  _ => SituacaoMesa.livre,
+};
+
+class MesaRestaurante {
+  MesaRestaurante({
     required this.id,
-    required this.code,
-    required this.areaId,
+    required this.codigo,
+    required this.idArea,
     required this.x,
     required this.y,
     required this.width,
     required this.height,
-    required this.shape,
-    required this.chairsCount,
-    required this.status,
-    required this.isJoined,
-    this.joinGroupId,
-    this.activeOrderId,
-    this.lastOrderAt,
-    this.seatedPeople,
-    this.customerName,
-    this.orderItemsCount = 0,
-    this.partialTotal = 0,
+    required this.formato,
+    required this.quantidadeCadeiras,
+    required this.situacao,
+    required this.estaUnida,
+    this.idGrupoUniao,
+    this.idComandaAtiva,
+    this.ultimoPedidoEm,
+    this.pessoasSentadas,
+    this.nomeCliente,
+    this.quantidadeItensPedido = 0,
+    this.totalParcial = 0,
   });
 
   final String id;
-  final String code;
-  final String areaId;
+  final String codigo;
+  final String idArea;
   final double x;
   final double y;
   final double width;
   final double height;
-  final TableShape shape;
-  final int chairsCount;
-  final TableStatus status;
-  final bool isJoined;
-  final String? joinGroupId;
-  final String? activeOrderId;
-  final DateTime? lastOrderAt;
-  final int? seatedPeople;
-  final String? customerName;
-  final int orderItemsCount;
-  final double partialTotal;
+  final FormatoMesa formato;
+  final int quantidadeCadeiras;
+  final SituacaoMesa situacao;
+  final bool estaUnida;
+  final String? idGrupoUniao;
+  final String? idComandaAtiva;
+  final DateTime? ultimoPedidoEm;
+  final int? pessoasSentadas;
+  final String? nomeCliente;
+  final int quantidadeItensPedido;
+  final double totalParcial;
 
-  RestaurantTable copyWith({
+  MesaRestaurante copiarCom({
     String? id,
-    String? code,
-    String? areaId,
+    String? codigo,
+    String? idArea,
     double? x,
     double? y,
     double? width,
     double? height,
-    TableShape? shape,
-    int? chairsCount,
-    TableStatus? status,
-    bool? isJoined,
-    String? joinGroupId,
-    String? activeOrderId,
-    DateTime? lastOrderAt,
-    int? seatedPeople,
-    String? customerName,
-    int? orderItemsCount,
-    double? partialTotal,
-    bool clearJoinGroup = false,
-    bool clearActiveOrder = false,
-    bool clearLastOrderAt = false,
-    bool clearSeatedPeople = false,
-    bool clearCustomerName = false,
+    FormatoMesa? formato,
+    int? quantidadeCadeiras,
+    SituacaoMesa? situacao,
+    bool? estaUnida,
+    String? idGrupoUniao,
+    String? idComandaAtiva,
+    DateTime? ultimoPedidoEm,
+    int? pessoasSentadas,
+    String? nomeCliente,
+    int? quantidadeItensPedido,
+    double? totalParcial,
+    bool limparGrupoUniao = false,
+    bool limparComandaAtiva = false,
+    bool limparUltimoPedido = false,
+    bool limparPessoasSentadas = false,
+    bool limparNomeCliente = false,
   }) {
-    return RestaurantTable(
+    return MesaRestaurante(
       id: id ?? this.id,
-      code: code ?? this.code,
-      areaId: areaId ?? this.areaId,
+      codigo: codigo ?? this.codigo,
+      idArea: idArea ?? this.idArea,
       x: x ?? this.x,
       y: y ?? this.y,
       width: width ?? this.width,
       height: height ?? this.height,
-      shape: shape ?? this.shape,
-      chairsCount: chairsCount ?? this.chairsCount,
-      status: status ?? this.status,
-      isJoined: isJoined ?? this.isJoined,
-      joinGroupId: clearJoinGroup ? null : (joinGroupId ?? this.joinGroupId),
-      activeOrderId: clearActiveOrder ? null : (activeOrderId ?? this.activeOrderId),
-      lastOrderAt: clearLastOrderAt ? null : (lastOrderAt ?? this.lastOrderAt),
-      seatedPeople: clearSeatedPeople ? null : (seatedPeople ?? this.seatedPeople),
-      customerName: clearCustomerName ? null : (customerName ?? this.customerName),
-      orderItemsCount: orderItemsCount ?? this.orderItemsCount,
-      partialTotal: partialTotal ?? this.partialTotal,
+      formato: formato ?? this.formato,
+      quantidadeCadeiras: quantidadeCadeiras ?? this.quantidadeCadeiras,
+      situacao: situacao ?? this.situacao,
+      estaUnida: estaUnida ?? this.estaUnida,
+      idGrupoUniao: limparGrupoUniao
+          ? null
+          : (idGrupoUniao ?? this.idGrupoUniao),
+      idComandaAtiva: limparComandaAtiva
+          ? null
+          : (idComandaAtiva ?? this.idComandaAtiva),
+      ultimoPedidoEm: limparUltimoPedido
+          ? null
+          : (ultimoPedidoEm ?? this.ultimoPedidoEm),
+      pessoasSentadas: limparPessoasSentadas
+          ? null
+          : (pessoasSentadas ?? this.pessoasSentadas),
+      nomeCliente: limparNomeCliente ? null : (nomeCliente ?? this.nomeCliente),
+      quantidadeItensPedido:
+          quantidadeItensPedido ?? this.quantidadeItensPedido,
+      totalParcial: totalParcial ?? this.totalParcial,
     );
   }
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> paraMapa() {
     return {
       'id': id,
-      'code': code,
-      'areaId': areaId,
+      'code': codigo,
+      'areaId': idArea,
       'x': x,
       'y': y,
       'width': width,
       'height': height,
-      'shape': shape.name,
-      'chairsCount': chairsCount,
-      'status': status.name,
-      'isJoined': isJoined,
-      'joinGroupId': joinGroupId,
-      'activeOrderId': activeOrderId,
-      'lastOrderAt': lastOrderAt?.toIso8601String(),
-      'seatedPeople': seatedPeople,
-      'customerName': customerName,
-      'orderItemsCount': orderItemsCount,
-      'partialTotal': partialTotal,
+      'shape': formato.valorPersistencia,
+      'chairsCount': quantidadeCadeiras,
+      'status': situacao.valorPersistencia,
+      'isJoined': estaUnida,
+      'joinGroupId': idGrupoUniao,
+      'activeOrderId': idComandaAtiva,
+      'lastOrderAt': ultimoPedidoEm?.toIso8601String(),
+      'seatedPeople': pessoasSentadas,
+      'customerName': nomeCliente,
+      'orderItemsCount': quantidadeItensPedido,
+      'partialTotal': totalParcial,
     };
   }
 
-  factory RestaurantTable.fromMap(Map<String, dynamic> map) {
-    return RestaurantTable(
+  factory MesaRestaurante.deMapa(Map<String, dynamic> map) {
+    return MesaRestaurante(
       id: map['id'] as String,
-      code: map['code'] as String,
-      areaId: map['areaId'] as String,
+      codigo: map['code'] as String,
+      idArea: map['areaId'] as String,
       x: (map['x'] as num).toDouble(),
       y: (map['y'] as num).toDouble(),
       width: (map['width'] as num).toDouble(),
       height: (map['height'] as num).toDouble(),
-      shape: TableShape.values.byName(map['shape'] as String),
-      chairsCount: map['chairsCount'] as int,
-      status: TableStatus.values.byName(map['status'] as String),
-      isJoined: map['isJoined'] as bool? ?? false,
-      joinGroupId: map['joinGroupId'] as String?,
-      activeOrderId: map['activeOrderId'] as String?,
-      lastOrderAt: map['lastOrderAt'] == null
+      formato: _formatoMesaDeValor(map['shape'] as String),
+      quantidadeCadeiras: map['chairsCount'] as int,
+      situacao: _situacaoMesaDeValor(map['status'] as String),
+      estaUnida: map['isJoined'] as bool? ?? false,
+      idGrupoUniao: map['joinGroupId'] as String?,
+      idComandaAtiva: map['activeOrderId'] as String?,
+      ultimoPedidoEm: map['lastOrderAt'] == null
           ? null
           : DateTime.parse(map['lastOrderAt'] as String),
-      seatedPeople: map['seatedPeople'] as int?,
-      customerName: map['customerName'] as String?,
-      orderItemsCount: map['orderItemsCount'] as int? ?? 0,
-      partialTotal: (map['partialTotal'] as num?)?.toDouble() ?? 0,
+      pessoasSentadas: map['seatedPeople'] as int?,
+      nomeCliente: map['customerName'] as String?,
+      quantidadeItensPedido: map['orderItemsCount'] as int? ?? 0,
+      totalParcial: (map['partialTotal'] as num?)?.toDouble() ?? 0,
     );
   }
 }
 
-class TableJoinGroup {
-  TableJoinGroup({
+class GrupoUniaoMesas {
+  GrupoUniaoMesas({
     required this.id,
-    required this.areaId,
-    required this.tableIds,
-    this.originalPositions = const <TableOriginalPosition>[],
+    required this.idArea,
+    required this.idsMesas,
+    this.posicoesOriginais = const <PosicaoOriginalMesa>[],
   });
 
   final String id;
-  final String areaId;
-  final List<String> tableIds;
-  final List<TableOriginalPosition> originalPositions;
+  final String idArea;
+  final List<String> idsMesas;
+  final List<PosicaoOriginalMesa> posicoesOriginais;
 
-  TableJoinGroup copyWith({
+  GrupoUniaoMesas copiarCom({
     String? id,
-    String? areaId,
-    List<String>? tableIds,
-    List<TableOriginalPosition>? originalPositions,
+    String? idArea,
+    List<String>? idsMesas,
+    List<PosicaoOriginalMesa>? posicoesOriginais,
   }) {
-    return TableJoinGroup(
+    return GrupoUniaoMesas(
       id: id ?? this.id,
-      areaId: areaId ?? this.areaId,
-      tableIds: tableIds ?? this.tableIds,
-      originalPositions: originalPositions ?? this.originalPositions,
+      idArea: idArea ?? this.idArea,
+      idsMesas: idsMesas ?? this.idsMesas,
+      posicoesOriginais: posicoesOriginais ?? this.posicoesOriginais,
     );
   }
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> paraMapa() {
     return {
       'id': id,
-      'areaId': areaId,
-      'tableIds': tableIds,
-      'originalPositions': originalPositions
-          .map((position) => position.toMap())
+      'areaId': idArea,
+      'tableIds': idsMesas,
+      'originalPositions': posicoesOriginais
+          .map((position) => position.paraMapa())
           .toList(),
     };
   }
 
-  factory TableJoinGroup.fromMap(Map<String, dynamic> map) {
-    return TableJoinGroup(
+  factory GrupoUniaoMesas.deMapa(Map<String, dynamic> map) {
+    return GrupoUniaoMesas(
       id: map['id'] as String,
-      areaId: map['areaId'] as String,
-      tableIds: List<String>.from(map['tableIds'] as List<dynamic>),
-      originalPositions: (map['originalPositions'] as List<dynamic>? ?? const [])
-          .map(
-            (entry) => TableOriginalPosition.fromMap(
-              Map<String, dynamic>.from(entry as Map),
-            ),
-          )
-          .toList(),
+      idArea: map['areaId'] as String,
+      idsMesas: List<String>.from(map['tableIds'] as List<dynamic>),
+      posicoesOriginais:
+          (map['originalPositions'] as List<dynamic>? ?? const [])
+              .map(
+                (entry) => PosicaoOriginalMesa.deMapa(
+                  Map<String, dynamic>.from(entry as Map),
+                ),
+              )
+              .toList(),
     );
   }
 }
 
-class TableOriginalPosition {
-  TableOriginalPosition({
-    required this.tableId,
-    required this.x,
-    required this.y,
-  });
+class PosicaoOriginalMesa {
+  PosicaoOriginalMesa({required this.idMesa, required this.x, required this.y});
 
-  final String tableId;
+  final String idMesa;
   final double x;
   final double y;
 
-  TableOriginalPosition copyWith({
-    String? tableId,
-    double? x,
-    double? y,
-  }) {
-    return TableOriginalPosition(
-      tableId: tableId ?? this.tableId,
+  PosicaoOriginalMesa copiarCom({String? idMesa, double? x, double? y}) {
+    return PosicaoOriginalMesa(
+      idMesa: idMesa ?? this.idMesa,
       x: x ?? this.x,
       y: y ?? this.y,
     );
   }
 
-  Map<String, dynamic> toMap() {
-    return {
-      'tableId': tableId,
-      'x': x,
-      'y': y,
-    };
+  Map<String, dynamic> paraMapa() {
+    return {'tableId': idMesa, 'x': x, 'y': y};
   }
 
-  factory TableOriginalPosition.fromMap(Map<String, dynamic> map) {
-    return TableOriginalPosition(
-      tableId: map['tableId'] as String,
+  factory PosicaoOriginalMesa.deMapa(Map<String, dynamic> map) {
+    return PosicaoOriginalMesa(
+      idMesa: map['tableId'] as String,
       x: (map['x'] as num).toDouble(),
       y: (map['y'] as num).toDouble(),
     );
   }
 }
 
-class RestaurantArea {
-  RestaurantArea({
+class AreaRestaurante {
+  AreaRestaurante({
     required this.id,
-    required this.name,
-    required this.type,
-    required this.tables,
-    this.joinGroups = const <TableJoinGroup>[],
+    required this.nome,
+    required this.tipo,
+    required this.mesas,
+    this.gruposUniao = const <GrupoUniaoMesas>[],
   });
 
   final String id;
-  final String name;
-  final String type;
-  final List<RestaurantTable> tables;
-  final List<TableJoinGroup> joinGroups;
+  final String nome;
+  final String tipo;
+  final List<MesaRestaurante> mesas;
+  final List<GrupoUniaoMesas> gruposUniao;
 
-  int get occupancyCount => tables
-      .where((table) => table.activeOrderId != null || (table.seatedPeople ?? 0) > 0)
+  int get quantidadeOcupadas => mesas
+      .where(
+        (mesa) =>
+            mesa.idComandaAtiva != null || (mesa.pessoasSentadas ?? 0) > 0,
+      )
       .length;
 
-  int get totalTables => tables.length;
+  int get totalMesas => mesas.length;
 
-  RestaurantArea copyWith({
+  AreaRestaurante copiarCom({
     String? id,
-    String? name,
-    String? type,
-    List<RestaurantTable>? tables,
-    List<TableJoinGroup>? joinGroups,
+    String? nome,
+    String? tipo,
+    List<MesaRestaurante>? mesas,
+    List<GrupoUniaoMesas>? gruposUniao,
   }) {
-    return RestaurantArea(
+    return AreaRestaurante(
       id: id ?? this.id,
-      name: name ?? this.name,
-      type: type ?? this.type,
-      tables: tables ?? this.tables,
-      joinGroups: joinGroups ?? this.joinGroups,
+      nome: nome ?? this.nome,
+      tipo: tipo ?? this.tipo,
+      mesas: mesas ?? this.mesas,
+      gruposUniao: gruposUniao ?? this.gruposUniao,
     );
   }
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> paraMapa() {
     return {
       'id': id,
-      'name': name,
-      'type': type,
-      'tables': tables.map((table) => table.toMap()).toList(),
-      'joinGroups': joinGroups.map((group) => group.toMap()).toList(),
+      'name': nome,
+      'type': tipo,
+      'tables': mesas.map((mesa) => mesa.paraMapa()).toList(),
+      'joinGroups': gruposUniao.map((grupo) => grupo.paraMapa()).toList(),
     };
   }
 
-  factory RestaurantArea.fromMap(Map<String, dynamic> map) {
-    return RestaurantArea(
+  factory AreaRestaurante.deMapa(Map<String, dynamic> map) {
+    return AreaRestaurante(
       id: map['id'] as String,
-      name: map['name'] as String,
-      type: map['type'] as String,
-      tables: (map['tables'] as List<dynamic>)
+      nome: map['name'] as String,
+      tipo: map['type'] as String,
+      mesas: (map['tables'] as List<dynamic>)
           .map(
-            (table) => RestaurantTable.fromMap(
-              Map<String, dynamic>.from(table as Map),
-            ),
+            (mesa) =>
+                MesaRestaurante.deMapa(Map<String, dynamic>.from(mesa as Map)),
           )
           .toList(),
-      joinGroups: (map['joinGroups'] as List<dynamic>? ?? const [])
+      gruposUniao: (map['joinGroups'] as List<dynamic>? ?? const [])
           .map(
-            (group) => TableJoinGroup.fromMap(
-              Map<String, dynamic>.from(group as Map),
-            ),
+            (grupo) =>
+                GrupoUniaoMesas.deMapa(Map<String, dynamic>.from(grupo as Map)),
           )
           .toList(),
     );
   }
 }
 
-class FloorPlanSnapshot {
-  FloorPlanSnapshot({
-    required this.selectedAreaId,
-    required this.areas,
-  });
+class EstadoMapaMesas {
+  EstadoMapaMesas({required this.idAreaSelecionada, required this.areas});
 
-  final String selectedAreaId;
-  final List<RestaurantArea> areas;
+  final String idAreaSelecionada;
+  final List<AreaRestaurante> areas;
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> paraMapa() {
     return {
-      'selectedAreaId': selectedAreaId,
-      'areas': areas.map((area) => area.toMap()).toList(),
+      'selectedAreaId': idAreaSelecionada,
+      'areas': areas.map((area) => area.paraMapa()).toList(),
     };
   }
 
-  factory FloorPlanSnapshot.fromMap(Map<String, dynamic> map) {
-    return FloorPlanSnapshot(
-      selectedAreaId: map['selectedAreaId'] as String,
+  factory EstadoMapaMesas.deMapa(Map<String, dynamic> map) {
+    return EstadoMapaMesas(
+      idAreaSelecionada: map['selectedAreaId'] as String,
       areas: (map['areas'] as List<dynamic>)
           .map(
-            (area) => RestaurantArea.fromMap(
-              Map<String, dynamic>.from(area as Map),
-            ),
+            (area) =>
+                AreaRestaurante.deMapa(Map<String, dynamic>.from(area as Map)),
           )
           .toList(),
     );

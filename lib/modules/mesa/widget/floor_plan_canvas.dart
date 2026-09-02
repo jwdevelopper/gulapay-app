@@ -7,138 +7,140 @@ import 'package:my_app_teste/modules/mesa/model/restaurant_models.dart';
 import 'package:my_app_teste/modules/mesa/widget/table_node.dart';
 import 'package:my_app_teste/modules/mesa/widget/table_status_badge.dart';
 
-class FloorPlanCanvas extends StatefulWidget {
-  const FloorPlanCanvas({
+class CanvasMapaMesas extends StatefulWidget {
+  const CanvasMapaMesas({
     super.key,
     required this.area,
-    required this.controller,
-    required this.isEditMode,
-    required this.onToggleEditMode,
-    required this.onAddTable,
-    required this.onJoinSuggested,
-    required this.onEditTable,
-    required this.onOpenTable,
-    required this.onOpenOrder,
-    this.borderRadius = 24,
+    required this.controlador,
+    required this.modoEdicao,
+    required this.aoAlternarModoEdicao,
+    required this.aoAdicionarMesa,
+    required this.aoUnirSugeridas,
+    required this.aoEditarMesa,
+    required this.aoAbrirMesa,
+    required this.aoAbrirComanda,
+    this.raioBorda = 24,
   });
 
-  final RestaurantArea area;
-  final FloorPlanController controller;
-  final bool isEditMode;
-  final VoidCallback onToggleEditMode;
-  final VoidCallback onAddTable;
-  final VoidCallback onJoinSuggested;
-  final ValueChanged<RestaurantTable> onEditTable;
-  final ValueChanged<RestaurantTable> onOpenTable;
-  final ValueChanged<RestaurantTable> onOpenOrder;
-  final double borderRadius;
+  final AreaRestaurante area;
+  final ControladorMapaMesas controlador;
+  final bool modoEdicao;
+  final VoidCallback aoAlternarModoEdicao;
+  final VoidCallback aoAdicionarMesa;
+  final VoidCallback aoUnirSugeridas;
+  final ValueChanged<MesaRestaurante> aoEditarMesa;
+  final ValueChanged<MesaRestaurante> aoAbrirMesa;
+  final ValueChanged<MesaRestaurante> aoAbrirComanda;
+  final double raioBorda;
 
   @override
-  State<FloorPlanCanvas> createState() => _FloorPlanCanvasState();
+  State<CanvasMapaMesas> createState() => _CanvasMapaMesasState();
 }
 
-class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
-  late final TransformationController _transformationController;
-  late final Listenable _rebuildListenable;
-  double _scale = 1;
-  String? _selectedGroupId;
-  String? _selectedOperationalTableId;
+class _CanvasMapaMesasState extends State<CanvasMapaMesas> {
+  late final TransformationController _controleTransformacao;
+  late final Listenable _observavelReconstrucao;
+  double _escala = 1;
+  String? _idGrupoSelecionado;
+  String? _idMesaOperacionalSelecionada;
 
   @override
   void initState() {
     super.initState();
-    _transformationController = TransformationController();
-    _transformationController.addListener(_syncScaleFromMatrix);
-    _rebuildListenable = Listenable.merge([
-      widget.controller,
-      widget.controller.moveListenable,
+    _controleTransformacao = TransformationController();
+    _controleTransformacao.addListener(_sincronizarEscalaDaMatriz);
+    _observavelReconstrucao = Listenable.merge([
+      widget.controlador,
+      widget.controlador.observavelMovimento,
     ]);
   }
 
   @override
   void dispose() {
-    _transformationController.removeListener(_syncScaleFromMatrix);
-    _transformationController.dispose();
+    _controleTransformacao.removeListener(_sincronizarEscalaDaMatriz);
+    _controleTransformacao.dispose();
     super.dispose();
   }
 
-  void _syncScaleFromMatrix() {
-    final nextScale = _transformationController.value.getMaxScaleOnAxis();
-    if ((nextScale - _scale).abs() < 0.01) {
-      if (_selectedOperationalTableId != null) {
+  void _sincronizarEscalaDaMatriz() {
+    final proximaEscala = _controleTransformacao.value.getMaxScaleOnAxis();
+    if ((proximaEscala - _escala).abs() < 0.01) {
+      if (_idMesaOperacionalSelecionada != null) {
         setState(() {});
       }
       return;
     }
     setState(() {
-      _scale = nextScale;
+      _escala = proximaEscala;
     });
   }
 
-  void _setScale(double value) {
+  void _definirEscala(double value) {
     setState(() {
-      _scale = value.clamp(0.62, 1.45).toDouble();
-      _transformationController.value = Matrix4.diagonal3Values(
-        _scale,
-        _scale,
-        1,
-      );
+      _escala = value.clamp(0.62, 1.45).toDouble();
+      final matriz = _controleTransformacao.value.clone();
+      matriz.setIdentity();
+      matriz.setEntry(0, 0, _escala);
+      matriz.setEntry(1, 1, _escala);
+      _controleTransformacao.value = matriz;
     });
   }
 
   @override
-  void didUpdateWidget(covariant FloorPlanCanvas oldWidget) {
+  void didUpdateWidget(covariant CanvasMapaMesas oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!widget.isEditMode && _selectedGroupId != null) {
+    if (!widget.modoEdicao && _idGrupoSelecionado != null) {
       setState(() {
-        _selectedGroupId = null;
+        _idGrupoSelecionado = null;
       });
     } else if (oldWidget.area.id != widget.area.id &&
-        _selectedGroupId != null) {
+        _idGrupoSelecionado != null) {
       setState(() {
-        _selectedGroupId = null;
+        _idGrupoSelecionado = null;
       });
     }
 
-    if (widget.isEditMode || oldWidget.area.id != widget.area.id) {
-      _selectedOperationalTableId = null;
+    if (widget.modoEdicao || oldWidget.area.id != widget.area.id) {
+      _idMesaOperacionalSelecionada = null;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _rebuildListenable,
+      animation: _observavelReconstrucao,
       builder: (context, _) {
-        final area = widget.controller.areaById(widget.area.id) ?? widget.area;
-        final selectedGroupTables = _selectedGroupId == null
-            ? const <RestaurantTable>[]
-            : area.tables
-                  .where((table) => table.joinGroupId == _selectedGroupId)
+        final area =
+            widget.controlador.buscarAreaPorId(widget.area.id) ?? widget.area;
+        final mesasGrupoSelecionado = _idGrupoSelecionado == null
+            ? const <MesaRestaurante>[]
+            : area.mesas
+                  .where((mesa) => mesa.idGrupoUniao == _idGrupoSelecionado)
                   .toList();
         final showUnmixBar =
-            widget.isEditMode && selectedGroupTables.length > 1;
+            widget.modoEdicao && mesasGrupoSelecionado.length > 1;
 
         return LayoutBuilder(
           builder: (context, constraints) {
             final canvasWidth = max(920.0, constraints.maxWidth);
             final canvasHeight = max(640.0, constraints.maxHeight);
-            final canvasSize = Size(canvasWidth, canvasHeight);
+            final tamanhoCanvas = Size(canvasWidth, canvasHeight);
             final overlayCompact = constraints.maxWidth < 520;
-            final selectedOperationalTable = _selectedOperationalTableId == null
+            final mesaOperacionalSelecionada =
+                _idMesaOperacionalSelecionada == null
                 ? null
-                : area.tables.cast<RestaurantTable?>().firstWhere(
-                    (table) => table!.id == _selectedOperationalTableId,
+                : area.mesas.cast<MesaRestaurante?>().firstWhere(
+                    (mesa) => mesa!.id == _idMesaOperacionalSelecionada,
                     orElse: () => null,
                   );
 
             return ClipRRect(
-              borderRadius: BorderRadius.circular(widget.borderRadius),
+              borderRadius: BorderRadius.circular(widget.raioBorda),
               child: Container(
                 decoration: BoxDecoration(
                   color: GulaColors.canvas,
-                  borderRadius: BorderRadius.circular(widget.borderRadius),
-                  border: widget.borderRadius == 0
+                  borderRadius: BorderRadius.circular(widget.raioBorda),
+                  border: widget.raioBorda == 0
                       ? null
                       : Border.all(color: GulaColors.border),
                 ),
@@ -146,12 +148,14 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
                   children: [
                     Positioned.fill(
                       child: InteractiveViewer(
-                        transformationController: _transformationController,
+                        transformationController: _controleTransformacao,
                         alignment: Alignment.topLeft,
                         boundaryMargin: const EdgeInsets.all(180),
                         constrained: false,
-                        panEnabled: widget.controller.movingTableId == null,
-                        scaleEnabled: widget.controller.movingTableId == null,
+                        panEnabled:
+                            widget.controlador.idMesaEmMovimento == null,
+                        scaleEnabled:
+                            widget.controlador.idMesaEmMovimento == null,
                         minScale: 0.62,
                         maxScale: 1.45,
                         child: SizedBox(
@@ -160,12 +164,12 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
                           child: Stack(
                             children: [
                               CustomPaint(
-                                size: canvasSize,
-                                painter: _RestaurantFloorPainter(
-                                  areaType: area.type,
+                                size: tamanhoCanvas,
+                                painter: _PintorPlantaRestaurante(
+                                  tipoArea: area.tipo,
                                 ),
                               ),
-                              ..._buildTableNodes(area, canvasSize),
+                              ..._construirElementosMesa(area, tamanhoCanvas),
                             ],
                           ),
                         ),
@@ -174,19 +178,19 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
                     Positioned(
                       right: 12,
                       top: 12,
-                      child: _CanvasControls(
-                        onZoomOut: () => _setScale(_scale - 0.12),
-                        onZoomIn: () => _setScale(_scale + 0.12),
-                        onResetZoom: () => _setScale(1),
-                        compact: overlayCompact,
+                      child: _ControlesCanvas(
+                        aoDiminuirZoom: () => _definirEscala(_escala - 0.12),
+                        aoAumentarZoom: () => _definirEscala(_escala + 0.12),
+                        aoRestaurarZoom: () => _definirEscala(1),
+                        compacto: overlayCompact,
                       ),
                     ),
-                    if (widget.controller.suggestedJoinTargetId != null)
+                    if (widget.controlador.idAlvoUniaoSugerida != null)
                       Positioned(
                         left: 12,
                         bottom: 12,
-                        child: _JoinSuggestionBanner(
-                          onJoin: widget.onJoinSuggested,
+                        child: _AvisoSugestaoUniao(
+                          aoUnir: widget.aoUnirSugeridas,
                         ),
                       ),
                     Positioned(
@@ -204,10 +208,10 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
                             offset: showUnmixBar
                                 ? Offset.zero
                                 : const Offset(0, 0.3),
-                            child: _UnmixFloatingBar(
-                              tableCount: selectedGroupTables.length,
-                              onUnmix: () =>
-                                  _handleSeparateGroup(_selectedGroupId!),
+                            child: _BarraFlutuanteSeparacao(
+                              quantidadeMesas: mesasGrupoSelecionado.length,
+                              aoDesfazerUniao: () =>
+                                  _tratarSeparacaoGrupo(_idGrupoSelecionado!),
                             ),
                           ),
                         ),
@@ -216,16 +220,17 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
                     Positioned(
                       right: 12,
                       bottom: 12,
-                      child: _LayoutModeButton(
-                        isActive: widget.isEditMode,
-                        onPressed: widget.onToggleEditMode,
-                        onAddTable: widget.onAddTable,
-                        compact: overlayCompact,
+                      child: _BotaoModoLayout(
+                        ativo: widget.modoEdicao,
+                        aoPressionar: widget.aoAlternarModoEdicao,
+                        aoAdicionarMesa: widget.aoAdicionarMesa,
+                        compacto: overlayCompact,
                       ),
                     ),
-                    if (!widget.isEditMode && selectedOperationalTable != null)
-                      _buildQuickPopover(
-                        selectedOperationalTable,
+                    if (!widget.modoEdicao &&
+                        mesaOperacionalSelecionada != null)
+                      _construirResumoRapido(
+                        mesaOperacionalSelecionada,
                         constraints.biggest,
                       ),
                   ],
@@ -238,80 +243,83 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
     );
   }
 
-  List<Widget> _buildTableNodes(RestaurantArea area, Size canvasSize) {
-    final groupMap = <String, List<RestaurantTable>>{};
-    final soloTables = <RestaurantTable>[];
+  List<Widget> _construirElementosMesa(
+    AreaRestaurante area,
+    Size tamanhoCanvas,
+  ) {
+    final gruposPorId = <String, List<MesaRestaurante>>{};
+    final mesasIndividuais = <MesaRestaurante>[];
 
-    for (final table in area.tables) {
-      if (table.isJoined && table.joinGroupId != null) {
-        groupMap
-            .putIfAbsent(table.joinGroupId!, () => <RestaurantTable>[])
-            .add(table);
+    for (final mesa in area.mesas) {
+      if (mesa.estaUnida && mesa.idGrupoUniao != null) {
+        gruposPorId
+            .putIfAbsent(mesa.idGrupoUniao!, () => <MesaRestaurante>[])
+            .add(mesa);
       } else {
-        soloTables.add(table);
+        mesasIndividuais.add(mesa);
       }
     }
 
-    for (final entry in groupMap.entries) {
+    for (final entry in gruposPorId.entries) {
       if (entry.value.length == 1) {
-        soloTables.add(entry.value.first);
+        mesasIndividuais.add(entry.value.first);
       }
     }
 
     final nodes = <Widget>[];
 
-    for (final entry in groupMap.entries) {
+    for (final entry in gruposPorId.entries) {
       if (entry.value.length < 2) {
         continue;
       }
-      final isSuggestedJoin = entry.value.any(
-        (table) => widget.controller.suggestedJoinTargetId == table.id,
+      final uniaoSugerida = entry.value.any(
+        (mesa) => widget.controlador.idAlvoUniaoSugerida == mesa.id,
       );
-      final isSelected = entry.key == _selectedGroupId;
+      final selecionada = entry.key == _idGrupoSelecionado;
       nodes.add(
-        _buildMergedGroupNode(
+        _construirElementoGrupoUnido(
           area: area,
-          groupId: entry.key,
-          tables: entry.value,
-          canvasSize: canvasSize,
-          isSuggestedJoin: isSuggestedJoin,
-          isSelected: isSelected,
+          idGrupo: entry.key,
+          mesas: entry.value,
+          tamanhoCanvas: tamanhoCanvas,
+          uniaoSugerida: uniaoSugerida,
+          selecionada: selecionada,
         ),
       );
     }
 
     nodes.addAll(
-      soloTables.map((table) {
+      mesasIndividuais.map((mesa) {
         return Positioned(
-          left: table.x,
-          top: table.y,
-          child: TableNode(
-            table: table,
-            areaName: area.name,
-            status: widget.controller.resolveStatus(table),
-            isMoving: widget.controller.movingTableId == table.id,
-            isSuggestedJoin:
-                widget.controller.suggestedJoinTargetId == table.id ||
-                widget.controller.movingTableId == table.id,
-            canDrag: widget.isEditMode,
-            lastEventAt: widget.controller.lastOrderAtForScope(table.id),
-            onTap: () => widget.isEditMode
-                ? _selectGroup(null, () => widget.onEditTable(table))
-                : _selectOperationalTable(table),
-            onDoubleTap: () {
-              if (!widget.isEditMode) {
-                widget.onOpenOrder(table);
+          left: mesa.x,
+          top: mesa.y,
+          child: ElementoMesa(
+            mesa: mesa,
+            nomeArea: area.nome,
+            situacao: widget.controlador.resolverSituacao(mesa),
+            emMovimento: widget.controlador.idMesaEmMovimento == mesa.id,
+            uniaoSugerida:
+                widget.controlador.idAlvoUniaoSugerida == mesa.id ||
+                widget.controlador.idMesaEmMovimento == mesa.id,
+            podeArrastar: widget.modoEdicao,
+            ultimoEventoEm: widget.controlador.ultimoPedidoDoContexto(mesa.id),
+            aoTocar: () => widget.modoEdicao
+                ? _selecionarGrupo(null, () => widget.aoEditarMesa(mesa))
+                : _selecionarMesaOperacional(mesa),
+            aoToqueDuplo: () {
+              if (!widget.modoEdicao) {
+                widget.aoAbrirComanda(mesa);
               }
             },
-            onPanStart: () => _selectGroup(null, () {
-              widget.controller.beginMove(table.id);
+            aoIniciarArraste: () => _selecionarGrupo(null, () {
+              widget.controlador.iniciarMovimento(mesa.id);
             }),
-            onPanUpdate: (delta) => widget.controller.moveTable(
-              table.id,
-              delta / _scale,
-              canvasSize,
+            aoAtualizarArraste: (delta) => widget.controlador.moverMesa(
+              mesa.id,
+              delta / _escala,
+              tamanhoCanvas,
             ),
-            onPanEnd: widget.controller.finishMove,
+            aoFinalizarArraste: widget.controlador.finalizarMovimento,
           ),
         );
       }),
@@ -320,191 +328,197 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
     return nodes;
   }
 
-  Widget _buildMergedGroupNode({
-    required RestaurantArea area,
-    required String groupId,
-    required List<RestaurantTable> tables,
-    required Size canvasSize,
-    required bool isSuggestedJoin,
-    required bool isSelected,
+  Widget _construirElementoGrupoUnido({
+    required AreaRestaurante area,
+    required String idGrupo,
+    required List<MesaRestaurante> mesas,
+    required Size tamanhoCanvas,
+    required bool uniaoSugerida,
+    required bool selecionada,
   }) {
-    final sorted = [...tables]..sort((a, b) => a.code.compareTo(b.code));
-    final anchor = _anchorTable(sorted);
-    final bounds = _groupBounds(sorted);
-    final groupStatus = _resolveGroupStatus(sorted);
-    final groupLabel = _groupLabel(sorted);
-    final groupChairs = sorted.fold<int>(
+    final sorted = [...mesas]..sort((a, b) => a.codigo.compareTo(b.codigo));
+    final anchor = _mesaAncora(sorted);
+    final bounds = _limitesGrupo(sorted);
+    final situacaoGrupo = _resolverSituacaoGrupo(sorted);
+    final groupLabel = _rotuloGrupo(sorted);
+    final cadeirasGrupo = sorted.fold<int>(
       0,
-      (sum, table) => sum + table.chairsCount,
+      (sum, mesa) => sum + mesa.quantidadeCadeiras,
     );
-    final isMoving = sorted.any(
-      (table) => widget.controller.movingTableId == table.id,
+    final emMovimento = sorted.any(
+      (mesa) => widget.controlador.idMesaEmMovimento == mesa.id,
     );
 
-    final mergedTable = RestaurantTable(
-      id: groupId,
-      code: groupLabel,
-      areaId: area.id,
+    final mergedTable = MesaRestaurante(
+      id: idGrupo,
+      codigo: groupLabel,
+      idArea: area.id,
       x: bounds.left,
       y: bounds.top,
       width: bounds.width,
       height: bounds.height,
-      shape: TableShape.rectangular,
-      chairsCount: groupChairs,
-      status: groupStatus,
-      isJoined: true,
-      joinGroupId: groupId,
-      activeOrderId: anchor.activeOrderId,
-      lastOrderAt: anchor.lastOrderAt,
-      seatedPeople: anchor.seatedPeople,
-      customerName: anchor.customerName,
-      orderItemsCount: anchor.orderItemsCount,
-      partialTotal: anchor.partialTotal,
+      formato: FormatoMesa.retangular,
+      quantidadeCadeiras: cadeirasGrupo,
+      situacao: situacaoGrupo,
+      estaUnida: true,
+      idGrupoUniao: idGrupo,
+      idComandaAtiva: anchor.idComandaAtiva,
+      ultimoPedidoEm: anchor.ultimoPedidoEm,
+      pessoasSentadas: anchor.pessoasSentadas,
+      nomeCliente: anchor.nomeCliente,
+      quantidadeItensPedido: anchor.quantidadeItensPedido,
+      totalParcial: anchor.totalParcial,
     );
 
     return Positioned(
       left: bounds.left,
       top: bounds.top,
-      child: TableNode(
-        table: mergedTable,
-        areaName: area.name,
-        status: groupStatus,
-        isMoving: isMoving,
-        isSuggestedJoin: isSuggestedJoin || isSelected,
-        canDrag: widget.isEditMode,
-        lastEventAt: widget.controller.lastOrderAtForScope(anchor.id),
-        onTap: () => widget.isEditMode
-            ? _selectGroup(groupId, () => widget.onEditTable(anchor))
-            : _selectOperationalTable(anchor),
-        onDoubleTap: () {
-          if (!widget.isEditMode) {
-            widget.onOpenOrder(anchor);
+      child: ElementoMesa(
+        mesa: mergedTable,
+        nomeArea: area.nome,
+        situacao: situacaoGrupo,
+        emMovimento: emMovimento,
+        uniaoSugerida: uniaoSugerida || selecionada,
+        podeArrastar: widget.modoEdicao,
+        ultimoEventoEm: widget.controlador.ultimoPedidoDoContexto(anchor.id),
+        aoTocar: () => widget.modoEdicao
+            ? _selecionarGrupo(idGrupo, () => widget.aoEditarMesa(anchor))
+            : _selecionarMesaOperacional(anchor),
+        aoToqueDuplo: () {
+          if (!widget.modoEdicao) {
+            widget.aoAbrirComanda(anchor);
           }
         },
-        onPanStart: () => _selectGroup(groupId, () {
-          widget.controller.beginMove(anchor.id);
+        aoIniciarArraste: () => _selecionarGrupo(idGrupo, () {
+          widget.controlador.iniciarMovimento(anchor.id);
         }),
-        onPanUpdate: (delta) =>
-            widget.controller.moveTable(anchor.id, delta / _scale, canvasSize),
-        onPanEnd: widget.controller.finishMove,
+        aoAtualizarArraste: (delta) => widget.controlador.moverMesa(
+          anchor.id,
+          delta / _escala,
+          tamanhoCanvas,
+        ),
+        aoFinalizarArraste: widget.controlador.finalizarMovimento,
       ),
     );
   }
 
-  void _selectOperationalTable(RestaurantTable table) {
+  void _selecionarMesaOperacional(MesaRestaurante mesa) {
     setState(() {
-      _selectedOperationalTableId = table.id;
+      _idMesaOperacionalSelecionada = mesa.id;
     });
   }
 
-  Widget _buildQuickPopover(RestaurantTable table, Size viewportSize) {
+  Widget _construirResumoRapido(MesaRestaurante mesa, Size tamanhoAreaVisivel) {
     const preferredWidth = 258.0;
-    const preferredHeight = 172.0;
+    const alturaPreferida = 172.0;
     const margin = 12.0;
 
-    final scenePosition = MatrixUtils.transformPoint(
-      _transformationController.value,
-      Offset(table.x, table.y),
+    final posicaoCena = MatrixUtils.transformPoint(
+      _controleTransformacao.value,
+      Offset(mesa.x, mesa.y),
     );
-    final availableWidth = max(0.0, viewportSize.width - (margin * 2));
-    final popoverWidth = min(preferredWidth, availableWidth);
-    final tableCenterX = scenePosition.dx + (table.width / 2);
-    final prefersRight = tableCenterX < viewportSize.width / 2;
-    final preferredLeft = prefersRight
-        ? scenePosition.dx + table.width + margin
-        : scenePosition.dx - popoverWidth - margin;
+    final larguraDisponivel = max(0.0, tamanhoAreaVisivel.width - (margin * 2));
+    final larguraResumo = min(preferredWidth, larguraDisponivel);
+    final centroHorizontalMesa = posicaoCena.dx + (mesa.width / 2);
+    final prefereDireita = centroHorizontalMesa < tamanhoAreaVisivel.width / 2;
+    final preferredLeft = prefereDireita
+        ? posicaoCena.dx + mesa.width + margin
+        : posicaoCena.dx - larguraResumo - margin;
     final left = preferredLeft
-        .clamp(margin, max(margin, viewportSize.width - popoverWidth - margin))
-        .toDouble();
-    final top = (scenePosition.dy + (table.height / 2) - (preferredHeight / 2))
         .clamp(
           margin,
-          max(margin, viewportSize.height - preferredHeight - margin),
+          max(margin, tamanhoAreaVisivel.width - larguraResumo - margin),
+        )
+        .toDouble();
+    final top = (posicaoCena.dy + (mesa.height / 2) - (alturaPreferida / 2))
+        .clamp(
+          margin,
+          max(margin, tamanhoAreaVisivel.height - alturaPreferida - margin),
         )
         .toDouble();
 
     return Positioned(
       left: left,
       top: top,
-      width: popoverWidth,
-      child: _TableQuickPopover(
-        table: table,
-        status: widget.controller.resolveStatus(table),
-        itemsCount: widget.controller.groupItemsCount(table.id),
-        partialTotal: widget.controller.groupPartialTotal(table.id),
-        lastOrderAt: widget.controller.lastOrderAtForScope(table.id),
-        hasActiveOrder:
-            widget.controller.activeOrderIdForScope(table.id) != null,
-        onOpenOrder: () => widget.onOpenOrder(table),
-        onMoreDetails: () => widget.onOpenTable(table),
-        onClose: () => setState(() => _selectedOperationalTableId = null),
+      width: larguraResumo,
+      child: _ResumoRapidoMesa(
+        mesa: mesa,
+        situacao: widget.controlador.resolverSituacao(mesa),
+        quantidadeItens: widget.controlador.quantidadeItensGrupo(mesa.id),
+        totalParcial: widget.controlador.totalParcialGrupo(mesa.id),
+        ultimoPedidoEm: widget.controlador.ultimoPedidoDoContexto(mesa.id),
+        temComandaAtiva:
+            widget.controlador.idComandaAtivaDoContexto(mesa.id) != null,
+        aoAbrirComanda: () => widget.aoAbrirComanda(mesa),
+        aoVerDetalhes: () => widget.aoAbrirMesa(mesa),
+        aoFechar: () => setState(() => _idMesaOperacionalSelecionada = null),
       ),
     );
   }
 
-  Rect _groupBounds(List<RestaurantTable> tables) {
-    var minX = tables.first.x;
-    var minY = tables.first.y;
-    var maxX = tables.first.x + tables.first.width;
-    var maxY = tables.first.y + tables.first.height;
+  Rect _limitesGrupo(List<MesaRestaurante> mesas) {
+    var minX = mesas.first.x;
+    var minY = mesas.first.y;
+    var maxX = mesas.first.x + mesas.first.width;
+    var maxY = mesas.first.y + mesas.first.height;
 
-    for (final table in tables.skip(1)) {
-      minX = min(minX, table.x);
-      minY = min(minY, table.y);
-      maxX = max(maxX, table.x + table.width);
-      maxY = max(maxY, table.y + table.height);
+    for (final mesa in mesas.skip(1)) {
+      minX = min(minX, mesa.x);
+      minY = min(minY, mesa.y);
+      maxX = max(maxX, mesa.x + mesa.width);
+      maxY = max(maxY, mesa.y + mesa.height);
     }
 
     return Rect.fromLTRB(minX, minY, maxX, maxY);
   }
 
-  RestaurantTable _anchorTable(List<RestaurantTable> tables) {
-    for (final table in tables) {
-      if (table.activeOrderId != null) {
-        return table;
+  MesaRestaurante _mesaAncora(List<MesaRestaurante> mesas) {
+    for (final mesa in mesas) {
+      if (mesa.idComandaAtiva != null) {
+        return mesa;
       }
     }
-    for (final table in tables) {
-      if ((table.seatedPeople ?? 0) > 0) {
-        return table;
+    for (final mesa in mesas) {
+      if ((mesa.pessoasSentadas ?? 0) > 0) {
+        return mesa;
       }
     }
-    return tables.first;
+    return mesas.first;
   }
 
-  String _groupLabel(List<RestaurantTable> tables) {
-    if (tables.length == 2) {
-      return '${tables[0].code} + ${tables[1].code}';
+  String _rotuloGrupo(List<MesaRestaurante> mesas) {
+    if (mesas.length == 2) {
+      return '${mesas[0].codigo} + ${mesas[1].codigo}';
     }
-    final extra = tables.length - 1;
-    return '${tables[0].code} + $extra mesas';
+    final extra = mesas.length - 1;
+    return '${mesas[0].codigo} + $extra mesas';
   }
 
-  TableStatus _resolveGroupStatus(List<RestaurantTable> tables) {
-    final statuses = tables
-        .map((table) => widget.controller.resolveStatus(table))
+  SituacaoMesa _resolverSituacaoGrupo(List<MesaRestaurante> mesas) {
+    final situacoes = mesas
+        .map((mesa) => widget.controlador.resolverSituacao(mesa))
         .toList();
 
-    if (statuses.contains(TableStatus.withOrder)) {
-      return TableStatus.withOrder;
+    if (situacoes.contains(SituacaoMesa.comPedido)) {
+      return SituacaoMesa.comPedido;
     }
-    if (statuses.contains(TableStatus.awaitingRelease1H)) {
-      return TableStatus.awaitingRelease1H;
+    if (situacoes.contains(SituacaoMesa.aguardandoLiberacaoHa1H)) {
+      return SituacaoMesa.aguardandoLiberacaoHa1H;
     }
-    if (statuses.contains(TableStatus.noOrder30Min)) {
-      return TableStatus.noOrder30Min;
+    if (situacoes.contains(SituacaoMesa.semPedidoHa30Min)) {
+      return SituacaoMesa.semPedidoHa30Min;
     }
-    if (statuses.contains(TableStatus.occupied)) {
-      return TableStatus.occupied;
+    if (situacoes.contains(SituacaoMesa.ocupada)) {
+      return SituacaoMesa.ocupada;
     }
-    if (statuses.contains(TableStatus.attention)) {
-      return TableStatus.attention;
+    if (situacoes.contains(SituacaoMesa.atencao)) {
+      return SituacaoMesa.atencao;
     }
-    return TableStatus.free;
+    return SituacaoMesa.livre;
   }
 
-  Future<void> _handleSeparateGroup(String groupId) async {
-    final error = await widget.controller.separateGroup(groupId);
+  Future<void> _tratarSeparacaoGrupo(String idGrupo) async {
+    final error = await widget.controlador.separarGrupo(idGrupo);
     if (!mounted) {
       return;
     }
@@ -514,9 +528,9 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
       ).showSnackBar(SnackBar(content: Text(error)));
       return;
     }
-    if (_selectedGroupId == groupId) {
+    if (_idGrupoSelecionado == idGrupo) {
       setState(() {
-        _selectedGroupId = null;
+        _idGrupoSelecionado = null;
       });
     }
     ScaffoldMessenger.of(context).showSnackBar(
@@ -524,25 +538,28 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
     );
   }
 
-  void _selectGroup(String? groupId, VoidCallback action) {
-    if (widget.isEditMode && _selectedGroupId != groupId) {
+  void _selecionarGrupo(String? idGrupo, VoidCallback acao) {
+    if (widget.modoEdicao && _idGrupoSelecionado != idGrupo) {
       setState(() {
-        _selectedGroupId = groupId;
+        _idGrupoSelecionado = idGrupo;
       });
-    } else if (!widget.isEditMode && _selectedGroupId != null) {
+    } else if (!widget.modoEdicao && _idGrupoSelecionado != null) {
       setState(() {
-        _selectedGroupId = null;
+        _idGrupoSelecionado = null;
       });
     }
-    action();
+    acao();
   }
 }
 
-class _UnmixFloatingBar extends StatelessWidget {
-  const _UnmixFloatingBar({required this.tableCount, required this.onUnmix});
+class _BarraFlutuanteSeparacao extends StatelessWidget {
+  const _BarraFlutuanteSeparacao({
+    required this.quantidadeMesas,
+    required this.aoDesfazerUniao,
+  });
 
-  final int tableCount;
-  final VoidCallback onUnmix;
+  final int quantidadeMesas;
+  final VoidCallback aoDesfazerUniao;
 
   @override
   Widget build(BuildContext context) {
@@ -570,7 +587,7 @@ class _UnmixFloatingBar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            'Desfazer ($tableCount)',
+            'Desfazer ($quantidadeMesas)',
             style: const TextStyle(
               color: GulaColors.text,
               fontWeight: FontWeight.w700,
@@ -578,7 +595,7 @@ class _UnmixFloatingBar extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           FilledButton.tonalIcon(
-            onPressed: onUnmix,
+            onPressed: aoDesfazerUniao,
             icon: const Icon(Icons.undo_rounded, size: 18),
             label: const Text('Desfazer'),
             style: FilledButton.styleFrom(
@@ -592,33 +609,33 @@ class _UnmixFloatingBar extends StatelessWidget {
   }
 }
 
-class _TableQuickPopover extends StatelessWidget {
-  const _TableQuickPopover({
-    required this.table,
-    required this.status,
-    required this.itemsCount,
-    required this.partialTotal,
-    required this.lastOrderAt,
-    required this.hasActiveOrder,
-    required this.onOpenOrder,
-    required this.onMoreDetails,
-    required this.onClose,
+class _ResumoRapidoMesa extends StatelessWidget {
+  const _ResumoRapidoMesa({
+    required this.mesa,
+    required this.situacao,
+    required this.quantidadeItens,
+    required this.totalParcial,
+    required this.ultimoPedidoEm,
+    required this.temComandaAtiva,
+    required this.aoAbrirComanda,
+    required this.aoVerDetalhes,
+    required this.aoFechar,
   });
 
-  final RestaurantTable table;
-  final TableStatus status;
-  final int itemsCount;
-  final double partialTotal;
-  final DateTime? lastOrderAt;
-  final bool hasActiveOrder;
-  final VoidCallback onOpenOrder;
-  final VoidCallback onMoreDetails;
-  final VoidCallback onClose;
+  final MesaRestaurante mesa;
+  final SituacaoMesa situacao;
+  final int quantidadeItens;
+  final double totalParcial;
+  final DateTime? ultimoPedidoEm;
+  final bool temComandaAtiva;
+  final VoidCallback aoAbrirComanda;
+  final VoidCallback aoVerDetalhes;
+  final VoidCallback aoFechar;
 
   @override
   Widget build(BuildContext context) {
-    final orderLabel = hasActiveOrder
-        ? 'Pedido ${table.activeOrderId?.replaceFirst('ORD-', '#') ?? ''}'
+    final orderLabel = temComandaAtiva
+        ? 'Pedido ${mesa.idComandaAtiva?.replaceFirst('ORD-', '#') ?? ''}'
         : 'Mesa disponível';
 
     return Material(
@@ -629,7 +646,7 @@ class _TableQuickPopover extends StatelessWidget {
           color: GulaColors.surfaceAlt.withValues(alpha: 0.98),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: tableStatusColor(status).withValues(alpha: 0.82),
+            color: corSituacaoMesa(situacao).withValues(alpha: 0.82),
           ),
           boxShadow: [
             BoxShadow(
@@ -647,7 +664,7 @@ class _TableQuickPopover extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    table.code,
+                    mesa.codigo,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -658,11 +675,11 @@ class _TableQuickPopover extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 6),
-                TableStatusBadge(status: status, compact: true),
+                IndicadorSituacaoMesa(situacao: situacao, compacto: true),
                 const SizedBox(width: 2),
                 IconButton(
                   tooltip: 'Fechar resumo',
-                  onPressed: onClose,
+                  onPressed: aoFechar,
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.close_rounded, size: 18),
                 ),
@@ -685,16 +702,17 @@ class _TableQuickPopover extends StatelessWidget {
               runSpacing: 4,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                _QuickData(
-                  icon: Icons.schedule_outlined,
-                  label: _formatElapsed(lastOrderAt),
+                _DadoRapido(
+                  icone: Icons.schedule_outlined,
+                  rotulo: _formatarTempoDecorrido(ultimoPedidoEm),
                 ),
-                _QuickData(
-                  icon: Icons.receipt_long_outlined,
-                  label: '$itemsCount item${itemsCount == 1 ? '' : 's'}',
+                _DadoRapido(
+                  icone: Icons.receipt_long_outlined,
+                  rotulo:
+                      '$quantidadeItens item${quantidadeItens == 1 ? '' : 's'}',
                 ),
                 Text(
-                  'R\$ ${partialTotal.toStringAsFixed(2)}',
+                  'R\$ ${totalParcial.toStringAsFixed(2)}',
                   style: const TextStyle(
                     color: GulaColors.text,
                     fontSize: 12,
@@ -708,15 +726,15 @@ class _TableQuickPopover extends StatelessWidget {
               children: [
                 Expanded(
                   child: FilledButton.icon(
-                    onPressed: onOpenOrder,
+                    onPressed: aoAbrirComanda,
                     icon: Icon(
-                      hasActiveOrder
+                      temComandaAtiva
                           ? Icons.receipt_long_outlined
                           : Icons.add_shopping_cart_outlined,
                       size: 16,
                     ),
                     label: Text(
-                      hasActiveOrder ? 'Ver comanda' : 'Abrir pedido',
+                      temComandaAtiva ? 'Ver comanda' : 'Abrir pedido',
                     ),
                     style: FilledButton.styleFrom(
                       visualDensity: VisualDensity.compact,
@@ -727,7 +745,7 @@ class _TableQuickPopover extends StatelessWidget {
                 const SizedBox(width: 4),
                 IconButton(
                   tooltip: 'Detalhes da mesa',
-                  onPressed: onMoreDetails,
+                  onPressed: aoVerDetalhes,
                   icon: const Icon(Icons.more_horiz_rounded),
                 ),
               ],
@@ -738,36 +756,36 @@ class _TableQuickPopover extends StatelessWidget {
     );
   }
 
-  String _formatElapsed(DateTime? value) {
+  String _formatarTempoDecorrido(DateTime? value) {
     if (value == null) {
       return 'sem tempo';
     }
-    final elapsed = DateTime.now().difference(value);
-    if (elapsed.inMinutes < 1) {
+    final tempoDecorrido = DateTime.now().difference(value);
+    if (tempoDecorrido.inMinutes < 1) {
       return 'agora';
     }
-    if (elapsed.inMinutes < 60) {
-      return '${elapsed.inMinutes} min';
+    if (tempoDecorrido.inMinutes < 60) {
+      return '${tempoDecorrido.inMinutes} min';
     }
-    return '${elapsed.inHours} h';
+    return '${tempoDecorrido.inHours} h';
   }
 }
 
-class _QuickData extends StatelessWidget {
-  const _QuickData({required this.icon, required this.label});
+class _DadoRapido extends StatelessWidget {
+  const _DadoRapido({required this.icone, required this.rotulo});
 
-  final IconData icon;
-  final String label;
+  final IconData icone;
+  final String rotulo;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: GulaColors.textMuted),
+        Icon(icone, size: 14, color: GulaColors.textMuted),
         const SizedBox(width: 4),
         Text(
-          label,
+          rotulo,
           style: const TextStyle(
             color: GulaColors.textMuted,
             fontSize: 11,
@@ -779,18 +797,18 @@ class _QuickData extends StatelessWidget {
   }
 }
 
-class _LayoutModeButton extends StatelessWidget {
-  const _LayoutModeButton({
-    required this.isActive,
-    required this.onPressed,
-    required this.onAddTable,
-    required this.compact,
+class _BotaoModoLayout extends StatelessWidget {
+  const _BotaoModoLayout({
+    required this.ativo,
+    required this.aoPressionar,
+    required this.aoAdicionarMesa,
+    required this.compacto,
   });
 
-  final bool isActive;
-  final VoidCallback onPressed;
-  final VoidCallback onAddTable;
-  final bool compact;
+  final bool ativo;
+  final VoidCallback aoPressionar;
+  final VoidCallback aoAdicionarMesa;
+  final bool compacto;
 
   @override
   Widget build(BuildContext context) {
@@ -800,8 +818,8 @@ class _LayoutModeButton extends StatelessWidget {
         color: GulaColors.surfaceAlt.withValues(alpha: 0.97),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: isActive ? GulaColors.primary : GulaColors.border,
-          width: isActive ? 1.5 : 1,
+          color: ativo ? GulaColors.primary : GulaColors.border,
+          width: ativo ? 1.5 : 1,
         ),
         boxShadow: [
           BoxShadow(
@@ -814,33 +832,31 @@ class _LayoutModeButton extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (isActive)
+          if (ativo)
             IconButton(
               tooltip: 'Nova mesa',
-              onPressed: onAddTable,
+              onPressed: aoAdicionarMesa,
               visualDensity: VisualDensity.compact,
               style: IconButton.styleFrom(
                 foregroundColor: GulaColors.primary,
-                fixedSize: Size(compact ? 34 : 38, compact ? 34 : 38),
+                fixedSize: Size(compacto ? 34 : 38, compacto ? 34 : 38),
               ),
               icon: const Icon(Icons.add_rounded),
             ),
           FilledButton.icon(
-            onPressed: onPressed,
+            onPressed: aoPressionar,
             icon: Icon(
-              isActive ? Icons.lock_open_rounded : Icons.lock_outline_rounded,
-              size: compact ? 16 : 18,
+              ativo ? Icons.lock_open_rounded : Icons.lock_outline_rounded,
+              size: compacto ? 16 : 18,
             ),
-            label: Text(isActive ? 'Layout ativo' : 'Modo layout'),
+            label: Text(ativo ? 'Layout ativo' : 'Modo layout'),
             style: FilledButton.styleFrom(
-              backgroundColor: isActive
-                  ? GulaColors.primary
-                  : GulaColors.surface,
-              foregroundColor: isActive ? Colors.white : GulaColors.text,
+              backgroundColor: ativo ? GulaColors.primary : GulaColors.surface,
+              foregroundColor: ativo ? Colors.white : GulaColors.text,
               visualDensity: VisualDensity.compact,
               padding: EdgeInsets.symmetric(
-                horizontal: compact ? 10 : 12,
-                vertical: compact ? 9 : 10,
+                horizontal: compacto ? 10 : 12,
+                vertical: compacto ? 9 : 10,
               ),
             ),
           ),
@@ -850,23 +866,23 @@ class _LayoutModeButton extends StatelessWidget {
   }
 }
 
-class _CanvasControls extends StatelessWidget {
-  const _CanvasControls({
-    required this.onZoomOut,
-    required this.onZoomIn,
-    required this.onResetZoom,
-    this.compact = false,
+class _ControlesCanvas extends StatelessWidget {
+  const _ControlesCanvas({
+    required this.aoDiminuirZoom,
+    required this.aoAumentarZoom,
+    required this.aoRestaurarZoom,
+    this.compacto = false,
   });
 
-  final VoidCallback onZoomOut;
-  final VoidCallback onZoomIn;
-  final VoidCallback onResetZoom;
-  final bool compact;
+  final VoidCallback aoDiminuirZoom;
+  final VoidCallback aoAumentarZoom;
+  final VoidCallback aoRestaurarZoom;
+  final bool compacto;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(compact ? 3 : 4),
+      padding: EdgeInsets.all(compacto ? 3 : 4),
       decoration: BoxDecoration(
         color: GulaColors.surfaceAlt.withValues(alpha: 0.96),
         borderRadius: BorderRadius.circular(18),
@@ -874,8 +890,8 @@ class _CanvasControls extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: compact ? 10 : 14,
-            offset: Offset(0, compact ? 5 : 7),
+            blurRadius: compacto ? 10 : 14,
+            offset: Offset(0, compacto ? 5 : 7),
           ),
         ],
       ),
@@ -883,23 +899,23 @@ class _CanvasControls extends StatelessWidget {
         spacing: 2,
         runSpacing: 2,
         children: [
-          _ControlButton(
-            tooltip: 'Diminuir zoom',
-            icon: Icons.remove_rounded,
-            onPressed: onZoomOut,
-            compact: compact,
+          _BotaoControle(
+            dica: 'Diminuir zoom',
+            icone: Icons.remove_rounded,
+            aoPressionar: aoDiminuirZoom,
+            compacto: compacto,
           ),
-          _ControlButton(
-            tooltip: 'Restaurar zoom',
-            icon: Icons.center_focus_strong_outlined,
-            onPressed: onResetZoom,
-            compact: compact,
+          _BotaoControle(
+            dica: 'Restaurar zoom',
+            icone: Icons.center_focus_strong_outlined,
+            aoPressionar: aoRestaurarZoom,
+            compacto: compacto,
           ),
-          _ControlButton(
-            tooltip: 'Aumentar zoom',
-            icon: Icons.add_rounded,
-            onPressed: onZoomIn,
-            compact: compact,
+          _BotaoControle(
+            dica: 'Aumentar zoom',
+            icone: Icons.add_rounded,
+            aoPressionar: aoAumentarZoom,
+            compacto: compacto,
           ),
         ],
       ),
@@ -907,44 +923,44 @@ class _CanvasControls extends StatelessWidget {
   }
 }
 
-class _ControlButton extends StatelessWidget {
-  const _ControlButton({
-    required this.tooltip,
-    required this.icon,
-    required this.onPressed,
-    this.compact = false,
+class _BotaoControle extends StatelessWidget {
+  const _BotaoControle({
+    required this.dica,
+    required this.icone,
+    required this.aoPressionar,
+    this.compacto = false,
   });
 
-  final String tooltip;
-  final IconData icon;
-  final VoidCallback onPressed;
-  final bool compact;
+  final String dica;
+  final IconData icone;
+  final VoidCallback aoPressionar;
+  final bool compacto;
 
   @override
   Widget build(BuildContext context) {
     return Tooltip(
-      message: tooltip,
+      message: dica,
       child: IconButton(
-        onPressed: onPressed,
+        onPressed: aoPressionar,
         visualDensity: VisualDensity.compact,
         style: IconButton.styleFrom(
           backgroundColor: Colors.transparent,
           foregroundColor: GulaColors.text,
-          fixedSize: Size(compact ? 32 : 38, compact ? 32 : 38),
+          fixedSize: Size(compacto ? 32 : 38, compacto ? 32 : 38),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(compact ? 11 : 13),
+            borderRadius: BorderRadius.circular(compacto ? 11 : 13),
           ),
         ),
-        icon: Icon(icon, size: compact ? 17 : 19),
+        icon: Icon(icone, size: compacto ? 17 : 19),
       ),
     );
   }
 }
 
-class _JoinSuggestionBanner extends StatelessWidget {
-  const _JoinSuggestionBanner({required this.onJoin});
+class _AvisoSugestaoUniao extends StatelessWidget {
+  const _AvisoSugestaoUniao({required this.aoUnir});
 
-  final VoidCallback onJoin;
+  final VoidCallback aoUnir;
 
   @override
   Widget build(BuildContext context) {
@@ -983,7 +999,7 @@ class _JoinSuggestionBanner extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             FilledButton.tonalIcon(
-              onPressed: onJoin,
+              onPressed: aoUnir,
               icon: const Icon(Icons.call_merge_rounded, size: 18),
               label: const Text('Unir'),
               style: FilledButton.styleFrom(
@@ -1001,23 +1017,23 @@ class _JoinSuggestionBanner extends StatelessWidget {
   }
 }
 
-class _RestaurantFloorPainter extends CustomPainter {
-  const _RestaurantFloorPainter({required this.areaType});
+class _PintorPlantaRestaurante extends CustomPainter {
+  const _PintorPlantaRestaurante({required this.tipoArea});
 
-  final String areaType;
+  final String tipoArea;
 
   @override
   void paint(Canvas canvas, Size size) {
     final basePaint = Paint()..color = GulaColors.canvas;
     canvas.drawRect(Offset.zero & size, basePaint);
 
-    _drawFloorTexture(canvas, size);
-    _drawGrid(canvas, size);
-    _drawWalls(canvas, size);
-    _drawAreaFixtures(canvas, size);
+    _desenharTexturaPiso(canvas, size);
+    _desenharGrade(canvas, size);
+    _desenharParedes(canvas, size);
+    _desenharElementosArea(canvas, size);
   }
 
-  void _drawFloorTexture(Canvas canvas, Size size) {
+  void _desenharTexturaPiso(Canvas canvas, Size size) {
     final plankPaint = Paint()..color = Colors.white.withValues(alpha: 0.15);
     final linePaint = Paint()
       ..color = GulaColors.borderSoft.withValues(alpha: 0.45)
@@ -1039,7 +1055,7 @@ class _RestaurantFloorPainter extends CustomPainter {
     }
   }
 
-  void _drawGrid(Canvas canvas, Size size) {
+  void _desenharGrade(Canvas canvas, Size size) {
     final fineLine = Paint()
       ..color = GulaColors.borderSoft.withValues(alpha: 0.5)
       ..strokeWidth = 1;
@@ -1053,7 +1069,7 @@ class _RestaurantFloorPainter extends CustomPainter {
     }
   }
 
-  void _drawWalls(Canvas canvas, Size size) {
+  void _desenharParedes(Canvas canvas, Size size) {
     final wallPaint = Paint()
       ..color = GulaColors.text.withValues(alpha: 0.22)
       ..style = PaintingStyle.stroke
@@ -1076,68 +1092,72 @@ class _RestaurantFloorPainter extends CustomPainter {
       Offset(size.width * 0.58, size.height - 12),
       doorPaint,
     );
-    _drawLabel(canvas, 'Entrada', Offset(size.width * 0.46, size.height - 46));
+    _desenharRotulo(
+      canvas,
+      'Entrada',
+      Offset(size.width * 0.46, size.height - 46),
+    );
   }
 
-  void _drawAreaFixtures(Canvas canvas, Size size) {
+  void _desenharElementosArea(Canvas canvas, Size size) {
     final counterColor = GulaColors.textMuted.withValues(alpha: 0.18);
     final greenColor = const Color(0xFF8DAA91).withValues(alpha: 0.22);
     final glassColor = const Color(0xFF87A7B2).withValues(alpha: 0.2);
 
-    switch (areaType) {
+    switch (tipoArea) {
       case 'externo':
-        _drawFixture(
+        _desenharElemento(
           canvas,
           Rect.fromLTWH(54, 42, size.width - 108, 38),
           'Cobertura',
           glassColor,
         );
-        _drawFixture(
+        _desenharElemento(
           canvas,
           Rect.fromLTWH(size.width - 136, 110, 64, 360),
           'Jardim',
           greenColor,
-          verticalLabel: true,
+          rotuloVertical: true,
         );
         break;
       case 'premium':
-        _drawFixture(
+        _desenharElemento(
           canvas,
           Rect.fromLTWH(62, 56, 180, 58),
           'Recepcao VIP',
           counterColor,
         );
-        _drawFixture(
+        _desenharElemento(
           canvas,
           Rect.fromLTWH(size.width - 178, 72, 76, 420),
           'Adega',
           const Color(0xFF7E6B8E).withValues(alpha: 0.2),
-          verticalLabel: true,
+          rotuloVertical: true,
         );
         break;
       default:
-        _drawFixture(
+        _desenharElemento(
           canvas,
           Rect.fromLTWH(size.width - 210, 64, 146, 78),
           'Caixa',
           counterColor,
         );
-        _drawFixture(
+        _desenharElemento(
           canvas,
           Rect.fromLTWH(size.width - 192, 184, 112, 270),
           'Copa',
           counterColor,
-          verticalLabel: true,
+          rotuloVertical: true,
         );
     }
   }
 
-  void _drawFixture(
+  void _desenharElemento(
     Canvas canvas,
     Rect rect,
     String label,
     Color color, {
-    bool verticalLabel = false,
+    bool rotuloVertical = false,
   }) {
     final paint = Paint()..color = color;
     final borderPaint = Paint()
@@ -1148,17 +1168,17 @@ class _RestaurantFloorPainter extends CustomPainter {
 
     canvas.drawRRect(rrect, paint);
     canvas.drawRRect(rrect, borderPaint);
-    _drawLabel(
+    _desenharRotulo(
       canvas,
       label,
-      verticalLabel
+      rotuloVertical
           ? Offset(rect.center.dx - 20, rect.center.dy)
           : Offset(rect.left + 14, rect.top + 18),
-      rotate: verticalLabel,
+      rotate: rotuloVertical,
     );
   }
 
-  void _drawLabel(
+  void _desenharRotulo(
     Canvas canvas,
     String label,
     Offset offset, {
@@ -1186,7 +1206,7 @@ class _RestaurantFloorPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _RestaurantFloorPainter oldDelegate) {
-    return oldDelegate.areaType != areaType;
+  bool shouldRepaint(covariant _PintorPlantaRestaurante oldDelegate) {
+    return oldDelegate.tipoArea != tipoArea;
   }
 }

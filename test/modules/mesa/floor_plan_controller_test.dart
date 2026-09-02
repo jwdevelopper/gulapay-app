@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_app_teste/core/theme/gula_theme.dart';
 import 'package:my_app_teste/modules/mesa/controller/floor_plan_controller.dart';
+import 'package:my_app_teste/modules/mesa/dto/mesa_dto.dart';
 import 'package:my_app_teste/modules/mesa/model/restaurant_models.dart';
 import 'package:my_app_teste/modules/mesa/page/mesa_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,130 +14,168 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  test('bloqueia mesa duplicada e pessoas acima da capacidade', () async {
-    final controller = FloorPlanController();
-    await controller.load();
+  test('converte requisicao e resposta seguindo o padrao em portugues', () {
+    final requisicao = MesaSalvarRequisicao(numero: '12', capacidade: 4);
+    final resposta = MesaResposta.deJson({
+      'id': '12',
+      'numero': 12,
+      'capacidade': '4',
+      'status': 'LIVRE',
+      'ativo': true,
+    });
 
-    await controller.saveTable(
-      TableDraft(
-        code: 'Mesa 01',
-        areaId: 'salao',
-        shape: TableShape.rectangular,
-        chairsCount: 4,
+    expect(requisicao.paraJson(), {'numero': '12', 'capacidade': 4});
+    expect(resposta.id, 12);
+    expect(resposta.numero, '12');
+    expect(resposta.capacidade, 4);
+    expect(resposta.situacao, 'LIVRE');
+  });
+
+  test('preserva o formato antigo dos dados locais do mapa', () {
+    final mesa = MesaRestaurante.deMapa({
+      'id': 'm1',
+      'code': 'Mesa 01',
+      'areaId': 'salao',
+      'x': 10,
+      'y': 20,
+      'width': 112,
+      'height': 84,
+      'shape': 'round',
+      'chairsCount': 4,
+      'status': 'free',
+      'isJoined': false,
+    });
+
+    expect(mesa.formato, FormatoMesa.redonda);
+    expect(mesa.situacao, SituacaoMesa.livre);
+    expect(mesa.paraMapa()['shape'], 'round');
+    expect(mesa.paraMapa()['status'], 'free');
+  });
+
+  test('bloqueia mesa duplicada e pessoas acima da capacidade', () async {
+    final controlador = ControladorMapaMesas();
+    await controlador.carregar();
+
+    await controlador.salvarMesa(
+      RascunhoMesa(
+        codigo: 'Mesa 01',
+        idArea: 'salao',
+        formato: FormatoMesa.retangular,
+        quantidadeCadeiras: 4,
         width: 112,
         height: 84,
       ),
     );
 
     expect(
-      controller.lastActionError,
+      controlador.erroUltimaAcao,
       'Ja existe uma mesa com esse codigo nessa area.',
     );
 
-    await controller.saveTable(
-      TableDraft(
-        code: 'Mesa 99',
-        areaId: 'salao',
-        shape: TableShape.rectangular,
-        chairsCount: 2,
+    await controlador.salvarMesa(
+      RascunhoMesa(
+        codigo: 'Mesa 99',
+        idArea: 'salao',
+        formato: FormatoMesa.retangular,
+        quantidadeCadeiras: 2,
         width: 112,
         height: 84,
-        seatedPeople: 3,
+        pessoasSentadas: 3,
       ),
     );
 
     expect(
-      controller.lastActionError,
+      controlador.erroUltimaAcao,
       'Pessoas sentadas nao podem ultrapassar a capacidade da mesa.',
     );
     expect(
-      controller
-          .areaById('salao')!
-          .tables
-          .any((table) => table.code == 'Mesa 99'),
+      controlador
+          .buscarAreaPorId('salao')!
+          .mesas
+          .any((mesa) => mesa.codigo == 'Mesa 99'),
       isFalse,
     );
 
-    controller.dispose();
+    controlador.dispose();
   });
 
   test('sugere uniao quando mesas ficam proximas no mapa', () async {
-    final controller = FloorPlanController();
-    await controller.load();
+    final controlador = ControladorMapaMesas();
+    await controlador.carregar();
 
-    controller.beginMove('m3');
-    await controller.moveTable(
+    controlador.iniciarMovimento('m3');
+    await controlador.moverMesa(
       'm3',
       const Offset(-78, -162),
       const Size(920, 640),
     );
 
-    expect(controller.suggestedJoinTargetId, 'm2');
-    expect(controller.suggestedJoinSourceId, 'm3');
+    expect(controlador.idAlvoUniaoSugerida, 'm2');
+    expect(controlador.idOrigemUniaoSugerida, 'm3');
 
-    controller.dispose();
+    controlador.dispose();
   });
 
   test('move mesa com delta pequeno sem travar no snap da grade', () async {
-    final controller = FloorPlanController();
-    await controller.load();
+    final controlador = ControladorMapaMesas();
+    await controlador.carregar();
 
-    final before = controller.findTableById('m3')!;
-    controller.beginMove('m3');
-    await controller.moveTable(
+    final before = controlador.buscarMesaPorId('m3')!;
+    controlador.iniciarMovimento('m3');
+    await controlador.moverMesa(
       'm3',
       const Offset(2.5, 1.5),
       const Size(920, 640),
     );
-    final duringMove = controller.findTableById('m3')!;
+    final duringMove = controlador.buscarMesaPorId('m3')!;
 
     expect(duringMove.x, closeTo(before.x + 2.5, 0.01));
     expect(duringMove.y, closeTo(before.y + 1.5, 0.01));
 
-    await controller.finishMove();
-    final afterDrop = controller.findTableById('m3')!;
+    await controlador.finalizarMovimento();
+    final afterDrop = controlador.buscarMesaPorId('m3')!;
 
     expect(afterDrop.x % 12, 0);
     expect(afterDrop.y % 12, 0);
 
-    controller.dispose();
+    controlador.dispose();
   });
 
   test('une mesas sugeridas direto pelo mapa de edicao', () async {
-    final controller = FloorPlanController();
-    await controller.load();
+    final controlador = ControladorMapaMesas();
+    await controlador.carregar();
 
-    controller.beginMove('m3');
-    await controller.moveTable(
+    controlador.iniciarMovimento('m3');
+    await controlador.moverMesa(
       'm3',
       const Offset(-78, -162),
       const Size(920, 640),
     );
 
-    final error = await controller.joinSuggestedTables();
+    final error = await controlador.unirMesasSugeridas();
 
     expect(error, isNull);
-    expect(controller.findTableById('m2')!.isJoined, isTrue);
-    expect(controller.findTableById('m3')!.isJoined, isTrue);
-    expect(controller.areaById('salao')!.joinGroups, hasLength(1));
+    expect(controlador.buscarMesaPorId('m2')!.estaUnida, isTrue);
+    expect(controlador.buscarMesaPorId('m3')!.estaUnida, isTrue);
+    expect(controlador.buscarAreaPorId('salao')!.gruposUniao, hasLength(1));
 
-    controller.dispose();
+    controlador.dispose();
   });
 
   test('bloqueia uniao de mesas com comandas ativas diferentes', () async {
-    final controller = FloorPlanController();
-    await controller.load();
+    final controlador = ControladorMapaMesas();
+    await controlador.carregar();
 
-    final result = await controller.openOrderForTable('m2');
+    final result = await controlador.abrirComandaDaMesa('m2');
     expect(result, isNotNull);
     expect(
-      controller.joinableTablesFor('m1').map((table) => table.id),
+      controlador.mesasCompativeisParaUniao('m1').map((mesa) => mesa.id),
       isNot(contains('m2')),
     );
 
-    final error = await controller.joinTables(
-      sourceTableId: 'm1',
-      targetTableId: 'm2',
+    final error = await controlador.unirMesas(
+      idMesaOrigem: 'm1',
+      idMesaAlvo: 'm2',
     );
 
     expect(
@@ -144,51 +183,51 @@ void main() {
       'As mesas possuem pedidos diferentes e nao podem ser unidas agora.',
     );
 
-    controller.dispose();
+    controlador.dispose();
   });
 
   test(
     'bloqueia mover ou esvaziar mesa com comanda ativa pela edicao',
     () async {
-      final controller = FloorPlanController();
-      await controller.load();
+      final controlador = ControladorMapaMesas();
+      await controlador.carregar();
 
-      await controller.saveTable(
-        TableDraft(
+      await controlador.salvarMesa(
+        RascunhoMesa(
           id: 'm1',
-          code: 'Mesa 01',
-          areaId: 'varanda',
-          shape: TableShape.rectangular,
-          chairsCount: 6,
+          codigo: 'Mesa 01',
+          idArea: 'varanda',
+          formato: FormatoMesa.retangular,
+          quantidadeCadeiras: 6,
           width: 116,
           height: 86,
-          seatedPeople: 4,
+          pessoasSentadas: 4,
         ),
       );
 
       expect(
-        controller.lastActionError,
+        controlador.erroUltimaAcao,
         'Encerre a comanda antes de mover a mesa para outra area.',
       );
 
-      await controller.saveTable(
-        TableDraft(
+      await controlador.salvarMesa(
+        RascunhoMesa(
           id: 'm1',
-          code: 'Mesa 01',
-          areaId: 'salao',
-          shape: TableShape.rectangular,
-          chairsCount: 6,
+          codigo: 'Mesa 01',
+          idArea: 'salao',
+          formato: FormatoMesa.retangular,
+          quantidadeCadeiras: 6,
           width: 116,
           height: 86,
         ),
       );
 
       expect(
-        controller.lastActionError,
+        controlador.erroUltimaAcao,
         'Mesa com comanda ativa precisa manter ao menos uma pessoa sentada.',
       );
 
-      controller.dispose();
+      controlador.dispose();
     },
   );
 
@@ -201,7 +240,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      MaterialApp(theme: GulaTheme.light(), home: const MesaPage()),
+      MaterialApp(theme: GulaTheme.light(), home: const MesaPagina()),
     );
     await tester.pumpAndSettle();
 
@@ -218,7 +257,7 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
 
       await tester.pumpWidget(
-        MaterialApp(theme: GulaTheme.light(), home: const MesaPage()),
+        MaterialApp(theme: GulaTheme.light(), home: const MesaPagina()),
       );
       await tester.pumpAndSettle();
 

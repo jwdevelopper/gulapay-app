@@ -3,37 +3,35 @@ import 'package:my_app_teste/core/theme/gula_theme.dart';
 import 'package:my_app_teste/modules/mesa/controller/floor_plan_controller.dart';
 import 'package:my_app_teste/modules/mesa/widget/table_status_badge.dart';
 
-class MesaOrderPage extends StatelessWidget {
-  const MesaOrderPage({
+class ComandaMesaPagina extends StatelessWidget {
+  const ComandaMesaPagina({
     super.key,
-    required this.controller,
-    required this.tableId,
+    required this.controlador,
+    required this.idMesa,
   });
 
-  final FloorPlanController controller;
-  final String tableId;
+  final ControladorMapaMesas controlador;
+  final String idMesa;
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: controller,
+      animation: controlador,
       builder: (context, _) {
-        final table = controller.findTableById(tableId);
-        if (table == null) {
+        final mesa = controlador.buscarMesaPorId(idMesa);
+        if (mesa == null) {
           return Scaffold(
             appBar: AppBar(title: const Text('Pedido da mesa')),
             body: const Center(child: Text('Mesa nao encontrada.')),
           );
         }
 
-        final scopeTables = controller.tablesForScope(tableId);
-        final status = controller.resolveStatus(table);
-        final area = controller.areaById(table.areaId);
+        final mesasDoContexto = controlador.mesasDoContexto(idMesa);
+        final situacao = controlador.resolverSituacao(mesa);
+        final area = controlador.buscarAreaPorId(mesa.idArea);
 
         return Scaffold(
-          appBar: AppBar(
-            title: Text('Pedido - ${table.code}'),
-          ),
+          appBar: AppBar(title: Text('Pedido - ${mesa.codigo}')),
           body: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -54,16 +52,16 @@ class MesaOrderPage extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              table.code,
+                              mesa.codigo,
                               style: Theme.of(context).textTheme.headlineSmall,
                             ),
                           ),
-                          TableStatusBadge(status: status),
+                          IndicadorSituacaoMesa(situacao: situacao),
                         ],
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        area?.name ?? 'Area nao identificada',
+                        area?.nome ?? 'Area nao identificada',
                         style: const TextStyle(
                           color: GulaColors.textMuted,
                           fontWeight: FontWeight.w600,
@@ -74,21 +72,28 @@ class MesaOrderPage extends StatelessWidget {
                         spacing: 10,
                         runSpacing: 10,
                         children: [
-                          _OrderStat(
-                            label: 'Comanda',
-                            value: controller.activeOrderIdForScope(tableId) ?? '--',
+                          _EstatisticaComanda(
+                            rotulo: 'Comanda',
+                            valor:
+                                controlador.idComandaAtivaDoContexto(idMesa) ??
+                                '--',
                           ),
-                          _OrderStat(
-                            label: 'Mesas',
-                            value: scopeTables.map((item) => item.code).join(', '),
+                          _EstatisticaComanda(
+                            rotulo: 'Mesas',
+                            valor: mesasDoContexto
+                                .map((item) => item.codigo)
+                                .join(', '),
                           ),
-                          _OrderStat(
-                            label: 'Itens',
-                            value: controller.groupItemsCount(tableId).toString(),
+                          _EstatisticaComanda(
+                            rotulo: 'Itens',
+                            valor: controlador
+                                .quantidadeItensGrupo(idMesa)
+                                .toString(),
                           ),
-                          _OrderStat(
-                            label: 'Parcial',
-                            value: 'R\$ ${controller.groupPartialTotal(tableId).toStringAsFixed(2)}',
+                          _EstatisticaComanda(
+                            rotulo: 'Parcial',
+                            valor:
+                                'R\$ ${controlador.totalParcialGrupo(idMesa).toStringAsFixed(2)}',
                           ),
                         ],
                       ),
@@ -105,7 +110,7 @@ class MesaOrderPage extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: () async {
-                      await controller.addSimulatedItem(tableId);
+                      await controlador.adicionarItemSimulado(idMesa);
                       if (!context.mounted) {
                         return;
                       }
@@ -124,7 +129,7 @@ class MesaOrderPage extends StatelessWidget {
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: () async {
-                      await controller.markTableAsFree(tableId);
+                      await controlador.liberarMesa(idMesa);
                       if (!context.mounted) {
                         return;
                       }
@@ -143,14 +148,11 @@ class MesaOrderPage extends StatelessWidget {
   }
 }
 
-class _OrderStat extends StatelessWidget {
-  const _OrderStat({
-    required this.label,
-    required this.value,
-  });
+class _EstatisticaComanda extends StatelessWidget {
+  const _EstatisticaComanda({required this.rotulo, required this.valor});
 
-  final String label;
-  final String value;
+  final String rotulo;
+  final String valor;
 
   @override
   Widget build(BuildContext context) {
@@ -165,7 +167,7 @@ class _OrderStat extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            label,
+            rotulo,
             style: const TextStyle(
               color: GulaColors.textMuted,
               fontWeight: FontWeight.w600,
@@ -173,7 +175,7 @@ class _OrderStat extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            value,
+            valor,
             style: const TextStyle(
               color: GulaColors.text,
               fontWeight: FontWeight.w700,

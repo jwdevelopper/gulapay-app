@@ -1,41 +1,62 @@
-class MesaDto {
-  int? id;
-  String? numero;
-  String? descricao;
-  int? capacidade;
-  String? status;
-  bool? ativo;
-  String? message;
+class MesaSalvarRequisicao {
+  final String numero;
+  final String? descricao;
+  final int capacidade;
+  final String? situacao;
+  final bool? ativo;
 
-  MesaDto({
+  MesaSalvarRequisicao({
+    required this.numero,
+    this.descricao,
+    required this.capacidade,
+    this.situacao,
+    this.ativo,
+  });
+
+  Map<String, dynamic> paraJson() {
+    return {
+      'numero': numero,
+      if (descricao != null) 'descricao': descricao,
+      'capacidade': capacidade,
+      if (situacao != null) 'status': situacao,
+      if (ativo != null) 'ativo': ativo,
+    };
+  }
+}
+
+class MesaResposta {
+  final int? id;
+  final String? numero;
+  final String? descricao;
+  final int? capacidade;
+  final String? situacao;
+  final bool? ativo;
+  final String? mensagem;
+
+  MesaResposta({
     this.id,
     this.numero,
     this.descricao,
     this.capacidade,
-    this.status,
+    this.situacao,
     this.ativo,
-    this.message,
+    this.mensagem,
   });
 
-  MesaDto.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    numero = json['numero'];
-    descricao = json['descricao'];
-    capacidade = json['capacidade'];
-    status = json['status'];
-    ativo = json['ativo'];
-    message = json['message'];
-  }
-
-  Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
-    data['id'] = id;
-    data['numero'] = numero;
-    data['descricao'] = descricao;
-    data['capacidade'] = capacidade;
-    data['status'] = status;
-    data['ativo'] = ativo;
-    data['message'] = message;
-    return data;
+  factory MesaResposta.deJson(Map<String, dynamic> json) {
+    return MesaResposta(
+      id: json['id'] is int ? json['id'] as int : int.tryParse('${json['id']}'),
+      numero: json['numero']?.toString(),
+      descricao: json['descricao']?.toString(),
+      capacidade: json['capacidade'] is int
+          ? json['capacidade'] as int
+          : int.tryParse('${json['capacidade']}'),
+      situacao: json['status']?.toString(),
+      ativo: json['ativo'] as bool?,
+      mensagem: json['message']?.toString(),
+    );
   }
 }
+
+// Compatibilidade com os consumidores atuais fora do modulo de mesas.
+typedef MesaDto = MesaResposta;

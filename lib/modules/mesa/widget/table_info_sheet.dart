@@ -3,48 +3,50 @@ import 'package:my_app_teste/core/theme/gula_theme.dart';
 import 'package:my_app_teste/modules/mesa/model/restaurant_models.dart';
 import 'package:my_app_teste/modules/mesa/widget/table_status_badge.dart';
 
-class TableInfoSheet extends StatelessWidget {
-  const TableInfoSheet({
+class PainelInformacoesMesa extends StatelessWidget {
+  const PainelInformacoesMesa({
     super.key,
-    required this.areaName,
-    required this.table,
-    required this.status,
-    required this.scopeTables,
-    required this.totalChairs,
-    required this.seatedPeople,
-    required this.itemsCount,
-    required this.partialTotal,
-    required this.lastOrderAt,
-    required this.customerName,
-    required this.joinableTables,
-    required this.onOpenOrder,
-    required this.onEdit,
-    required this.onMarkFree,
-    required this.onJoinWith,
-    this.onSeparateGroup,
+    required this.nomeArea,
+    required this.mesa,
+    required this.situacao,
+    required this.mesasDoContexto,
+    required this.totalCadeiras,
+    required this.pessoasSentadas,
+    required this.quantidadeItens,
+    required this.totalParcial,
+    required this.ultimoPedidoEm,
+    required this.nomeCliente,
+    required this.mesasCompativeis,
+    required this.aoAbrirComanda,
+    required this.aoEditar,
+    required this.aoLiberar,
+    required this.aoUnirCom,
+    this.aoSepararGrupo,
   });
 
-  final String areaName;
-  final RestaurantTable table;
-  final TableStatus status;
-  final List<RestaurantTable> scopeTables;
-  final int totalChairs;
-  final int seatedPeople;
-  final int itemsCount;
-  final double partialTotal;
-  final DateTime? lastOrderAt;
-  final String? customerName;
-  final List<RestaurantTable> joinableTables;
-  final VoidCallback onOpenOrder;
-  final VoidCallback onEdit;
-  final VoidCallback onMarkFree;
-  final ValueChanged<String> onJoinWith;
-  final VoidCallback? onSeparateGroup;
+  final String nomeArea;
+  final MesaRestaurante mesa;
+  final SituacaoMesa situacao;
+  final List<MesaRestaurante> mesasDoContexto;
+  final int totalCadeiras;
+  final int pessoasSentadas;
+  final int quantidadeItens;
+  final double totalParcial;
+  final DateTime? ultimoPedidoEm;
+  final String? nomeCliente;
+  final List<MesaRestaurante> mesasCompativeis;
+  final VoidCallback aoAbrirComanda;
+  final VoidCallback aoEditar;
+  final VoidCallback aoLiberar;
+  final ValueChanged<String> aoUnirCom;
+  final VoidCallback? aoSepararGrupo;
 
   @override
   Widget build(BuildContext context) {
     final viewInsets = MediaQuery.of(context).viewInsets;
-    final hasActiveOrder = scopeTables.any((item) => item.activeOrderId != null);
+    final temComandaAtiva = mesasDoContexto.any(
+      (item) => item.idComandaAtiva != null,
+    );
 
     return Container(
       decoration: const BoxDecoration(
@@ -75,12 +77,12 @@ class TableInfoSheet extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        table.code,
+                        mesa.codigo,
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        areaName,
+                        nomeArea,
                         style: const TextStyle(
                           color: GulaColors.textMuted,
                           fontWeight: FontWeight.w600,
@@ -89,7 +91,7 @@ class TableInfoSheet extends StatelessWidget {
                     ],
                   ),
                 ),
-                TableStatusBadge(status: status),
+                IndicadorSituacaoMesa(situacao: situacao),
               ],
             ),
             const SizedBox(height: 18),
@@ -97,42 +99,51 @@ class TableInfoSheet extends StatelessWidget {
               spacing: 12,
               runSpacing: 12,
               children: [
-                _InfoCard(label: 'Capacidade', value: '$totalChairs lugares'),
-                _InfoCard(label: 'Pessoas', value: '$seatedPeople sentadas'),
-                _InfoCard(label: 'Itens', value: '$itemsCount em aberto'),
-                _InfoCard(
-                  label: 'Parcial',
-                  value: 'R\$ ${partialTotal.toStringAsFixed(2)}',
+                _CartaoInformacao(
+                  rotulo: 'Capacidade',
+                  valor: '$totalCadeiras lugares',
+                ),
+                _CartaoInformacao(
+                  rotulo: 'Pessoas',
+                  valor: '$pessoasSentadas sentadas',
+                ),
+                _CartaoInformacao(
+                  rotulo: 'Itens',
+                  valor: '$quantidadeItens em aberto',
+                ),
+                _CartaoInformacao(
+                  rotulo: 'Parcial',
+                  valor: 'R\$ ${totalParcial.toStringAsFixed(2)}',
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            _InfoCard(
-              label: 'Ultimo movimento',
-              value: _formatLastEvent(lastOrderAt),
-              fullWidth: true,
+            _CartaoInformacao(
+              rotulo: 'Ultimo movimento',
+              valor: _formatarUltimoEvento(ultimoPedidoEm),
+              larguraTotal: true,
             ),
             const SizedBox(height: 12),
-            _InfoCard(
-              label: 'Cliente',
-              value: customerName ?? 'Nao informado',
-              fullWidth: true,
+            _CartaoInformacao(
+              rotulo: 'Cliente',
+              valor: nomeCliente ?? 'Nao informado',
+              larguraTotal: true,
             ),
-            if (scopeTables.length > 1) ...[
+            if (mesasDoContexto.length > 1) ...[
               const SizedBox(height: 12),
-              _InfoCard(
-                label: 'Mesas no grupo',
-                value: scopeTables.map((item) => item.code).join(', '),
-                fullWidth: true,
+              _CartaoInformacao(
+                rotulo: 'Mesas no grupo',
+                valor: mesasDoContexto.map((item) => item.codigo).join(', '),
+                larguraTotal: true,
               ),
             ],
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: onOpenOrder,
+                onPressed: aoAbrirComanda,
                 icon: const Icon(Icons.receipt_long_outlined),
-                label: Text(hasActiveOrder ? 'Ver comanda' : 'Abrir pedido'),
+                label: Text(temComandaAtiva ? 'Ver comanda' : 'Abrir pedido'),
               ),
             ),
             const SizedBox(height: 12),
@@ -140,7 +151,7 @@ class TableInfoSheet extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: onEdit,
+                    onPressed: aoEditar,
                     icon: const Icon(Icons.edit_outlined),
                     label: const Text('Editar'),
                   ),
@@ -148,14 +159,14 @@ class TableInfoSheet extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: onMarkFree,
+                    onPressed: aoLiberar,
                     icon: const Icon(Icons.cleaning_services_outlined),
                     label: const Text('Liberar'),
                   ),
                 ),
               ],
             ),
-            if (joinableTables.isNotEmpty) ...[
+            if (mesasCompativeis.isNotEmpty) ...[
               const SizedBox(height: 18),
               const Text(
                 'Unir com outra mesa da area',
@@ -168,22 +179,22 @@ class TableInfoSheet extends StatelessWidget {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: joinableTables
+                children: mesasCompativeis
                     .map(
-                      (candidate) => ActionChip(
-                        label: Text(candidate.code),
-                        onPressed: () => onJoinWith(candidate.id),
+                      (candidata) => ActionChip(
+                        label: Text(candidata.codigo),
+                        onPressed: () => aoUnirCom(candidata.id),
                       ),
                     )
                     .toList(),
               ),
             ],
-            if (onSeparateGroup != null) ...[
+            if (aoSepararGrupo != null) ...[
               const SizedBox(height: 18),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: onSeparateGroup,
+                  onPressed: aoSepararGrupo,
                   icon: const Icon(Icons.call_split_outlined),
                   label: const Text('Desfazer mistura'),
                 ),
@@ -195,32 +206,32 @@ class TableInfoSheet extends StatelessWidget {
     );
   }
 
-  String _formatLastEvent(DateTime? value) {
+  String _formatarUltimoEvento(DateTime? value) {
     if (value == null) {
       return 'Sem historico recente';
     }
 
-    final elapsed = DateTime.now().difference(value);
-    if (elapsed.inMinutes < 1) {
+    final tempoDecorrido = DateTime.now().difference(value);
+    if (tempoDecorrido.inMinutes < 1) {
       return 'Agora mesmo';
     }
-    if (elapsed.inMinutes < 60) {
-      return '${elapsed.inMinutes} min atras';
+    if (tempoDecorrido.inMinutes < 60) {
+      return '${tempoDecorrido.inMinutes} min atras';
     }
-    return '${elapsed.inHours} h atras';
+    return '${tempoDecorrido.inHours} h atras';
   }
 }
 
-class _InfoCard extends StatelessWidget {
-  const _InfoCard({
-    required this.label,
-    required this.value,
-    this.fullWidth = false,
+class _CartaoInformacao extends StatelessWidget {
+  const _CartaoInformacao({
+    required this.rotulo,
+    required this.valor,
+    this.larguraTotal = false,
   });
 
-  final String label;
-  final String value;
-  final bool fullWidth;
+  final String rotulo;
+  final String valor;
+  final bool larguraTotal;
 
   @override
   Widget build(BuildContext context) {
@@ -235,7 +246,7 @@ class _InfoCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            label,
+            rotulo,
             style: const TextStyle(
               color: GulaColors.textMuted,
               fontSize: 12,
@@ -244,7 +255,7 @@ class _InfoCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            value,
+            valor,
             style: const TextStyle(
               color: GulaColors.text,
               fontWeight: FontWeight.w700,
@@ -254,7 +265,7 @@ class _InfoCard extends StatelessWidget {
       ),
     );
 
-    if (fullWidth) {
+    if (larguraTotal) {
       return SizedBox(width: double.infinity, child: child);
     }
 

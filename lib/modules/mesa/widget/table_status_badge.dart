@@ -2,75 +2,75 @@ import 'package:flutter/material.dart';
 import 'package:my_app_teste/core/theme/gula_theme.dart';
 import 'package:my_app_teste/modules/mesa/model/restaurant_models.dart';
 
-Color tableStatusColor(TableStatus status) {
-  switch (status) {
-    case TableStatus.free:
+Color corSituacaoMesa(SituacaoMesa situacao) {
+  switch (situacao) {
+    case SituacaoMesa.livre:
       return GulaColors.free;
-    case TableStatus.occupied:
+    case SituacaoMesa.ocupada:
       return GulaColors.occupied;
-    case TableStatus.noOrder30Min:
+    case SituacaoMesa.semPedidoHa30Min:
       return GulaColors.warning;
-    case TableStatus.awaitingRelease1H:
+    case SituacaoMesa.aguardandoLiberacaoHa1H:
       return GulaColors.critical;
-    case TableStatus.withOrder:
+    case SituacaoMesa.comPedido:
       return GulaColors.occupied;
-    case TableStatus.attention:
+    case SituacaoMesa.atencao:
       return GulaColors.critical;
   }
 }
 
-String tableStatusLabel(TableStatus status) {
-  switch (status) {
-    case TableStatus.free:
+String rotuloSituacaoMesa(SituacaoMesa situacao) {
+  switch (situacao) {
+    case SituacaoMesa.livre:
       return 'Livre';
-    case TableStatus.occupied:
+    case SituacaoMesa.ocupada:
       return 'Ocupada';
-    case TableStatus.noOrder30Min:
+    case SituacaoMesa.semPedidoHa30Min:
       return 'Sem pedido 30m';
-    case TableStatus.awaitingRelease1H:
+    case SituacaoMesa.aguardandoLiberacaoHa1H:
       return 'Liberar 1h';
-    case TableStatus.withOrder:
+    case SituacaoMesa.comPedido:
       return 'Com pedido';
-    case TableStatus.attention:
+    case SituacaoMesa.atencao:
       return 'Em atencao';
   }
 }
 
-IconData tableStatusIcon(TableStatus status) {
-  switch (status) {
-    case TableStatus.free:
+IconData iconeSituacaoMesa(SituacaoMesa situacao) {
+  switch (situacao) {
+    case SituacaoMesa.livre:
       return Icons.check_circle_outline_rounded;
-    case TableStatus.occupied:
+    case SituacaoMesa.ocupada:
       return Icons.schedule_outlined;
-    case TableStatus.noOrder30Min:
+    case SituacaoMesa.semPedidoHa30Min:
       return Icons.schedule_outlined;
-    case TableStatus.awaitingRelease1H:
+    case SituacaoMesa.aguardandoLiberacaoHa1H:
       return Icons.priority_high_rounded;
-    case TableStatus.withOrder:
+    case SituacaoMesa.comPedido:
       return Icons.schedule_rounded;
-    case TableStatus.attention:
+    case SituacaoMesa.atencao:
       return Icons.priority_high_rounded;
   }
 }
 
-class TableStatusBadge extends StatelessWidget {
-  const TableStatusBadge({
+class IndicadorSituacaoMesa extends StatelessWidget {
+  const IndicadorSituacaoMesa({
     super.key,
-    required this.status,
-    this.compact = false,
+    required this.situacao,
+    this.compacto = false,
   });
 
-  final TableStatus status;
-  final bool compact;
+  final SituacaoMesa situacao;
+  final bool compacto;
 
   @override
   Widget build(BuildContext context) {
-    final color = tableStatusColor(status);
+    final color = corSituacaoMesa(situacao);
 
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: compact ? 8 : 10,
-        vertical: compact ? 4 : 6,
+        horizontal: compacto ? 8 : 10,
+        vertical: compacto ? 4 : 6,
       ),
       decoration: BoxDecoration(
         color: color,
@@ -81,16 +81,16 @@ class TableStatusBadge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            tableStatusIcon(status),
-            size: compact ? 12 : 14,
+            iconeSituacaoMesa(situacao),
+            size: compacto ? 12 : 14,
             color: GulaColors.text,
           ),
           const SizedBox(width: 6),
           Text(
-            tableStatusLabel(status),
+            rotuloSituacaoMesa(situacao),
             style: TextStyle(
               color: GulaColors.text,
-              fontSize: compact ? 10 : 11,
+              fontSize: compacto ? 10 : 11,
               fontWeight: FontWeight.w700,
             ),
           ),

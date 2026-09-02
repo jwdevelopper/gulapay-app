@@ -3,18 +3,18 @@ import 'package:my_app_teste/core/theme/gula_theme.dart';
 import 'package:my_app_teste/modules/mesa/model/restaurant_models.dart';
 import 'package:my_app_teste/modules/mesa/widget/table_status_badge.dart';
 
-class TableLegend extends StatelessWidget {
-  const TableLegend({super.key, this.compact = false});
+class LegendaMesas extends StatelessWidget {
+  const LegendaMesas({super.key, this.compacto = false});
 
-  final bool compact;
+  final bool compacto;
 
   @override
   Widget build(BuildContext context) {
-    final padding = compact ? 12.0 : 16.0;
-    final spacing = compact ? 6.0 : 8.0;
-    final runSpacing = compact ? 6.0 : 8.0;
-    final titleSize = compact ? 13.0 : 14.0;
-    final bodySize = compact ? 11.0 : 12.0;
+    final padding = compacto ? 12.0 : 16.0;
+    final spacing = compacto ? 6.0 : 8.0;
+    final runSpacing = compacto ? 6.0 : 8.0;
+    final titleSize = compacto ? 13.0 : 14.0;
+    final bodySize = compacto ? 11.0 : 12.0;
 
     return Container(
       padding: EdgeInsets.all(padding),
@@ -30,10 +30,10 @@ class TableLegend extends StatelessWidget {
             children: [
               Icon(
                 Icons.info_outline,
-                size: compact ? 16 : 18,
+                size: compacto ? 16 : 18,
                 color: GulaColors.textMuted,
               ),
-              SizedBox(width: compact ? 6 : 8),
+              SizedBox(width: compacto ? 6 : 8),
               Text(
                 'Legenda operacional',
                 style: TextStyle(
@@ -44,26 +44,38 @@ class TableLegend extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: compact ? 10 : 12),
+          SizedBox(height: compacto ? 10 : 12),
           Wrap(
             spacing: spacing,
             runSpacing: runSpacing,
             children: [
-              TableStatusBadge(status: TableStatus.free, compact: compact),
-              TableStatusBadge(status: TableStatus.occupied, compact: compact),
-              TableStatusBadge(
-                status: TableStatus.noOrder30Min,
-                compact: compact,
+              IndicadorSituacaoMesa(
+                situacao: SituacaoMesa.livre,
+                compacto: compacto,
               ),
-              TableStatusBadge(
-                status: TableStatus.awaitingRelease1H,
-                compact: compact,
+              IndicadorSituacaoMesa(
+                situacao: SituacaoMesa.ocupada,
+                compacto: compacto,
               ),
-              TableStatusBadge(status: TableStatus.withOrder, compact: compact),
-              TableStatusBadge(status: TableStatus.attention, compact: compact),
+              IndicadorSituacaoMesa(
+                situacao: SituacaoMesa.semPedidoHa30Min,
+                compacto: compacto,
+              ),
+              IndicadorSituacaoMesa(
+                situacao: SituacaoMesa.aguardandoLiberacaoHa1H,
+                compacto: compacto,
+              ),
+              IndicadorSituacaoMesa(
+                situacao: SituacaoMesa.comPedido,
+                compacto: compacto,
+              ),
+              IndicadorSituacaoMesa(
+                situacao: SituacaoMesa.atencao,
+                compacto: compacto,
+              ),
             ],
           ),
-          SizedBox(height: compact ? 10 : 14),
+          SizedBox(height: compacto ? 10 : 14),
           Text(
             'No modo editar, arraste mesas e aproxime itens da mesma area para sugerir uniao. A comanda e sempre reaproveitada dentro do mesmo grupo.',
             style: TextStyle(
