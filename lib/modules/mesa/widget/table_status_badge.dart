@@ -13,9 +13,9 @@ Color tableStatusColor(TableStatus status) {
     case TableStatus.awaitingRelease1H:
       return GulaColors.critical;
     case TableStatus.withOrder:
-      return GulaColors.success;
+      return GulaColors.occupied;
     case TableStatus.attention:
-      return GulaColors.attention;
+      return GulaColors.critical;
   }
 }
 
@@ -39,17 +39,17 @@ String tableStatusLabel(TableStatus status) {
 IconData tableStatusIcon(TableStatus status) {
   switch (status) {
     case TableStatus.free:
-      return Icons.deck_outlined;
+      return Icons.check_circle_outline_rounded;
     case TableStatus.occupied:
-      return Icons.people_outline;
+      return Icons.schedule_outlined;
     case TableStatus.noOrder30Min:
       return Icons.schedule_outlined;
     case TableStatus.awaitingRelease1H:
-      return Icons.notification_important_outlined;
+      return Icons.priority_high_rounded;
     case TableStatus.withOrder:
-      return Icons.receipt_long_outlined;
+      return Icons.schedule_rounded;
     case TableStatus.attention:
-      return Icons.warning_amber_rounded;
+      return Icons.priority_high_rounded;
   }
 }
 

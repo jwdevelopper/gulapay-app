@@ -205,29 +205,34 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Mesas do restaurante'), findsOneWidget);
+    expect(find.text('Salao interno'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('abre editor expandido mobile sem comandos de comanda', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(393, 852);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
+  testWidgets(
+    'abre popover operacional e ativa o modo layout no proprio mapa',
+    (tester) async {
+      tester.view.physicalSize = const Size(393, 852);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(
-      MaterialApp(theme: GulaTheme.light(), home: const MesaPage()),
-    );
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        MaterialApp(theme: GulaTheme.light(), home: const MesaPage()),
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.open_in_full_rounded));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Mesa 01'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Editor do mapa de mesas'), findsOneWidget);
-    expect(find.text('Unir'), findsWidgets);
-    expect(find.text('Abrir pedido'), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
+      expect(find.text('Pedido #1001'), findsOneWidget);
+      expect(find.text('Ver comanda'), findsOneWidget);
+
+      await tester.tap(find.text('Modo layout'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Layout ativo'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

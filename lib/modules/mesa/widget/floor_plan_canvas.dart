@@ -5,6 +5,7 @@ import 'package:my_app_teste/core/theme/gula_theme.dart';
 import 'package:my_app_teste/modules/mesa/controller/floor_plan_controller.dart';
 import 'package:my_app_teste/modules/mesa/model/restaurant_models.dart';
 import 'package:my_app_teste/modules/mesa/widget/table_node.dart';
+import 'package:my_app_teste/modules/mesa/widget/table_status_badge.dart';
 
 class FloorPlanCanvas extends StatefulWidget {
   const FloorPlanCanvas({
@@ -13,28 +14,24 @@ class FloorPlanCanvas extends StatefulWidget {
     required this.controller,
     required this.isEditMode,
     required this.onToggleEditMode,
-    required this.onExpand,
+    required this.onAddTable,
     required this.onJoinSuggested,
     required this.onEditTable,
     required this.onOpenTable,
     required this.onOpenOrder,
-    this.isExpanded = false,
     this.borderRadius = 24,
-    this.showMapBadge = true,
   });
 
   final RestaurantArea area;
   final FloorPlanController controller;
   final bool isEditMode;
   final VoidCallback onToggleEditMode;
-  final VoidCallback onExpand;
+  final VoidCallback onAddTable;
   final VoidCallback onJoinSuggested;
   final ValueChanged<RestaurantTable> onEditTable;
   final ValueChanged<RestaurantTable> onOpenTable;
   final ValueChanged<RestaurantTable> onOpenOrder;
-  final bool isExpanded;
   final double borderRadius;
-  final bool showMapBadge;
 
   @override
   State<FloorPlanCanvas> createState() => _FloorPlanCanvasState();
@@ -45,6 +42,7 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
   late final Listenable _rebuildListenable;
   double _scale = 1;
   String? _selectedGroupId;
+  String? _selectedOperationalTableId;
 
   @override
   void initState() {
@@ -67,6 +65,9 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
   void _syncScaleFromMatrix() {
     final nextScale = _transformationController.value.getMaxScaleOnAxis();
     if ((nextScale - _scale).abs() < 0.01) {
+      if (_selectedOperationalTableId != null) {
+        setState(() {});
+      }
       return;
     }
     setState(() {
@@ -98,6 +99,10 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
         _selectedGroupId = null;
       });
     }
+
+    if (widget.isEditMode || oldWidget.area.id != widget.area.id) {
+      _selectedOperationalTableId = null;
+    }
   }
 
   @override
@@ -109,23 +114,23 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
         final selectedGroupTables = _selectedGroupId == null
             ? const <RestaurantTable>[]
             : area.tables
-                .where((table) => table.joinGroupId == _selectedGroupId)
-                .toList();
+                  .where((table) => table.joinGroupId == _selectedGroupId)
+                  .toList();
         final showUnmixBar =
             widget.isEditMode && selectedGroupTables.length > 1;
 
         return LayoutBuilder(
           builder: (context, constraints) {
-            final canvasWidth = max(
-              widget.isExpanded ? 1240.0 : 920.0,
-              constraints.maxWidth,
-            );
-            final canvasHeight = max(
-              widget.isExpanded ? 820.0 : 640.0,
-              constraints.maxHeight,
-            );
+            final canvasWidth = max(920.0, constraints.maxWidth);
+            final canvasHeight = max(640.0, constraints.maxHeight);
             final canvasSize = Size(canvasWidth, canvasHeight);
             final overlayCompact = constraints.maxWidth < 520;
+            final selectedOperationalTable = _selectedOperationalTableId == null
+                ? null
+                : area.tables.cast<RestaurantTable?>().firstWhere(
+                    (table) => table!.id == _selectedOperationalTableId,
+                    orElse: () => null,
+                  );
 
             return ClipRRect(
               borderRadius: BorderRadius.circular(widget.borderRadius),
@@ -142,6 +147,7 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
                     Positioned.fill(
                       child: InteractiveViewer(
                         transformationController: _transformationController,
+                        alignment: Alignment.topLeft,
                         boundaryMargin: const EdgeInsets.all(180),
                         constrained: false,
                         panEnabled: widget.controller.movingTableId == null,
@@ -166,31 +172,13 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
                       ),
                     ),
                     Positioned(
-                      left: 12,
                       right: 12,
                       top: 12,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (widget.showMapBadge)
-                            Expanded(
-                              child: _AreaMapBadge(
-                                area: area,
-                                compact: overlayCompact,
-                              ),
-                            ),
-                          if (widget.showMapBadge) const SizedBox(width: 8),
-                          _CanvasControls(
-                            isEditMode: widget.isEditMode,
-                            onToggleEditMode: widget.onToggleEditMode,
-                            onZoomOut: () => _setScale(_scale - 0.12),
-                            onZoomIn: () => _setScale(_scale + 0.12),
-                            onResetZoom: () => _setScale(1),
-                            onExpand: widget.onExpand,
-                            showExpand: !widget.isExpanded,
-                            compact: overlayCompact,
-                          ),
-                        ],
+                      child: _CanvasControls(
+                        onZoomOut: () => _setScale(_scale - 0.12),
+                        onZoomIn: () => _setScale(_scale + 0.12),
+                        onResetZoom: () => _setScale(1),
+                        compact: overlayCompact,
                       ),
                     ),
                     if (widget.controller.suggestedJoinTargetId != null)
@@ -203,7 +191,7 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
                       ),
                     Positioned(
                       right: 12,
-                      bottom: 12,
+                      bottom: 76,
                       child: IgnorePointer(
                         ignoring: !showUnmixBar,
                         child: AnimatedOpacity(
@@ -218,14 +206,28 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
                                 : const Offset(0, 0.3),
                             child: _UnmixFloatingBar(
                               tableCount: selectedGroupTables.length,
-                              onUnmix: () => _handleSeparateGroup(
-                                _selectedGroupId!,
-                              ),
+                              onUnmix: () =>
+                                  _handleSeparateGroup(_selectedGroupId!),
                             ),
                           ),
                         ),
                       ),
                     ),
+                    Positioned(
+                      right: 12,
+                      bottom: 12,
+                      child: _LayoutModeButton(
+                        isActive: widget.isEditMode,
+                        onPressed: widget.onToggleEditMode,
+                        onAddTable: widget.onAddTable,
+                        compact: overlayCompact,
+                      ),
+                    ),
+                    if (!widget.isEditMode && selectedOperationalTable != null)
+                      _buildQuickPopover(
+                        selectedOperationalTable,
+                        constraints.biggest,
+                      ),
                   ],
                 ),
               ),
@@ -266,48 +268,54 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
         (table) => widget.controller.suggestedJoinTargetId == table.id,
       );
       final isSelected = entry.key == _selectedGroupId;
-      nodes.add(_buildMergedGroupNode(
-        area: area,
-        groupId: entry.key,
-        tables: entry.value,
-        canvasSize: canvasSize,
-        isSuggestedJoin: isSuggestedJoin,
-        isSelected: isSelected,
-      ));
-    }
-
-    nodes.addAll(soloTables.map((table) {
-      return Positioned(
-        left: table.x,
-        top: table.y,
-        child: TableNode(
-          table: table,
-          areaName: area.name,
-          status: widget.controller.resolveStatus(table),
-          isMoving: widget.controller.movingTableId == table.id,
-          isSuggestedJoin: widget.controller.suggestedJoinTargetId == table.id ||
-              widget.controller.movingTableId == table.id,
-          canDrag: widget.isEditMode,
-          onTap: () => widget.isEditMode
-              ? _selectGroup(null, () => widget.onEditTable(table))
-              : widget.onOpenTable(table),
-          onDoubleTap: () {
-            if (!widget.isEditMode) {
-              widget.onOpenOrder(table);
-            }
-          },
-          onPanStart: () => _selectGroup(null, () {
-            widget.controller.beginMove(table.id);
-          }),
-          onPanUpdate: (delta) => widget.controller.moveTable(
-            table.id,
-            delta / _scale,
-            canvasSize,
-          ),
-          onPanEnd: widget.controller.finishMove,
+      nodes.add(
+        _buildMergedGroupNode(
+          area: area,
+          groupId: entry.key,
+          tables: entry.value,
+          canvasSize: canvasSize,
+          isSuggestedJoin: isSuggestedJoin,
+          isSelected: isSelected,
         ),
       );
-    }));
+    }
+
+    nodes.addAll(
+      soloTables.map((table) {
+        return Positioned(
+          left: table.x,
+          top: table.y,
+          child: TableNode(
+            table: table,
+            areaName: area.name,
+            status: widget.controller.resolveStatus(table),
+            isMoving: widget.controller.movingTableId == table.id,
+            isSuggestedJoin:
+                widget.controller.suggestedJoinTargetId == table.id ||
+                widget.controller.movingTableId == table.id,
+            canDrag: widget.isEditMode,
+            lastEventAt: widget.controller.lastOrderAtForScope(table.id),
+            onTap: () => widget.isEditMode
+                ? _selectGroup(null, () => widget.onEditTable(table))
+                : _selectOperationalTable(table),
+            onDoubleTap: () {
+              if (!widget.isEditMode) {
+                widget.onOpenOrder(table);
+              }
+            },
+            onPanStart: () => _selectGroup(null, () {
+              widget.controller.beginMove(table.id);
+            }),
+            onPanUpdate: (delta) => widget.controller.moveTable(
+              table.id,
+              delta / _scale,
+              canvasSize,
+            ),
+            onPanEnd: widget.controller.finishMove,
+          ),
+        );
+      }),
+    );
 
     return nodes;
   }
@@ -325,7 +333,10 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
     final bounds = _groupBounds(sorted);
     final groupStatus = _resolveGroupStatus(sorted);
     final groupLabel = _groupLabel(sorted);
-    final groupChairs = sorted.fold<int>(0, (sum, table) => sum + table.chairsCount);
+    final groupChairs = sorted.fold<int>(
+      0,
+      (sum, table) => sum + table.chairsCount,
+    );
     final isMoving = sorted.any(
       (table) => widget.controller.movingTableId == table.id,
     );
@@ -361,9 +372,10 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
         isMoving: isMoving,
         isSuggestedJoin: isSuggestedJoin || isSelected,
         canDrag: widget.isEditMode,
+        lastEventAt: widget.controller.lastOrderAtForScope(anchor.id),
         onTap: () => widget.isEditMode
             ? _selectGroup(groupId, () => widget.onEditTable(anchor))
-            : widget.onOpenTable(anchor),
+            : _selectOperationalTable(anchor),
         onDoubleTap: () {
           if (!widget.isEditMode) {
             widget.onOpenOrder(anchor);
@@ -372,12 +384,60 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
         onPanStart: () => _selectGroup(groupId, () {
           widget.controller.beginMove(anchor.id);
         }),
-        onPanUpdate: (delta) => widget.controller.moveTable(
-          anchor.id,
-          delta / _scale,
-          canvasSize,
-        ),
+        onPanUpdate: (delta) =>
+            widget.controller.moveTable(anchor.id, delta / _scale, canvasSize),
         onPanEnd: widget.controller.finishMove,
+      ),
+    );
+  }
+
+  void _selectOperationalTable(RestaurantTable table) {
+    setState(() {
+      _selectedOperationalTableId = table.id;
+    });
+  }
+
+  Widget _buildQuickPopover(RestaurantTable table, Size viewportSize) {
+    const preferredWidth = 258.0;
+    const preferredHeight = 172.0;
+    const margin = 12.0;
+
+    final scenePosition = MatrixUtils.transformPoint(
+      _transformationController.value,
+      Offset(table.x, table.y),
+    );
+    final availableWidth = max(0.0, viewportSize.width - (margin * 2));
+    final popoverWidth = min(preferredWidth, availableWidth);
+    final tableCenterX = scenePosition.dx + (table.width / 2);
+    final prefersRight = tableCenterX < viewportSize.width / 2;
+    final preferredLeft = prefersRight
+        ? scenePosition.dx + table.width + margin
+        : scenePosition.dx - popoverWidth - margin;
+    final left = preferredLeft
+        .clamp(margin, max(margin, viewportSize.width - popoverWidth - margin))
+        .toDouble();
+    final top = (scenePosition.dy + (table.height / 2) - (preferredHeight / 2))
+        .clamp(
+          margin,
+          max(margin, viewportSize.height - preferredHeight - margin),
+        )
+        .toDouble();
+
+    return Positioned(
+      left: left,
+      top: top,
+      width: popoverWidth,
+      child: _TableQuickPopover(
+        table: table,
+        status: widget.controller.resolveStatus(table),
+        itemsCount: widget.controller.groupItemsCount(table.id),
+        partialTotal: widget.controller.groupPartialTotal(table.id),
+        lastOrderAt: widget.controller.lastOrderAtForScope(table.id),
+        hasActiveOrder:
+            widget.controller.activeOrderIdForScope(table.id) != null,
+        onOpenOrder: () => widget.onOpenOrder(table),
+        onMoreDetails: () => widget.onOpenTable(table),
+        onClose: () => setState(() => _selectedOperationalTableId = null),
       ),
     );
   }
@@ -449,9 +509,9 @@ class _FloorPlanCanvasState extends State<FloorPlanCanvas> {
       return;
     }
     if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
       return;
     }
     if (_selectedGroupId == groupId) {
@@ -503,7 +563,11 @@ class _UnmixFloatingBar extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.call_split_rounded, size: 18, color: GulaColors.primary),
+          const Icon(
+            Icons.call_split_rounded,
+            size: 18,
+            color: GulaColors.primary,
+          ),
           const SizedBox(width: 8),
           Text(
             'Desfazer ($tableCount)',
@@ -528,52 +592,145 @@ class _UnmixFloatingBar extends StatelessWidget {
   }
 }
 
-class _AreaMapBadge extends StatelessWidget {
-  const _AreaMapBadge({required this.area, this.compact = false});
+class _TableQuickPopover extends StatelessWidget {
+  const _TableQuickPopover({
+    required this.table,
+    required this.status,
+    required this.itemsCount,
+    required this.partialTotal,
+    required this.lastOrderAt,
+    required this.hasActiveOrder,
+    required this.onOpenOrder,
+    required this.onMoreDetails,
+    required this.onClose,
+  });
 
-  final RestaurantArea area;
-  final bool compact;
+  final RestaurantTable table;
+  final TableStatus status;
+  final int itemsCount;
+  final double partialTotal;
+  final DateTime? lastOrderAt;
+  final bool hasActiveOrder;
+  final VoidCallback onOpenOrder;
+  final VoidCallback onMoreDetails;
+  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
-    return IgnorePointer(
+    final orderLabel = hasActiveOrder
+        ? 'Pedido ${table.activeOrderId?.replaceFirst('ORD-', '#') ?? ''}'
+        : 'Mesa disponível';
+
+    return Material(
+      color: Colors.transparent,
       child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: compact ? 10 : 12,
-          vertical: compact ? 7 : 9,
-        ),
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
         decoration: BoxDecoration(
-          color: GulaColors.surfaceAlt.withValues(alpha: 0.94),
+          color: GulaColors.surfaceAlt.withValues(alpha: 0.98),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: GulaColors.border),
+          border: Border.all(
+            color: tableStatusColor(status).withValues(alpha: 0.82),
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: compact ? 10 : 14,
-              offset: Offset(0, compact ? 5 : 7),
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.max,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              _areaIcon(area.type),
-              size: compact ? 15 : 17,
-              color: GulaColors.text,
-            ),
-            SizedBox(width: compact ? 6 : 8),
-            Flexible(
-              child: Text(
-                '${area.name} - ${area.totalTables} mesas',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: GulaColors.text,
-                  fontWeight: FontWeight.w800,
-                  fontSize: compact ? 12 : 13,
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    table.code,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: GulaColors.text,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
+                const SizedBox(width: 6),
+                TableStatusBadge(status: status, compact: true),
+                const SizedBox(width: 2),
+                IconButton(
+                  tooltip: 'Fechar resumo',
+                  onPressed: onClose,
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.close_rounded, size: 18),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              orderLabel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: GulaColors.textMuted,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
               ),
+            ),
+            const SizedBox(height: 9),
+            Wrap(
+              spacing: 10,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                _QuickData(
+                  icon: Icons.schedule_outlined,
+                  label: _formatElapsed(lastOrderAt),
+                ),
+                _QuickData(
+                  icon: Icons.receipt_long_outlined,
+                  label: '$itemsCount item${itemsCount == 1 ? '' : 's'}',
+                ),
+                Text(
+                  'R\$ ${partialTotal.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    color: GulaColors.text,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: onOpenOrder,
+                    icon: Icon(
+                      hasActiveOrder
+                          ? Icons.receipt_long_outlined
+                          : Icons.add_shopping_cart_outlined,
+                      size: 16,
+                    ),
+                    label: Text(
+                      hasActiveOrder ? 'Ver comanda' : 'Abrir pedido',
+                    ),
+                    style: FilledButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(vertical: 9),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                IconButton(
+                  tooltip: 'Detalhes da mesa',
+                  onPressed: onMoreDetails,
+                  icon: const Icon(Icons.more_horiz_rounded),
+                ),
+              ],
             ),
           ],
         ),
@@ -581,37 +738,129 @@ class _AreaMapBadge extends StatelessWidget {
     );
   }
 
-  IconData _areaIcon(String type) {
-    switch (type) {
-      case 'externo':
-        return Icons.deck_outlined;
-      case 'premium':
-        return Icons.workspace_premium_outlined;
-      default:
-        return Icons.restaurant_outlined;
+  String _formatElapsed(DateTime? value) {
+    if (value == null) {
+      return 'sem tempo';
     }
+    final elapsed = DateTime.now().difference(value);
+    if (elapsed.inMinutes < 1) {
+      return 'agora';
+    }
+    if (elapsed.inMinutes < 60) {
+      return '${elapsed.inMinutes} min';
+    }
+    return '${elapsed.inHours} h';
+  }
+}
+
+class _QuickData extends StatelessWidget {
+  const _QuickData({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: GulaColors.textMuted),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            color: GulaColors.textMuted,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LayoutModeButton extends StatelessWidget {
+  const _LayoutModeButton({
+    required this.isActive,
+    required this.onPressed,
+    required this.onAddTable,
+    required this.compact,
+  });
+
+  final bool isActive;
+  final VoidCallback onPressed;
+  final VoidCallback onAddTable;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: GulaColors.surfaceAlt.withValues(alpha: 0.97),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isActive ? GulaColors.primary : GulaColors.border,
+          width: isActive ? 1.5 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isActive)
+            IconButton(
+              tooltip: 'Nova mesa',
+              onPressed: onAddTable,
+              visualDensity: VisualDensity.compact,
+              style: IconButton.styleFrom(
+                foregroundColor: GulaColors.primary,
+                fixedSize: Size(compact ? 34 : 38, compact ? 34 : 38),
+              ),
+              icon: const Icon(Icons.add_rounded),
+            ),
+          FilledButton.icon(
+            onPressed: onPressed,
+            icon: Icon(
+              isActive ? Icons.lock_open_rounded : Icons.lock_outline_rounded,
+              size: compact ? 16 : 18,
+            ),
+            label: Text(isActive ? 'Layout ativo' : 'Modo layout'),
+            style: FilledButton.styleFrom(
+              backgroundColor: isActive
+                  ? GulaColors.primary
+                  : GulaColors.surface,
+              foregroundColor: isActive ? Colors.white : GulaColors.text,
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? 10 : 12,
+                vertical: compact ? 9 : 10,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
 class _CanvasControls extends StatelessWidget {
   const _CanvasControls({
-    required this.isEditMode,
-    required this.onToggleEditMode,
     required this.onZoomOut,
     required this.onZoomIn,
     required this.onResetZoom,
-    required this.onExpand,
-    required this.showExpand,
     this.compact = false,
   });
 
-  final bool isEditMode;
-  final VoidCallback onToggleEditMode;
   final VoidCallback onZoomOut;
   final VoidCallback onZoomIn;
   final VoidCallback onResetZoom;
-  final VoidCallback onExpand;
-  final bool showExpand;
   final bool compact;
 
   @override
@@ -635,16 +884,6 @@ class _CanvasControls extends StatelessWidget {
         runSpacing: 2,
         children: [
           _ControlButton(
-            tooltip: isEditMode ? 'Sair da edicao' : 'Editar mapa',
-            icon: isEditMode
-                ? Icons.lock_open_rounded
-                : Icons.edit_location_alt_outlined,
-            isActive: isEditMode,
-            onPressed: onToggleEditMode,
-            compact: compact,
-          ),
-          const SizedBox(width: 2),
-          _ControlButton(
             tooltip: 'Diminuir zoom',
             icon: Icons.remove_rounded,
             onPressed: onZoomOut,
@@ -662,13 +901,6 @@ class _CanvasControls extends StatelessWidget {
             onPressed: onZoomIn,
             compact: compact,
           ),
-          if (showExpand)
-            _ControlButton(
-              tooltip: 'Abrir editor expandido',
-              icon: Icons.open_in_full_rounded,
-              onPressed: onExpand,
-              compact: compact,
-            ),
         ],
       ),
     );
@@ -680,14 +912,12 @@ class _ControlButton extends StatelessWidget {
     required this.tooltip,
     required this.icon,
     required this.onPressed,
-    this.isActive = false,
     this.compact = false,
   });
 
   final String tooltip;
   final IconData icon;
   final VoidCallback onPressed;
-  final bool isActive;
   final bool compact;
 
   @override
@@ -698,8 +928,8 @@ class _ControlButton extends StatelessWidget {
         onPressed: onPressed,
         visualDensity: VisualDensity.compact,
         style: IconButton.styleFrom(
-          backgroundColor: isActive ? GulaColors.primary : Colors.transparent,
-          foregroundColor: isActive ? Colors.white : GulaColors.text,
+          backgroundColor: Colors.transparent,
+          foregroundColor: GulaColors.text,
           fixedSize: Size(compact ? 32 : 38, compact ? 32 : 38),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(compact ? 11 : 13),

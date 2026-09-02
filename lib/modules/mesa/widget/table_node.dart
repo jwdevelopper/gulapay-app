@@ -15,6 +15,7 @@ class TableNode extends StatelessWidget {
     required this.isSuggestedJoin,
     required this.canDrag,
     required this.areaName,
+    this.lastEventAt,
     required this.onTap,
     required this.onDoubleTap,
     required this.onPanStart,
@@ -28,6 +29,7 @@ class TableNode extends StatelessWidget {
   final bool isSuggestedJoin;
   final bool canDrag;
   final String areaName;
+  final DateTime? lastEventAt;
   final VoidCallback onTap;
   final VoidCallback onDoubleTap;
   final VoidCallback onPanStart;
@@ -57,135 +59,144 @@ class TableNode extends StatelessWidget {
       hint: canDrag
           ? 'Toque para detalhes ou arraste para reposicionar.'
           : 'Toque para detalhes.',
-      child: Tooltip(
-        message: canDrag
-            ? '${table.code} - arraste para reposicionar'
-            : '${table.code} - ${tableStatusLabel(status)}',
-        child: MouseRegion(
-          cursor: canDrag ? SystemMouseCursors.grab : SystemMouseCursors.click,
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            dragStartBehavior: DragStartBehavior.down,
-            onTap: onTap,
-            onDoubleTap: onDoubleTap,
-            onPanStart: canDrag ? (_) => onPanStart() : null,
-            onPanUpdate: canDrag
-                ? (details) => onPanUpdate(details.delta)
-                : null,
-            onPanEnd: canDrag ? (_) => onPanEnd() : null,
-            child: AnimatedScale(
-              duration: const Duration(milliseconds: 160),
-              scale: isMoving ? 1.04 : 1,
-              child: SizedBox(
-                width: table.width,
-                height: table.height,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    ...chairOffsets.map(
-                      (offset) => Positioned(
-                        left: offset.dx - 5,
-                        top: offset.dy - 5,
-                        child: Container(
-                          width: 10,
-                          height: 10,
-                          decoration: BoxDecoration(
-                            color: GulaColors.surfaceAlt,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: GulaColors.border),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.05),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned.fill(
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        decoration: decoration,
-                        padding: const EdgeInsets.all(8),
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            final compact =
-                                constraints.maxWidth < 106 ||
-                                constraints.maxHeight < 78;
-                            final veryCompact = constraints.maxHeight < 70;
-
-                            return Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Flexible(
-                                      child: Text(
-                                        table.code,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(
-                                          color: GulaColors.text,
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ),
-                                    if (table.isJoined) ...[
-                                      const SizedBox(width: 4),
-                                      const Icon(
-                                        Icons.link,
-                                        size: 12,
-                                        color: GulaColors.text,
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                                const SizedBox(height: 5),
-                                _NodeStatusPill(
-                                  status: status,
-                                  compact: compact,
-                                ),
-                                if (!veryCompact) ...[
-                                  const SizedBox(height: 5),
-                                  _CapacityLine(count: table.chairsCount),
-                                ],
-                              ],
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                    if (canDrag)
-                      const Positioned(
-                        right: 7,
-                        bottom: 6,
-                        child: Icon(
-                          Icons.open_with_rounded,
-                          size: 13,
-                          color: GulaColors.textMuted,
-                        ),
-                      ),
-                    if (isSuggestedJoin)
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          child: DecoratedBox(
+      child: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerUp: canDrag ? null : (_) => onTap(),
+        child: Tooltip(
+          message: canDrag
+              ? '${table.code} - arraste para reposicionar'
+              : '${table.code} - ${tableStatusLabel(status)}',
+          child: MouseRegion(
+            cursor: canDrag
+                ? SystemMouseCursors.grab
+                : SystemMouseCursors.click,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              dragStartBehavior: DragStartBehavior.down,
+              onTap: onTap,
+              onDoubleTap: onDoubleTap,
+              onPanStart: canDrag ? (_) => onPanStart() : null,
+              onPanUpdate: canDrag
+                  ? (details) => onPanUpdate(details.delta)
+                  : null,
+              onPanEnd: canDrag ? (_) => onPanEnd() : null,
+              child: AnimatedScale(
+                duration: const Duration(milliseconds: 160),
+                scale: isMoving ? 1.04 : 1,
+                child: SizedBox(
+                  width: table.width,
+                  height: table.height,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      ...chairOffsets.map(
+                        (offset) => Positioned(
+                          left: offset.dx - 5,
+                          top: offset.dy - 5,
+                          child: Container(
+                            width: 10,
+                            height: 10,
                             decoration: BoxDecoration(
-                              borderRadius: _borderRadiusForShape(table.shape),
-                              border: Border.all(
-                                color: GulaColors.primary,
-                                width: 2,
-                              ),
+                              color: GulaColors.surfaceAlt,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: GulaColors.border),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.05),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ),
-                  ],
+                      Positioned.fill(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          decoration: decoration,
+                          padding: const EdgeInsets.all(8),
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final compact =
+                                  constraints.maxWidth < 106 ||
+                                  constraints.maxHeight < 78;
+                              final veryCompact = constraints.maxHeight < 70;
+
+                              return Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          table.code,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            color: GulaColors.text,
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ),
+                                      if (table.isJoined) ...[
+                                        const SizedBox(width: 4),
+                                        const Icon(
+                                          Icons.link,
+                                          size: 12,
+                                          color: GulaColors.text,
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                  const SizedBox(height: 5),
+                                  _NodeStatusPill(
+                                    status: status,
+                                    compact: compact,
+                                    lastEventAt: lastEventAt,
+                                  ),
+                                  if (!veryCompact) ...[
+                                    const SizedBox(height: 5),
+                                    _CapacityLine(count: table.chairsCount),
+                                  ],
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      if (canDrag)
+                        const Positioned(
+                          right: 7,
+                          bottom: 6,
+                          child: Icon(
+                            Icons.open_with_rounded,
+                            size: 13,
+                            color: GulaColors.textMuted,
+                          ),
+                        ),
+                      if (isSuggestedJoin)
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                borderRadius: _borderRadiusForShape(
+                                  table.shape,
+                                ),
+                                border: Border.all(
+                                  color: GulaColors.primary,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -288,10 +299,15 @@ class TableNode extends StatelessWidget {
 }
 
 class _NodeStatusPill extends StatelessWidget {
-  const _NodeStatusPill({required this.status, required this.compact});
+  const _NodeStatusPill({
+    required this.status,
+    required this.compact,
+    this.lastEventAt,
+  });
 
   final TableStatus status;
   final bool compact;
+  final DateTime? lastEventAt;
 
   @override
   Widget build(BuildContext context) {
@@ -306,7 +322,7 @@ class _NodeStatusPill extends StatelessWidget {
         if (!compact) ...[
           const SizedBox(width: 4),
           Text(
-            _shortLabel(status),
+            _shortLabel(status, lastEventAt),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -337,21 +353,35 @@ class _NodeStatusPill extends StatelessWidget {
     );
   }
 
-  String _shortLabel(TableStatus status) {
+  String _shortLabel(TableStatus status, DateTime? lastEventAt) {
     switch (status) {
       case TableStatus.free:
         return 'Livre';
       case TableStatus.occupied:
         return 'Ocupada';
       case TableStatus.noOrder30Min:
-        return '30 min';
+        return _elapsedLabel(lastEventAt, fallback: '30 min');
       case TableStatus.awaitingRelease1H:
-        return '1 h';
+        return _elapsedLabel(lastEventAt, fallback: '1 h');
       case TableStatus.withOrder:
-        return 'Pedido';
+        return _elapsedLabel(lastEventAt, fallback: 'Pedido');
       case TableStatus.attention:
         return 'Atencao';
     }
+  }
+
+  String _elapsedLabel(DateTime? value, {required String fallback}) {
+    if (value == null) {
+      return fallback;
+    }
+    final elapsed = DateTime.now().difference(value);
+    if (elapsed.inMinutes < 1) {
+      return 'Agora';
+    }
+    if (elapsed.inMinutes < 60) {
+      return '${elapsed.inMinutes} min';
+    }
+    return '${elapsed.inHours} h';
   }
 }
 

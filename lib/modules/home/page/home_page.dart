@@ -71,9 +71,6 @@ class _HomeState extends State<Home> {
       icone: Icons.shopping_bag_outlined,
       pagina: ProdutoPage(),
     ),
-    _AbaPrincipal(
-      tituloAppBar: 'Comandas',
-      rotuloInferior: 'Comandas',
     const _AbaPrincipal(
       tituloAppBar: 'Pedidos',
       rotuloInferior: 'Pedidos',

@@ -8,17 +8,16 @@ A tela de mesas agora trabalha mais como uma planta operacional do restaurante:
 
 - o usuario escolhe o ambiente em filtros compactos;
 - o mapa mostra piso, grade, paredes e elementos genericos do restaurante;
-- as mesas podem ser arrastadas no modo de edicao;
-- existe um editor expandido para trabalhar a planta com mais espaco;
-- no editor expandido, o canvas ocupa a tela inteira e os controles ficam flutuantes;
-- toque simples abre o painel da mesa;
+- o mapa ocupa a maior parte da tela;
+- as mesas podem ser arrastadas no modo Layout, no mesmo mapa;
+- toque simples abre um popover proximo a mesa, com pedido e acoes rapidas;
 - toque duplo abre ou reaproveita a comanda;
-- a legenda fica separada do mapa para evitar poluir os nos pequenos.
+- a legenda e os comandos secundarios ficam no menu de opcoes para nao poluir os nos pequenos.
 
 ## Arquivos principais
 
 - `lib/modules/mesa/page/mesa_page.dart`
-  - monta a tela, cabecalho, filtros de area, modo operar/editar, mapa e legenda.
+  - monta a tela focada no canvas, nos filtros de area e no resumo flutuante.
 - `lib/modules/mesa/controller/floor_plan_controller.dart`
   - concentra regras de negocio: status, edicao, movimentacao, uniao, separacao e abertura de comanda.
 - `lib/modules/mesa/widget/floor_plan_canvas.dart`
@@ -60,33 +59,25 @@ O status visual e derivado por `resolveStatus`:
 - `free`: mesa sem pessoas e sem comanda;
 - `attention`: estado manual de atencao quando nao ha ocupacao ativa.
 
-## Modo operar e modo editar
+## Modo operar e modo Layout
 
 O mapa tem dois comportamentos:
 
 - Operar: o usuario consulta mesa e abre pedido/comanda.
-- Editar: o usuario reposiciona mesas arrastando no mapa e toca na mesa para editar seus dados.
+- Layout: o usuario reposiciona mesas arrastando no mapa e toca na mesa para editar seus dados.
 
-O canvas possui um botao para abrir o editor expandido. Nesse editor, os comandos sao de planta:
+O controle flutuante `Modo layout` bloqueia ou libera os comandos de planta. Quando o layout esta ativo, o usuario pode:
 
-- selecionar ambiente;
 - criar mesa;
 - arrastar mesa;
 - unir mesas proximas;
 - editar mesa ao tocar nela.
 
-Comandos de operacao, como abrir pedido, ficam fora do fluxo de edicao para evitar acao acidental.
-
-Visualmente, o editor expandido usa:
-
-- canvas em tela cheia;
-- barra superior flutuante com titulo, ambiente e nova mesa;
-- painel flutuante com ambientes, estatisticas e acoes;
-- painel de mesa com pre-visualizacao do formato, chips de formato e presets de tamanho.
+Com o layout bloqueado, o toque abre o popover operacional da mesa. O popover mostra status, tempo, itens, parcial, acesso a comanda e um atalho para os detalhes completos.
 
 ## Uniao direta no mapa
 
-Quando uma mesa e arrastada para perto de outra mesa valida, o controller guarda a origem e o alvo sugeridos. O banner do canvas e o painel do editor habilitam a acao `Unir`.
+Quando uma mesa e arrastada para perto de outra mesa valida, o controller guarda a origem e o alvo sugeridos. O banner flutuante do canvas habilita a acao `Unir`.
 
 A uniao continua respeitando as regras:
 
@@ -100,10 +91,9 @@ A uniao continua respeitando as regras:
 O visual da mesa foi reduzido para caber em nos pequenos:
 
 - o status dentro da mesa usa icone ou texto curto;
-- detalhes completos ficam no painel inferior;
+- o resumo operacional fica em um popover contextual e os detalhes completos ficam no painel inferior sob demanda;
 - os filtros de area usam altura fixa e barra de ocupacao;
-- no mobile, mapa e legenda ficam em uma lista rolavel;
-- o editor expandido tambem e rolavel no mobile;
+- no mobile, o mapa recebe o espaco restante da tela e a legenda abre pelo menu;
 - o teste de widget renderiza uma largura de 393 px para capturar regressao de overflow.
 
 ## Testes adicionados
@@ -117,7 +107,7 @@ Os testes cobrem:
 - bloqueio de uniao quando existem comandas diferentes;
 - bloqueio de troca de area e remocao de pessoas quando ha comanda ativa;
 - renderizacao mobile da pagina de mesas sem overflow.
-- abertura do editor expandido mobile sem comandos de comanda.
+- abertura do popover operacional e ativacao do modo Layout no mesmo mapa.
 
 Comando usado:
 

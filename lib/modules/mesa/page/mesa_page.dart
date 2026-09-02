@@ -19,9 +19,6 @@ class MesaPage extends StatefulWidget {
 class _MesaPageState extends State<MesaPage> {
   late final FloorPlanController _controller;
   bool _isEditMode = false;
-  static const double _extraNarrowWidth = 360;
-  static const double _narrowWidth = 420;
-  static const double _wideWidth = 1024;
 
   @override
   void initState() {
@@ -41,55 +38,28 @@ class _MesaPageState extends State<MesaPage> {
       animation: _controller,
       builder: (context, _) {
         final area = _controller.selectedArea;
-
         if (_controller.isLoading || area == null) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final screenWidth = MediaQuery.of(context).size.width;
-        final isExtraNarrow = screenWidth <= _extraNarrowWidth;
-        final isNarrow = screenWidth <= _narrowWidth;
-        final isWide = screenWidth >= _wideWidth;
-        final canvasHeight = isExtraNarrow
-          ? 360.0
-          : (isNarrow ? 400.0 : 420.0);
+        final compact = MediaQuery.sizeOf(context).width < 520;
 
         return Scaffold(
           backgroundColor: GulaColors.background,
           body: SafeArea(
+            top: false,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.fromLTRB(
+                compact ? 12 : 16,
+                10,
+                compact ? 12 : 16,
+                12,
+              ),
               child: Column(
                 children: [
-                  _buildHeader(context, area),
-                  const SizedBox(height: 16),
-                  _buildAreaSelector(area, compact: isNarrow),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: isWide
-                        ? Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(flex: 3, child: _buildCanvas(area)),
-                              const SizedBox(width: 16),
-                              SizedBox(
-                                width: isWide ? 360 : 320,
-                                child: TableLegend(compact: isNarrow),
-                              ),
-                            ],
-                          )
-                        : ListView(
-                            padding: EdgeInsets.zero,
-                            children: [
-                              SizedBox(
-                                height: canvasHeight,
-                                child: _buildCanvas(area),
-                              ),
-                              const SizedBox(height: 14),
-                              TableLegend(compact: isNarrow),
-                            ],
-                          ),
-                  ),
+                  _buildAreaSelector(area, compact: compact),
+                  const SizedBox(height: 10),
+                  Expanded(child: _buildOperationalMap(area)),
                 ],
               ),
             ),
@@ -99,283 +69,99 @@ class _MesaPageState extends State<MesaPage> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, RestaurantArea area) {
-    final totalMesas = _controller.areas.fold<int>(
-      0,
-      (count, item) => count + item.totalTables,
-    );
-    final totalOcupadas = _controller.areas.fold<int>(
-      0,
-      (count, item) => count + item.occupancyCount,
-    );
-    final totalLivres = totalMesas - totalOcupadas;
-    final totalAlertas = _controller.areas.fold<int>(
-      0,
-      (count, item) =>
-          count +
-          item.tables
-              .where(
-                (table) =>
-                    _controller.resolveStatus(table) ==
-                        TableStatus.noOrder30Min ||
-                    _controller.resolveStatus(table) ==
-                        TableStatus.awaitingRelease1H,
-              )
-              .length,
-    );
-
-    final metrics = [
-      _HeaderMetric(
-        icon: Icons.table_restaurant_outlined,
-        label: 'Mesas',
-        value: '$totalMesas',
-      ),
-      _HeaderMetric(
-        icon: Icons.event_available_outlined,
-        label: 'Livres',
-        value: '$totalLivres',
-      ),
-      _HeaderMetric(
-        icon: Icons.warning_amber_rounded,
-        label: 'Alertas',
-        value: '$totalAlertas',
-      ),
-    ];
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isExtraNarrow = constraints.maxWidth <= _extraNarrowWidth;
-        final isNarrow = constraints.maxWidth <= _narrowWidth;
-        final isWide = constraints.maxWidth >= _wideWidth;
-        final verticalGap = isNarrow ? 8.0 : 12.0;
-        final denseButtons = isExtraNarrow;
-        final ButtonStyle? segmentedStyle = denseButtons
-            ? ButtonStyle(
-                visualDensity: VisualDensity.compact,
-                padding: MaterialStateProperty.all(
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                ),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              )
-            : null;
-        final ButtonStyle? outlinedStyle = denseButtons
-            ? OutlinedButton.styleFrom(
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              )
-            : null;
-
-        final actions = [
-          SegmentedButton<bool>(
-            showSelectedIcon: false,
-            selected: {_isEditMode},
-            style: segmentedStyle,
-            segments: const [
-              ButtonSegment<bool>(
-                value: false,
-                icon: Icon(Icons.receipt_long_outlined),
-                label: Text('Operar'),
-              ),
-              ButtonSegment<bool>(
-                value: true,
-                icon: Icon(Icons.edit_location_alt_outlined),
-                label: Text('Editar'),
-              ),
-            ],
-            onSelectionChanged: (selection) {
-              setState(() {
-                _isEditMode = selection.first;
-              });
-            },
-          ),
-          OutlinedButton.icon(
-            onPressed: () => _showTableEditor(),
-            style: outlinedStyle,
-            icon: const Icon(Icons.add_circle_outline),
-            label: const Text('Nova mesa'),
-          ),
-          OutlinedButton.icon(
-            onPressed: () async {
-              await _controller.resetSeed();
-              if (!context.mounted) {
-                return;
-              }
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Mapa restaurado para a base inicial.'),
-                ),
-              );
-            },
-            style: outlinedStyle,
-            icon: const Icon(Icons.refresh_outlined),
-            label: Text(
-              _controller.isSaving ? 'Salvando...' : 'Recarregar base',
+  Widget _buildAreaSelector(
+    RestaurantArea selectedArea, {
+    required bool compact,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: SizedBox(
+            height: compact ? 64 : 68,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _controller.areas.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final item = _controller.areas[index];
+                return RestaurantAreaTab(
+                  area: item,
+                  isSelected: item.id == selectedArea.id,
+                  compact: true,
+                  onTap: () => _controller.selectArea(item.id),
+                );
+              },
             ),
           ),
-        ];
-
-        final metricsWidget = isNarrow
-            ? SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    metrics[0],
-                    const SizedBox(width: 8),
-                    metrics[1],
-                    const SizedBox(width: 8),
-                    metrics[2],
-                  ],
-                ),
-              )
-            : Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: metrics,
-              );
-
-        final actionsWidget = isNarrow
-            ? SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    actions[0],
-                    const SizedBox(width: 8),
-                    actions[1],
-                    const SizedBox(width: 8),
-                    actions[2],
-                  ],
-                ),
-              )
-            : Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: actions,
-              );
-
-        final titleBlock = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Mesas do restaurante',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '${area.name} ativa - $totalOcupadas/$totalMesas mesas em uso',
-              style: const TextStyle(
-                color: GulaColors.textMuted,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        );
-
-        return Container(
-          width: double.infinity,
-          padding: EdgeInsets.all(isNarrow ? 14 : 18),
-          decoration: BoxDecoration(
-            color: GulaColors.surface,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: GulaColors.border),
-          ),
-          child: isNarrow
-              ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    titleBlock,
-                    SizedBox(height: verticalGap),
-                    metricsWidget,
-                    SizedBox(height: verticalGap),
-                    actionsWidget,
-                  ],
-                )
-              : Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          titleBlock,
-                          SizedBox(height: verticalGap),
-                          metricsWidget,
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: isWide ? 420 : 320,
-                      ),
-                      child: Align(
-                        alignment: Alignment.topRight,
-                        child: actionsWidget,
-                      ),
-                    ),
-                  ],
-                ),
-        );
-      },
+        ),
+        const SizedBox(width: 8),
+        _MapMenuButton(onShowLegend: _showMapLegend, onReset: _resetMap),
+      ],
     );
   }
 
-  Widget _buildAreaSelector(RestaurantArea selectedArea, {bool compact = false}) {
-    return SizedBox(
-      height: compact ? 64 : 76,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemBuilder: (context, index) {
-          final item = _controller.areas[index];
-          return RestaurantAreaTab(
-            area: item,
-            isSelected: item.id == selectedArea.id,
-            compact: compact,
-            onTap: () => _controller.selectArea(item.id),
-          );
-        },
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
-        itemCount: _controller.areas.length,
-      ),
-    );
-  }
+  Widget _buildOperationalMap(RestaurantArea area) {
+    final occupied = area.occupancyCount;
+    final alerts = area.tables.where((table) {
+      final status = _controller.resolveStatus(table);
+      return status == TableStatus.noOrder30Min ||
+          status == TableStatus.awaitingRelease1H ||
+          status == TableStatus.attention;
+    }).length;
 
-  Widget _buildCanvas(RestaurantArea area) {
-    return FloorPlanCanvas(
-      area: area,
-      controller: _controller,
-      isEditMode: _isEditMode,
-      onToggleEditMode: () {
-        setState(() {
-          _isEditMode = !_isEditMode;
-        });
-      },
-      onExpand: _openExpandedEditor,
-      onJoinSuggested: _joinSuggestedTables,
-      onEditTable: (table) => _showTableEditor(table: table),
-      onOpenTable: _showTableInfo,
-      onOpenOrder: (table) => _openOrder(table.id),
-    );
-  }
-
-  Future<void> _openExpandedEditor() async {
-    setState(() {
-      _isEditMode = true;
-    });
-
-    await Navigator.push<void>(
-      context,
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (context) {
-          return _MesaMapEditorPage(
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: FloorPlanCanvas(
+            area: area,
             controller: _controller,
-            onNewTable: () => _showTableEditor(),
-            onEditTable: (table) => _showTableEditor(table: table),
+            isEditMode: _isEditMode,
+            onToggleEditMode: () {
+              setState(() => _isEditMode = !_isEditMode);
+            },
+            onAddTable: () => _showTableEditor(),
             onJoinSuggested: _joinSuggestedTables,
-          );
-        },
+            onEditTable: (table) => _showTableEditor(table: table),
+            onOpenTable: _showTableInfo,
+            onOpenOrder: (table) => _openOrder(table.id),
+          ),
+        ),
+        Positioned(
+          top: 12,
+          left: 12,
+          child: IgnorePointer(
+            child: _MapSummary(
+              areaName: area.name,
+              total: area.totalTables,
+              occupied: occupied,
+              alerts: alerts,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _showMapLegend() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: TableLegend(compact: true),
+        ),
       ),
+    );
+  }
+
+  Future<void> _resetMap() async {
+    await _controller.resetSeed();
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Mapa restaurado para a base inicial.')),
     );
   }
 
@@ -401,13 +187,11 @@ class _MesaPageState extends State<MesaPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) {
-        return TableEditorSheet(
-          areas: _controller.areas,
-          initialAreaId: areaId,
-          table: table,
-        );
-      },
+      builder: (context) => TableEditorSheet(
+        areas: _controller.areas,
+        initialAreaId: areaId,
+        table: table,
+      ),
     );
 
     if (draft == null) {
@@ -436,58 +220,56 @@ class _MesaPageState extends State<MesaPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (sheetContext) {
-        return TableInfoSheet(
-          areaName: area.name,
-          table: refreshedTable,
-          status: status,
-          scopeTables: scopeTables,
-          totalChairs: _controller.groupChairsCount(refreshedTable.id),
-          seatedPeople: _controller.groupSeatedCount(refreshedTable.id),
-          itemsCount: _controller.groupItemsCount(refreshedTable.id),
-          partialTotal: _controller.groupPartialTotal(refreshedTable.id),
-          lastOrderAt: _controller.lastOrderAtForScope(refreshedTable.id),
-          customerName: _controller.groupCustomerName(refreshedTable.id),
-          joinableTables: _controller.joinableTablesFor(refreshedTable.id),
-          onOpenOrder: () {
-            Navigator.pop(sheetContext);
-            _openOrder(refreshedTable.id);
-          },
-          onEdit: () {
-            Navigator.pop(sheetContext);
-            _showTableEditor(table: refreshedTable);
-          },
-          onMarkFree: () {
-            Navigator.pop(sheetContext);
-            _confirmAndRelease(refreshedTable.id);
-          },
-          onJoinWith: (targetTableId) async {
-            Navigator.pop(sheetContext);
-            final error = await _controller.joinTables(
-              sourceTableId: refreshedTable.id,
-              targetTableId: targetTableId,
-            );
-            if (!mounted) {
-              return;
-            }
-            if (error != null) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(error)));
-              return;
-            }
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Mesas unidas com sucesso.')),
-            );
-          },
-          onSeparateGroup: refreshedTable.joinGroupId == null
-              ? null
-              : () {
-                  Navigator.pop(sheetContext);
-                  _confirmAndSeparate(refreshedTable.joinGroupId!);
-                },
-        );
-      },
+      builder: (sheetContext) => TableInfoSheet(
+        areaName: area.name,
+        table: refreshedTable,
+        status: status,
+        scopeTables: scopeTables,
+        totalChairs: _controller.groupChairsCount(refreshedTable.id),
+        seatedPeople: _controller.groupSeatedCount(refreshedTable.id),
+        itemsCount: _controller.groupItemsCount(refreshedTable.id),
+        partialTotal: _controller.groupPartialTotal(refreshedTable.id),
+        lastOrderAt: _controller.lastOrderAtForScope(refreshedTable.id),
+        customerName: _controller.groupCustomerName(refreshedTable.id),
+        joinableTables: _controller.joinableTablesFor(refreshedTable.id),
+        onOpenOrder: () {
+          Navigator.pop(sheetContext);
+          _openOrder(refreshedTable.id);
+        },
+        onEdit: () {
+          Navigator.pop(sheetContext);
+          _showTableEditor(table: refreshedTable);
+        },
+        onMarkFree: () {
+          Navigator.pop(sheetContext);
+          _confirmAndRelease(refreshedTable.id);
+        },
+        onJoinWith: (targetTableId) async {
+          Navigator.pop(sheetContext);
+          final error = await _controller.joinTables(
+            sourceTableId: refreshedTable.id,
+            targetTableId: targetTableId,
+          );
+          if (!mounted) {
+            return;
+          }
+          if (error != null) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(error)));
+            return;
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Mesas unidas com sucesso.')),
+          );
+        },
+        onSeparateGroup: refreshedTable.joinGroupId == null
+            ? null
+            : () {
+                Navigator.pop(sheetContext);
+                _confirmAndSeparate(refreshedTable.joinGroupId!);
+              },
+      ),
     );
   }
 
@@ -518,7 +300,7 @@ class _MesaPageState extends State<MesaPage> {
     final confirmed = await _confirmAction(
       title: 'Liberar mesa',
       body:
-          'Essa acao encerra o estado atual da mesa e limpa a comanda em aberto.',
+          'Essa ação encerra o estado atual da mesa e limpa a comanda em aberto.',
     );
     if (confirmed != true) {
       return;
@@ -537,7 +319,7 @@ class _MesaPageState extends State<MesaPage> {
     final confirmed = await _confirmAction(
       title: 'Separar grupo',
       body:
-          'As mesas voltarao a operar individualmente. A comanda do grupo sera preservada.',
+          'As mesas voltarão a operar individualmente. A comanda do grupo será preservada.',
     );
     if (confirmed != true) {
       return;
@@ -561,27 +343,25 @@ class _MesaPageState extends State<MesaPage> {
   Future<bool?> _confirmAction({required String title, required String body}) {
     return showDialog<bool>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: GulaColors.background,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-            side: const BorderSide(color: GulaColors.border),
+      builder: (context) => AlertDialog(
+        backgroundColor: GulaColors.background,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(color: GulaColors.border),
+        ),
+        title: Text(title),
+        content: Text(body),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
           ),
-          title: Text(title),
-          content: Text(body),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Confirmar'),
-            ),
-          ],
-        );
-      },
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Confirmar'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -590,201 +370,37 @@ class _MesaPageState extends State<MesaPage> {
     if (error == null || error.isEmpty) {
       return;
     }
-
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
   }
 }
 
-class _MesaMapEditorPage extends StatelessWidget {
-  const _MesaMapEditorPage({
-    required this.controller,
-    required this.onNewTable,
-    required this.onEditTable,
-    required this.onJoinSuggested,
+class _MapSummary extends StatelessWidget {
+  const _MapSummary({
+    required this.areaName,
+    required this.total,
+    required this.occupied,
+    required this.alerts,
   });
 
-  final FloorPlanController controller;
-  final VoidCallback onNewTable;
-  final ValueChanged<RestaurantTable> onEditTable;
-  final VoidCallback onJoinSuggested;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (context, _) {
-        final area = controller.selectedArea;
-        if (area == null) {
-          return const Scaffold(
-            backgroundColor: GulaColors.background,
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        return Scaffold(
-          backgroundColor: GulaColors.background,
-          body: LayoutBuilder(
-            builder: (context, constraints) {
-              final isWide = constraints.maxWidth >= 860;
-              final bottomInset = MediaQuery.of(context).padding.bottom;
-
-              return Stack(
-                children: [
-                  Positioned.fill(
-                    child: FloorPlanCanvas(
-                      area: area,
-                      controller: controller,
-                      isEditMode: true,
-                      isExpanded: true,
-                      borderRadius: 0,
-                      showMapBadge: false,
-                      onToggleEditMode: () => Navigator.pop(context),
-                      onExpand: () {},
-                      onJoinSuggested: onJoinSuggested,
-                      onEditTable: onEditTable,
-                      onOpenTable: onEditTable,
-                      onOpenOrder: (_) {},
-                    ),
-                  ),
-                  Positioned(
-                    left: 12,
-                    right: 12,
-                    top: MediaQuery.of(context).padding.top + 8,
-                    child: _EditorTopBar(
-                      area: area,
-                      onNewTable: onNewTable,
-                      onClose: () => Navigator.pop(context),
-                    ),
-                  ),
-                  Positioned(
-                    left: isWide ? 16 : 12,
-                    right: isWide ? null : 12,
-                    bottom: 12 + bottomInset,
-                    width: isWide ? 320 : null,
-                    child: _EditorSidePanel(
-                      controller: controller,
-                      area: area,
-                      onNewTable: onNewTable,
-                      onJoinSuggested: onJoinSuggested,
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _EditorTopBar extends StatelessWidget {
-  const _EditorTopBar({
-    required this.area,
-    required this.onNewTable,
-    required this.onClose,
-  });
-
-  final RestaurantArea area;
-  final VoidCallback onNewTable;
-  final VoidCallback onClose;
+  final String areaName;
+  final int total;
+  final int occupied;
+  final int alerts;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      constraints: const BoxConstraints(maxWidth: 220),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
-        color: GulaColors.surfaceAlt.withValues(alpha: 0.96),
+        color: GulaColors.surfaceAlt.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: GulaColors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            tooltip: 'Fechar editor',
-            onPressed: onClose,
-            icon: const Icon(Icons.arrow_back_rounded),
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Editor do mapa de mesas',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: GulaColors.text,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 15,
-                  ),
-                ),
-                Text(
-                  '${area.name} - ${area.totalTables} mesas',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: GulaColors.textMuted,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          FilledButton.icon(
-            onPressed: onNewTable,
-            icon: const Icon(Icons.add_circle_outline, size: 18),
-            label: const Text('Nova'),
-            style: FilledButton.styleFrom(
-              visualDensity: VisualDensity.compact,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EditorSidePanel extends StatelessWidget {
-  const _EditorSidePanel({
-    required this.controller,
-    required this.area,
-    required this.onNewTable,
-    required this.onJoinSuggested,
-  });
-
-  final FloorPlanController controller;
-  final RestaurantArea area;
-  final VoidCallback onNewTable;
-  final VoidCallback onJoinSuggested;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasJoinSuggestion = controller.suggestedJoinTargetId != null;
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: GulaColors.surfaceAlt.withValues(alpha: 0.96),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: GulaColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: Colors.black.withValues(alpha: 0.07),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -792,138 +408,36 @@ class _EditorSidePanel extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.edit_location_alt_outlined, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  area.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 40,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: controller.areas.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final item = controller.areas[index];
-                return ChoiceChip(
-                  selected: item.id == area.id,
-                  label: Text(item.name),
-                  avatar: Icon(
-                    item.id == area.id
-                        ? Icons.check_rounded
-                        : Icons.location_on_outlined,
-                    size: 16,
-                  ),
-                  onSelected: (_) => controller.selectArea(item.id),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _EditorMiniStat(
-                icon: Icons.table_restaurant_outlined,
-                label: 'Mesas',
-                value: '${area.totalTables}',
-              ),
-              _EditorMiniStat(
-                icon: Icons.people_outline,
-                label: 'Uso',
-                value: '${area.occupancyCount}',
-              ),
-              _EditorMiniStat(
-                icon: Icons.link,
-                label: 'Grupos',
-                value: '${area.joinGroups.length}',
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onNewTable,
-                  icon: const Icon(Icons.add_circle_outline),
-                  label: const Text('Mesa'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: FilledButton.tonalIcon(
-                  onPressed: hasJoinSuggestion ? onJoinSuggested : null,
-                  icon: const Icon(Icons.call_merge_rounded),
-                  label: const Text('Unir'),
-                ),
-              ),
-            ],
-          ),
-          if (hasJoinSuggestion) ...[
-            const SizedBox(height: 10),
-            const _EditorHint(
-              icon: Icons.touch_app_outlined,
-              text: 'Solte a mesa e toque em Unir para agrupar.',
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _EditorMiniStat extends StatelessWidget {
-  const _EditorMiniStat({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: GulaColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: GulaColors.borderSoft),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 15, color: GulaColors.textMuted),
-          const SizedBox(width: 6),
           Text(
-            value,
+            areaName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: GulaColors.text,
               fontWeight: FontWeight.w800,
+              fontSize: 13,
             ),
           ),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              color: GulaColors.textMuted,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
+          const SizedBox(height: 5),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              _MapSummaryValue(
+                icon: Icons.table_restaurant_outlined,
+                value: '$total mesas',
+              ),
+              _MapSummaryValue(
+                icon: Icons.people_outline_rounded,
+                value: '$occupied em uso',
+              ),
+              if (alerts > 0)
+                _MapSummaryValue(
+                  icon: Icons.priority_high_rounded,
+                  value: '$alerts alerta${alerts == 1 ? '' : 's'}',
+                  color: GulaColors.critical,
+                ),
+            ],
           ),
         ],
       ),
@@ -931,26 +445,27 @@ class _EditorMiniStat extends StatelessWidget {
   }
 }
 
-class _EditorHint extends StatelessWidget {
-  const _EditorHint({required this.icon, required this.text});
+class _MapSummaryValue extends StatelessWidget {
+  const _MapSummaryValue({required this.icon, required this.value, this.color});
 
   final IconData icon;
-  final String text;
+  final String value;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
+    final foreground = color ?? GulaColors.textMuted;
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: GulaColors.primary),
-        const SizedBox(width: 7),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(
-              color: GulaColors.textMuted,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
+        Icon(icon, size: 13, color: foreground),
+        const SizedBox(width: 4),
+        Text(
+          value,
+          style: TextStyle(
+            color: foreground,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ],
@@ -958,49 +473,54 @@ class _EditorHint extends StatelessWidget {
   }
 }
 
-class _HeaderMetric extends StatelessWidget {
-  const _HeaderMetric({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
+class _MapMenuButton extends StatelessWidget {
+  const _MapMenuButton({required this.onShowLegend, required this.onReset});
 
-  final IconData icon;
-  final String label;
-  final String value;
+  final VoidCallback onShowLegend;
+  final VoidCallback onReset;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: GulaColors.surfaceAlt.withValues(alpha: 0.84),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: GulaColors.border),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 15, color: GulaColors.textMuted),
-          const SizedBox(width: 6),
-          Text(
-            value,
-            style: const TextStyle(
-              color: GulaColors.text,
-              fontWeight: FontWeight.w800,
-            ),
+    return PopupMenuButton<_MapMenuAction>(
+      tooltip: 'Opções do mapa',
+      onSelected: (action) {
+        switch (action) {
+          case _MapMenuAction.legend:
+            onShowLegend();
+          case _MapMenuAction.reset:
+            onReset();
+        }
+      },
+      itemBuilder: (context) => const [
+        PopupMenuItem(
+          value: _MapMenuAction.legend,
+          child: ListTile(
+            dense: true,
+            leading: Icon(Icons.info_outline_rounded),
+            title: Text('Legenda operacional'),
           ),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              color: GulaColors.textMuted,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
+        ),
+        PopupMenuItem(
+          value: _MapMenuAction.reset,
+          child: ListTile(
+            dense: true,
+            leading: Icon(Icons.restart_alt_rounded),
+            title: Text('Restaurar mapa inicial'),
           ),
-        ],
+        ),
+      ],
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: GulaColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: GulaColors.border),
+        ),
+        child: const Icon(Icons.more_horiz_rounded, color: GulaColors.text),
       ),
     );
   }
 }
+
+enum _MapMenuAction { legend, reset }
