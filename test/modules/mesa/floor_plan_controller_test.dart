@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_app_teste/core/theme/gula_theme.dart';
+import 'package:my_app_teste/core/widgets/app_campo_texto.dart';
 import 'package:my_app_teste/modules/mesa/controller/floor_plan_controller.dart';
 import 'package:my_app_teste/modules/mesa/dto/mesa_dto.dart';
 import 'package:my_app_teste/modules/mesa/model/restaurant_models.dart';
+import 'package:my_app_teste/modules/mesa/page/mesa_form_page.dart';
 import 'package:my_app_teste/modules/mesa/page/mesa_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -248,6 +250,119 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('abre o formulario de mesa em largura mobile sem overflow', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(393, 852);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(theme: GulaTheme.light(), home: const MesaPagina()),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Mesa 01'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Detalhes da mesa'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Editar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Editar mesa'), findsOneWidget);
+    expect(find.text('Código da mesa *'), findsOneWidget);
+    expect(find.byType(AppCampoTexto), findsNWidgets(5));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('seleciona a area da nova mesa pela modal personalizada', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(393, 852);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final areas = [
+      AreaRestaurante(
+        id: 'salao',
+        nome: 'Salao interno',
+        tipo: 'interno',
+        mesas: [],
+      ),
+      AreaRestaurante(
+        id: 'varanda',
+        nome: 'Varanda',
+        tipo: 'externo',
+        mesas: [],
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: GulaTheme.light(),
+        home: MesaFormularioPagina(areas: areas, idAreaInicial: 'salao'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Salao interno'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Escolha a área'), findsOneWidget);
+    expect(find.text('Varanda'), findsOneWidget);
+
+    await tester.tap(find.text('Varanda'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Varanda'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('alterna formatos circulares sem erro durante a animacao', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(393, 852);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: GulaTheme.light(),
+        home: MesaFormularioPagina(
+          areas: [
+            AreaRestaurante(
+              id: 'salao',
+              nome: 'Salao interno',
+              tipo: 'interno',
+              mesas: [],
+            ),
+          ],
+          idAreaInicial: 'salao',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Redonda'));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    await tester.pump(const Duration(milliseconds: 90));
+    expect(tester.takeException(), isNull);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Quadrada'));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    await tester.pump(const Duration(milliseconds: 90));
+    expect(tester.takeException(), isNull);
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'abre popover operacional e ativa o modo layout no proprio mapa',
     (tester) async {
@@ -267,6 +382,8 @@ void main() {
       expect(find.text('Pedido #1001'), findsOneWidget);
       expect(find.text('Ver comanda'), findsOneWidget);
 
+      await tester.tap(find.byTooltip('Fechar resumo'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Modo layout'));
       await tester.pumpAndSettle();
 

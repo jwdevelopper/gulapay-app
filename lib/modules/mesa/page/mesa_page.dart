@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:my_app_teste/core/theme/gula_theme.dart';
 import 'package:my_app_teste/modules/mesa/controller/floor_plan_controller.dart';
 import 'package:my_app_teste/modules/mesa/model/restaurant_models.dart';
+import 'package:my_app_teste/modules/mesa/page/mesa_form_page.dart';
 import 'package:my_app_teste/modules/mesa/page/mesa_order_page.dart';
 import 'package:my_app_teste/modules/mesa/widget/floor_plan_canvas.dart';
 import 'package:my_app_teste/modules/mesa/widget/restaurant_area_tab.dart';
-import 'package:my_app_teste/modules/mesa/widget/table_editor_sheet.dart';
 import 'package:my_app_teste/modules/mesa/widget/table_info_sheet.dart';
 import 'package:my_app_teste/modules/mesa/widget/table_legend.dart';
 
@@ -184,14 +184,14 @@ class _MesaPaginaState extends State<MesaPagina> {
 
   Future<void> _exibirEditorMesa({MesaRestaurante? mesa}) async {
     final idArea = mesa?.idArea ?? (_controlador.areaSelecionada?.id ?? '');
-    final rascunho = await showModalBottomSheet<RascunhoMesa>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => PainelEditorMesa(
-        areas: _controlador.areas,
-        idAreaInicial: idArea,
-        mesa: mesa,
+    final rascunho = await Navigator.push<RascunhoMesa>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MesaFormularioPagina(
+          areas: _controlador.areas,
+          idAreaInicial: idArea,
+          mesa: mesa,
+        ),
       ),
     );
 
