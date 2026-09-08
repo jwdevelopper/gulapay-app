@@ -71,12 +71,9 @@ class _HomeState extends State<Home> {
       icone: Icons.shopping_bag_outlined,
       pagina: ProdutoPage(),
     ),
-    _AbaPrincipal(
+    const _AbaPrincipal(
       tituloAppBar: 'Comandas',
       rotuloInferior: 'Comandas',
-    const _AbaPrincipal(
-      tituloAppBar: 'Pedidos',
-      rotuloInferior: 'Pedidos',
       icone: Icons.receipt_long_outlined,
       pagina: ComandasPage(),
     ),
@@ -137,7 +134,7 @@ class _HomeState extends State<Home> {
   List<_AbaPrincipal> get _abasFixasNavBar => _abasVisiveis.where((aba) {
     return aba.rotuloInferior == 'Início' ||
         aba.rotuloInferior == 'Mesas' ||
-        aba.rotuloInferior == 'Pedidos' ||
+        aba.rotuloInferior == 'Comandas' ||
         aba.rotuloInferior == 'Clientes';
   }).toList();
 
@@ -148,7 +145,7 @@ class _HomeState extends State<Home> {
 
   /// Menu dinâmico:
   ///
-  /// - Tela SEM cadastro (Início, Mesas, Pedidos): abas fixas nas posições
+  /// - Tela SEM cadastro (Início, Mesas, Comandas): abas fixas nas posições
   ///   naturais, bolha na aba tocada.
   /// - Tela COM cadastro ("+" visível): o item atual — aba fixa ou página
   ///   vinda do drawer — vai para o CENTRO da barra com a bolha, e o "+"
