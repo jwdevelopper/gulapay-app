@@ -33,6 +33,11 @@ class ComandaService {
   Future<ComandaResponse> fechar(int id) => _action(id, 'fechar');
   Future<ComandaResponse> cancelar(int id) => _action(id, 'cancelar');
   Future<ComandaResponse> reabrir(int id) => _action(id, 'reabrir');
+  Future<ComandaResponse> registrarPagamento(int id, {required String formaPagamento, required double valor}) =>
+      _mutate(() async => ComandaResponse.fromJson(Map<String, dynamic>.from((await _dio.post(
+            '${ConstantsApi.urlComandas}/$id/pagamentos',
+            data: {'formaPagamento': formaPagamento, 'valor': valor},
+          )).data as Map)));
 
   Future<ComandaResponse> _get(String path) => _mutate(() async => ComandaResponse.fromJson(Map<String, dynamic>.from((await _dio.get('${ConstantsApi.urlComandas}/$path')).data as Map)));
   Future<ComandaResponse> _action(int id, String action) => _mutate(() async => ComandaResponse.fromJson(Map<String, dynamic>.from((await _dio.post('${ConstantsApi.urlComandas}/$id/$action')).data as Map)));

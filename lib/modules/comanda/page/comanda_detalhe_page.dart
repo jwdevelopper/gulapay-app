@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/auth_session.dart';
 import 'package:my_app_teste/core/widgets/app_tag.dart';
@@ -38,6 +39,7 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
   String? _erro;
   bool _loading = true;
   bool _actionLoading = false;
+  bool _paymentLoading = false;
 
   @override
   void initState() {
@@ -80,6 +82,10 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
   bool get _podeMutarItens => _caixa || _garcomDono;
 
   String _money(double value) => 'R\$ ${value.toStringAsFixed(2).replaceAll('.', ',')}';
+
+  String _quantityLabel(double value) => value == value.roundToDouble()
+      ? value.toInt().toString()
+      : value.toString().replaceAll('.', ',');
 
   String _friendlyOrigin(String origin) => switch (origin) {
         'MESA' => 'Mesa',
@@ -127,6 +133,21 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
       };
 
   Future<void> _action(String action) async {
+    if (action == 'fechar') {
+      final confirmar = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: EstoquePalette.surface,
+          title: const Text('Fechar comanda?', style: TextStyle(color: EstoquePalette.text, fontWeight: FontWeight.w700)),
+          content: const Text('Confira os itens e o valor total antes de finalizar esta venda.', style: TextStyle(color: EstoquePalette.textMuted)),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Voltar')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Fechar comanda')),
+          ],
+        ),
+      );
+      if (confirmar != true || !mounted) return;
+    }
     setState(() => _actionLoading = true);
     try {
       final updated = switch (action) {
@@ -134,7 +155,12 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
         'cancelar' => await _service.cancelar(widget.id),
         _ => await _service.reabrir(widget.id),
       };
-      if (mounted) setState(() => _comanda = updated);
+      if (mounted) {
+        setState(() => _comanda = updated);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(action == 'fechar' ? 'Comanda fechada com sucesso.' : 'Comanda atualizada.')),
+        );
+      }
     } on ApiError catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
@@ -316,8 +342,8 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link do WhatsApp copiado.')));
               },
               style: TextButton.styleFrom(foregroundColor: EstoquePalette.primary, padding: EdgeInsets.zero),
-              icon: const Icon(Icons.chat_outlined, size: 18),
-              label: const Text('Copiar link WhatsApp'),
+              icon: const FaIcon(FontAwesomeIcons.whatsapp, size: 18),
+              label: const Text('Abrir no WhatsApp'),
             ),
           ],
           const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Divider(height: 1, color: EstoquePalette.borderSoft)),
@@ -390,7 +416,7 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(item.produtoNome, style: const TextStyle(color: EstoquePalette.text, fontSize: 14, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 3),
-                Text('${item.quantidade} × ${_money(item.precoUnitario)}', style: const TextStyle(color: EstoquePalette.textMuted, fontSize: 12)),
+                Text('${_quantityLabel(item.quantidade)} × ${_money(item.precoUnitario)}', style: const TextStyle(color: EstoquePalette.textMuted, fontSize: 12)),
                 if (item.valorDesconto > 0 || item.valorAcrescimo > 0) ...[
                   const SizedBox(height: 2),
                   Text(
@@ -495,7 +521,9 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
           if (_caixa && active)
             Row(children: [
               Expanded(child: OutlinedButton.icon(onPressed: _actionLoading ? null : () => _action('cancelar'), icon: const Icon(Icons.cancel_outlined, size: 18), label: const Text('Cancelar'), style: OutlinedButton.styleFrom(foregroundColor: EstoquePalette.error, side: const BorderSide(color: EstoquePalette.error), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), padding: const EdgeInsets.symmetric(vertical: 15)))),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
+              Expanded(child: OutlinedButton.icon(onPressed: _actionLoading || _paymentLoading ? null : _abrirPagamento, icon: const Icon(Icons.payments_outlined, size: 18), label: const Text('Pagar'), style: OutlinedButton.styleFrom(foregroundColor: EstoquePalette.primary, side: const BorderSide(color: EstoquePalette.primary), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), padding: const EdgeInsets.symmetric(vertical: 15)))),
+              const SizedBox(width: 8),
               Expanded(child: ElevatedButton.icon(onPressed: _actionLoading ? null : () => _action('fechar'), icon: const Icon(Icons.check_circle_outline_rounded, size: 18), label: const Text('Fechar'), style: ElevatedButton.styleFrom(backgroundColor: EstoquePalette.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), padding: const EdgeInsets.symmetric(vertical: 15)))),
             ]),
           if (_admin && c.status == 'FECHADA')
@@ -503,6 +531,59 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
         ]),
       ),
     );
+  }
+
+  Future<void> _abrirPagamento() async {
+    final c = _comanda;
+    if (c?.id == null) return;
+    String forma = 'DINHEIRO';
+    final valorCtrl = TextEditingController(text: c!.totalLiquido.toStringAsFixed(2).replaceAll('.', ','));
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setLocal) => AlertDialog(
+        backgroundColor: EstoquePalette.surface,
+        title: const Text('Registrar pagamento', style: TextStyle(color: EstoquePalette.text, fontWeight: FontWeight.w700)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text('Total da comanda: ${_money(c.totalLiquido)}', style: const TextStyle(color: EstoquePalette.textMuted)),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(initialValue: forma, isExpanded: true, decoration: _dialogDecoration('Forma de pagamento'), items: const [
+            DropdownMenuItem(value: 'DINHEIRO', child: Text('Dinheiro')),
+            DropdownMenuItem(value: 'PIX', child: Text('PIX')),
+            DropdownMenuItem(value: 'CARTAO_CREDITO', child: Text('Cartão de crédito')),
+            DropdownMenuItem(value: 'CARTAO_DEBITO', child: Text('Cartão de débito')),
+          ], onChanged: (v) => setLocal(() => forma = v ?? forma)),
+          const SizedBox(height: 12),
+          TextField(controller: valorCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]'))], decoration: _dialogDecoration('Valor pago', prefix: 'R\$ ')),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Voltar')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Confirmar pagamento')),
+        ],
+      )),
+    );
+    final valor = _parseMoney(valorCtrl.text);
+    valorCtrl.dispose();
+    if (confirmado != true || valor == null || valor <= 0 || !mounted) return;
+    setState(() => _paymentLoading = true);
+    try {
+      final updated = await _service.registrarPagamento(c.id!, formaPagamento: forma, valor: valor);
+      if (mounted) {
+        setState(() => _comanda = updated);
+      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pagamento registrado com sucesso.')));
+    } on ApiError catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Não foi possível registrar o pagamento.')));
+    } finally { if (mounted) setState(() => _paymentLoading = false); }
+  }
+
+  InputDecoration _dialogDecoration(String label, {String? prefix}) => InputDecoration(labelText: label, prefixText: prefix, floatingLabelBehavior: FloatingLabelBehavior.always, filled: true, fillColor: EstoquePalette.surfaceAlt, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: EstoquePalette.border)), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: EstoquePalette.border)), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: EstoquePalette.primary, width: 1.5)));
+
+  double? _parseMoney(String raw) {
+    final value = raw.trim().replaceAll(RegExp(r'[^0-9,.]'), '');
+    if (value.isEmpty) return null;
+    return double.tryParse(value.contains(',') ? value.replaceAll('.', '').replaceAll(',', '.') : value);
   }
 
   Future<void> _abrirAdicionarItem() async {
@@ -572,32 +653,36 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
   Future<void> _abrirCancelarItem(ItemComandaResponse item) async {
     if (item.id == null) return;
     String? motivo = _motivosCancelamento.keys.first;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showModalBottomSheet<bool>(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: EstoquePalette.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setLocal) => AlertDialog(
-          backgroundColor: EstoquePalette.surface,
-          title: const Text('Cancelar item', style: TextStyle(color: EstoquePalette.text, fontWeight: FontWeight.w700)),
-          content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(item.produtoNome, style: const TextStyle(color: EstoquePalette.textMuted)),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: motivo,
-              decoration: const InputDecoration(labelText: 'Motivo *', border: OutlineInputBorder()),
-              items: _motivosCancelamento.entries
-                  .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
-                  .toList(),
-              onChanged: (value) => setLocal(() => motivo = value),
-            ),
-          ]),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Voltar')),
-            TextButton(
-              onPressed: motivo == null ? null : () => Navigator.pop(ctx, true),
-              style: TextButton.styleFrom(foregroundColor: EstoquePalette.error),
-              child: const Text('Cancelar item'),
-            ),
-          ],
+        builder: (ctx, setLocal) => Padding(
+          padding: EdgeInsets.fromLTRB(20, 12, 20, 16 + MediaQuery.of(ctx).viewInsets.bottom),
+          child: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Center(child: Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 18), decoration: BoxDecoration(color: EstoquePalette.border, borderRadius: BorderRadius.circular(999)))),
+              const Text('Cancelar item', style: TextStyle(color: EstoquePalette.text, fontSize: 20, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 4),
+              Text(item.produtoNome, style: const TextStyle(color: EstoquePalette.textMuted, fontSize: 13)),
+              const SizedBox(height: 20),
+              DropdownButtonFormField<String>(
+                initialValue: motivo,
+                isExpanded: true,
+                decoration: _dialogDecoration('Motivo *'),
+                items: _motivosCancelamento.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
+                onChanged: (value) => setLocal(() => motivo = value),
+              ),
+              const SizedBox(height: 20),
+              Row(children: [
+                Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(ctx, false), style: OutlinedButton.styleFrom(foregroundColor: EstoquePalette.text, side: const BorderSide(color: EstoquePalette.border), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), padding: const EdgeInsets.symmetric(vertical: 15)), child: const Text('Voltar'))),
+                const SizedBox(width: 12),
+                Expanded(child: ElevatedButton(onPressed: motivo == null ? null : () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: EstoquePalette.error, foregroundColor: Colors.white, disabledBackgroundColor: EstoquePalette.borderSoft, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), padding: const EdgeInsets.symmetric(vertical: 15)), child: const Text('Cancelar item'))),
+              ]),
+            ]),
+          ),
         ),
       ),
     );
@@ -743,6 +828,19 @@ class _ItemFormSheetState extends State<_ItemFormSheet> {
   }
 
   String _fmtMoney(double value) => value.toStringAsFixed(2).replaceAll('.', ',');
+
+  String _formatCurrencyInput(String raw) {
+    final digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isEmpty) return '';
+    final cents = int.tryParse(digits) ?? 0;
+    return (cents / 100).toStringAsFixed(2).replaceAll('.', ',');
+  }
+
+  void _onCurrencyChanged(TextEditingController controller, String value) {
+    final formatted = _formatCurrencyInput(value);
+    if (formatted == value) return;
+    controller.value = TextEditingValue(text: formatted, selection: TextSelection.collapsed(offset: formatted.length));
+  }
 
   String _fmtQtd(double value) {
     if (value == value.roundToDouble()) return value.toInt().toString();
@@ -917,7 +1015,8 @@ class _ItemFormSheetState extends State<_ItemFormSheet> {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 8, 20, 16 + bottom),
-      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      child: SingleChildScrollView(
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Center(
           child: Container(
             width: 40,
@@ -944,13 +1043,16 @@ class _ItemFormSheetState extends State<_ItemFormSheet> {
             _fieldLabel('Produto', subtitle: 'Obrigatório'),
             DropdownButtonFormField<int>(
               isExpanded: true,
-              decoration: _decoration('Selecione um produto'),
+              decoration: _decoration('', hint: 'Selecione um produto').copyWith(labelText: null, floatingLabelBehavior: FloatingLabelBehavior.never),
               dropdownColor: EstoquePalette.surface,
               items: _produtos
                   .where((p) => p.id != null)
-                  .map((p) => DropdownMenuItem(value: p.id, child: Text(p.nome, style: const TextStyle(color: EstoquePalette.text))))
+                  .map((p) => DropdownMenuItem(value: p.id, child: Text(p.nome, overflow: TextOverflow.ellipsis, style: const TextStyle(color: EstoquePalette.text))))
                   .toList(),
-              onChanged: (id) => setState(() => _produto = _produtos.firstWhere((p) => p.id == id)),
+              onChanged: (id) => setState(() {
+                _produto = _produtos.firstWhere((p) => p.id == id);
+                _qtdCtrl.text = '1';
+              }),
             ),
           ],
           const SizedBox(height: 20),
@@ -962,7 +1064,7 @@ class _ItemFormSheetState extends State<_ItemFormSheet> {
             controller: _obsCtrl,
             maxLines: 2,
             style: const TextStyle(color: EstoquePalette.text, fontSize: 15),
-            decoration: _decoration('Ex.: sem gelo, ponto da carne…'),
+            decoration: _decoration('Observação', hint: 'Ex.: sem gelo, ponto da carne…').copyWith(labelText: null, floatingLabelBehavior: FloatingLabelBehavior.never),
           ),
           const SizedBox(height: 8),
           Container(
@@ -994,6 +1096,7 @@ class _ItemFormSheetState extends State<_ItemFormSheet> {
                         controller: _descCtrl,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9,]'))],
+                        onChanged: (value) => _onCurrencyChanged(_descCtrl, value),
                         style: const TextStyle(color: EstoquePalette.text, fontSize: 15),
                         decoration: _decoration('Desconto', prefix: 'R\$ ', hint: '0,00', helper: 'Valor a menos'),
                       ),
@@ -1004,6 +1107,7 @@ class _ItemFormSheetState extends State<_ItemFormSheet> {
                         controller: _acresCtrl,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9,]'))],
+                        onChanged: (value) => _onCurrencyChanged(_acresCtrl, value),
                         style: const TextStyle(color: EstoquePalette.text, fontSize: 15),
                         decoration: _decoration('Acréscimo', prefix: 'R\$ ', hint: '0,00', helper: 'Valor a mais'),
                       ),
@@ -1026,7 +1130,8 @@ class _ItemFormSheetState extends State<_ItemFormSheet> {
             child: Text(widget.edicao ? 'Salvar alterações' : 'Adicionar à comanda', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
           ),
         ],
-      ]),
+        ]),
+      ),
     );
   }
 }
@@ -1074,6 +1179,13 @@ class _EventosSheetState extends State<_EventosSheet> {
     final local = dt.toLocal();
     String two(int n) => n.toString().padLeft(2, '0');
     return '${two(local.day)}/${two(local.month)}/${local.year} ${two(local.hour)}:${two(local.minute)}';
+  }
+
+  String _formatEventValue(String? value) {
+    if (value == null || value.trim().isEmpty) return '';
+    final compact = value.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (compact.length <= 140) return compact;
+    return '${compact.substring(0, 137)}...';
   }
 
   @override
@@ -1125,13 +1237,13 @@ class _EventosSheetState extends State<_EventosSheet> {
                                     const SizedBox(height: 4),
                                     Text('Motivo: ${_motivosCancelamento[e.motivo!] ?? e.motivo}', style: const TextStyle(color: EstoquePalette.textMuted, fontSize: 12)),
                                   ],
-                                  if (e.valorAntes?.isNotEmpty == true) ...[
+                                  if (_formatEventValue(e.valorAntes).isNotEmpty == true) ...[
                                     const SizedBox(height: 6),
-                                    Text('Antes: ${e.valorAntes}', style: const TextStyle(color: EstoquePalette.textMuted, fontSize: 11)),
+                                    Text('Dados anteriores: ${_formatEventValue(e.valorAntes)}', style: const TextStyle(color: EstoquePalette.textMuted, fontSize: 11)),
                                   ],
-                                  if (e.valorDepois?.isNotEmpty == true) ...[
+                                  if (_formatEventValue(e.valorDepois).isNotEmpty == true) ...[
                                     const SizedBox(height: 2),
-                                    Text('Depois: ${e.valorDepois}', style: const TextStyle(color: EstoquePalette.textMuted, fontSize: 11)),
+                                    Text('Dados atuais: ${_formatEventValue(e.valorDepois)}', style: const TextStyle(color: EstoquePalette.textMuted, fontSize: 11)),
                                   ],
                                 ]),
                               );
