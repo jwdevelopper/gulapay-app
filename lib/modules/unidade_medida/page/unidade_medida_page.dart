@@ -8,6 +8,8 @@ import 'package:my_app_teste/core/widgets/app_tag.dart';
 import '../dto/unidade_medida_response.dart';
 import '../service/unidade_medida_service.dart';
 import 'unidade_medida_form_page.dart';
+import 'package:my_app_teste/core/widgets/app_menu_acoes.dart';
+import 'package:my_app_teste/core/widgets/app_cartao_deslizavel.dart';
 
 class UnidadeMedidaPage extends StatefulWidget {
   const UnidadeMedidaPage({super.key});
@@ -213,6 +215,14 @@ class _UnidadeMedidaPageState extends State<UnidadeMedidaPage> {
     return ok ?? false;
   }
 
+  Future<bool> _confirmarMudancaStatus(UnidadeMedidaResponse u, bool isAtivo) async {
+    if (isAtivo) {
+      return _confirmarInativacao(u);
+    } else {
+      return _confirmarReativacao(u);
+    }
+  }
+
   Future<bool> _inativar(UnidadeMedidaResponse u) async {
     if (u.id == null) return false;
     try {
@@ -258,6 +268,14 @@ class _UnidadeMedidaPageState extends State<UnidadeMedidaPage> {
         ),
       );
       return false;
+    }
+  }
+
+  Future<bool> _alternarStatus(UnidadeMedidaResponse u, bool isAtivo) async {
+    if (isAtivo) {
+      return _inativar(u);
+    } else {
+      return _reativar(u);
     }
   }
 
@@ -384,192 +402,117 @@ class _UnidadeMedidaPageState extends State<UnidadeMedidaPage> {
     final tipoColor = _tipoColor(u.tipoMedida);
     final isBase = (u.fatorParaBase ?? 0) == 1.0;
 
-    return Dismissible(
-      key: ValueKey('unidade_${u.id ?? u.simbolo}'),
-      direction:
-          isAtivo ? DismissDirection.endToStart : DismissDirection.none,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: BoxDecoration(
-          color: Colors.red.shade600,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Text('Inativar',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15)),
-            SizedBox(width: 8),
-            Icon(Icons.block, color: Colors.white, size: 18),
-          ],
-        ),
-      ),
-      confirmDismiss: (_) async {
-        final confirmou = await _confirmarInativacao(u);
-        if (!confirmou) return false;
-        return _inativar(u);
-      },
-      onDismissed: (_) => _carregar(),
-      child: Material(
-        color: Colors.white,
+    final card = Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => _abrirFormulario(unidade: u),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppTema.bordaCampo),
-              borderRadius: BorderRadius.circular(12),
+        onTap: () => _abrirFormulario(unidade: u),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: AppTema.bordaCampo,
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: tipoColor.withOpacity(0.10),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                        color: tipoColor.withOpacity(0.30), width: 1.5),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    u.simbolo ?? '?',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: tipoColor,
-                      fontSize: _simboloFontSize(u.simbolo),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppTema.fundoDica,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  (u.nome!.trim().isNotEmpty
+                          ? u.nome!.trim().characters.first
+                          : '?')
+                      .toUpperCase(),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppTema.primaria,
+                    fontSize: 18,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        u.nome ?? '—',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: isAtivo
-                              ? AppTema.textoEscuro
-                              : AppTema.textoSecundario,
-                        ),
+              ),
+
+              const SizedBox(width: 12),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      u.nome!,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: AppTema.textoEscuro,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        isBase
-                            ? 'Referência de ${_tipoNome(u.tipoMedida)}'
-                            : '${_tipoNome(u.tipoMedida)} · ×${_formatFator(u.fatorParaBase)} em relação à base',
-                        style: const TextStyle(
-                            color: AppTema.textoSecundario, fontSize: 12),
-                      ),
+                    ),
+
+                    if (!isAtivo) ...[
                       const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 4,
-                        children: [
-                          AppTag(
-                            _tipoNome(u.tipoMedida),
-                            fundo: tipoColor.withOpacity(0.10),
-                            cor: tipoColor,
-                          ),
-                          if (isBase)
-                            AppTag(
-                              'BASE',
-                              fundo: AppTema.fundoDica,
-                              cor: AppTema.primariaEscura,
-                            ),
-                          if (!isAtivo)
-                            AppTag(
-                              'Inativo',
-                              fundo: Colors.red.shade100,
-                              cor: Colors.red.shade800,
-                            ),
-                        ],
+                      AppTag(
+                        'Inativa',
+                        fundo: Colors.red.shade100,
+                        cor: Colors.red.shade800,
                       ),
                     ],
-                  ),
-                ),
-                PopupMenuButton<String>(
-                  icon: const FaIcon(FontAwesomeIcons.ellipsisVertical,
-                      size: 16, color: AppTema.primariaEscura),
-                  color: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  onSelected: (opcao) async {
-                    if (opcao == 'editar') {
-                      await _abrirFormulario(unidade: u);
-                    } else if (opcao == 'inativar') {
-                      final confirmou = await _confirmarInativacao(u);
-                      if (confirmou) {
-                        await _inativar(u);
-                        if (mounted) _carregar();
-                      }
-                    } else if (opcao == 'ativar') {
-                      final confirmou = await _confirmarReativacao(u);
-                      if (confirmou) {
-                        await _reativar(u);
-                        if (mounted) _carregar();
-                      }
-                    }
-                  },
-                  itemBuilder: (_) => [
-                    const PopupMenuItem(
-                      value: 'editar',
-                      child: Row(
-                        children: [
-                          FaIcon(FontAwesomeIcons.penToSquare,
-                              size: 14, color: AppTema.primariaEscura),
-                          SizedBox(width: 10),
-                          Text('Editar',
-                              style:
-                                  TextStyle(color: AppTema.textoEscuro)),
-                        ],
-                      ),
-                    ),
-                    if (isAtivo)
-                      PopupMenuItem(
-                        value: 'inativar',
-                        child: Row(
-                          children: [
-                            Icon(Icons.block,
-                                size: 14, color: Colors.red.shade600),
-                            const SizedBox(width: 10),
-                            Text('Inativar',
-                                style:
-                                    TextStyle(color: Colors.red.shade600)),
-                          ],
-                        ),
-                      )
-                    else
-                      PopupMenuItem(
-                        value: 'ativar',
-                        child: Row(
-                          children: [
-                            Icon(Icons.check_circle_outline,
-                                size: 14, color: Colors.green.shade700),
-                            const SizedBox(width: 10),
-                            Text('Ativar',
-                                style: TextStyle(
-                                    color: Colors.green.shade700)),
-                          ],
-                        ),
-                      ),
                   ],
                 ),
-              ],
-            ),
+              ),
+
+              const SizedBox(width: 8),
+
+              AppMenuAcoes(
+                onEditar: () => _abrirFormulario(unidade: u),
+                onExcluir: () async {
+                  final confirmou = await _confirmarMudancaStatus(u, isAtivo);
+
+                  if (!confirmou) return;
+
+                  final sucesso = await _alternarStatus(u, isAtivo);
+
+                  if (sucesso && mounted) {
+                    await _carregar();
+                  }
+                },
+                rotuloEditar: 'Editar',
+                rotuloExcluir: isAtivo ? 'Inativar' : 'Reativar',
+                tooltip: 'Ações de Unidade de Medida',
+              ),
+            ],
           ),
         ),
       ),
+    );
+
+    if (!isAtivo) {
+      return card;
+    }
+   
+    return AppCartaoDeslizavel(
+      chave: 'unidade_${u.id ?? u.nome}',
+      rotuloExclusao: 'Inativar',
+      aoConfirmarExclusao: () async {
+        final confirmou =
+            await _confirmarMudancaStatus(u, true);
+
+        if (!confirmou) {
+          return false;
+        }
+
+        final sucesso = await _alternarStatus(u, true);
+
+        if (sucesso && mounted) {
+          await _carregar();
+        }
+        return false;
+      },
+      child: card,
     );
   }
 }

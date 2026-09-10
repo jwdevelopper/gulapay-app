@@ -10,6 +10,8 @@ import 'package:my_app_teste/core/widgets/app_tag.dart';
 import 'package:my_app_teste/modules/usuario/dto/usuario_response.dart';
 import 'package:my_app_teste/modules/usuario/page/usuario_form_page.dart';
 import 'package:my_app_teste/modules/usuario/service/usuario_service.dart';
+import 'package:my_app_teste/core/widgets/app_cartao_deslizavel.dart';
+import 'package:my_app_teste/core/widgets/app_menu_acoes.dart';
 
 class UsuarioListaPagina extends StatefulWidget {
   const UsuarioListaPagina({super.key});
@@ -265,75 +267,58 @@ class _UsuarioListaPaginaState extends State<UsuarioListaPagina> {
   }
 
   Widget _construirCartao(UsuarioResposta u) {
-    return Dismissible(
-      key: ValueKey('usuario_${u.id ?? u.login}'),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: BoxDecoration(
-          color: Colors.red.shade600,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Text('Excluir',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15)),
-            SizedBox(width: 8),
-            FaIcon(FontAwesomeIcons.trashCan, color: Colors.white, size: 20),
-          ],
-        ),
-      ),
-      confirmDismiss: (_) async {
-        final confirmou = await _confirmarExclusao(u);
-        if (!confirmou) return false;
-        return await _excluir(u);
-      },
-      child: Material(
-        color: Colors.white,
+    final card = Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => _abrirFormulario(usuario: u),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppTema.bordaCampo),
-              borderRadius: BorderRadius.circular(12),
+        onTap: () => _abrirFormulario(usuario: u),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: AppTema.bordaCampo,
             ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 22,
-                  backgroundColor: AppTema.fundoDica,
-                  child: Text(
-                    ((u.nome?.trim().isNotEmpty ?? false)
-                            ? u.nome!.trim().characters.first
-                            : '?')
-                        .toUpperCase(),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: AppTema.primaria,
-                    ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppTema.fundoDica,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  (u.nome!.trim().isNotEmpty
+                          ? u.nome!.trim().characters.first
+                          : '?')
+                      .toUpperCase(),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppTema.primaria,
+                    fontSize: 18,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        u.nome ?? '-',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppTema.textoEscuro,
-                        ),
+              ),
+
+              const SizedBox(width: 12),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      u.nome!,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: AppTema.textoEscuro,
                       ),
-                      const SizedBox(height: 2),
+                    ),
+
+                     const SizedBox(height: 2),
                       Text('@${u.login ?? '-'}',
                           style: const TextStyle(
                               color: AppTema.textoSecundario, fontSize: 13)),
@@ -348,29 +333,46 @@ class _UsuarioListaPaginaState extends State<UsuarioListaPagina> {
                               fundo: Colors.red.shade100,
                               cor: Colors.red.shade800,
                             ),
-                          ],
-                        ],
-                      ),
+                      ],
                     ],
                   ),
-                ),
-                AppMenuAcoes(
-                  onEditar: () => _abrirFormulario(usuario: u),
-                  // Fallback ao swipe: mesma confirmação + delete.
-                  onExcluir: () async {
-                    if (await _confirmarExclusao(u)) {
-                      await _excluir(u);
-                    }
-                  },
-                  rotuloEditar: 'Editar usuário',
-                  rotuloExcluir: 'Excluir usuário',
-                  tooltip: 'Ações do usuário',
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+               
+              const SizedBox(width: 8),
+
+              AppMenuAcoes(
+                onEditar: () => _abrirFormulario(usuario: u),
+                onExcluir: () async {
+                  final confirmou = await _confirmarExclusao(u);
+
+                  if (!confirmou) return;
+                },
+                rotuloEditar: 'Editar',
+                rotuloExcluir: 'Excluir',
+                tooltip: 'Ações de usuário',
+              ),
+          ],
         ),
       ),
+    ),
+  );
+
+    return AppCartaoDeslizavel(
+      chave: 'usuario_${u.id ?? u.nome}',
+      rotuloExclusao: 'Excluir',
+      aoConfirmarExclusao: () async {
+        final confirmou =
+            await _confirmarExclusao(u);
+
+        if (!confirmou) {
+          return false;
+        }
+
+        return false;
+      },
+      child: card,
     );
   }
 }

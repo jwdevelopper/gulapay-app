@@ -11,6 +11,8 @@ import '../dto/cliente_response.dart';
 import '../service/cliente_service.dart';
 import 'cliente_form_page.dart';
 import 'cliente_detalhe_page.dart';
+import 'package:my_app_teste/core/widgets/app_menu_acoes.dart';
+import 'package:my_app_teste/core/widgets/app_cartao_deslizavel.dart';
 
 class ClientePage extends StatefulWidget {
   const ClientePage({super.key});
@@ -187,6 +189,14 @@ class _ClientePageState extends State<ClientePage> {
     return ok ?? false;
   }
 
+  Future<bool> _confirmarMudancaStatus(ClienteResponse c, bool ativa) async {
+    if (ativa) {
+      return await _confirmarInativacao(c);
+    } else {
+      return await _confirmarReativacao(c);
+    }
+  }
+
   Future<bool> _reativar(ClienteResponse c) async {
     if (c.id == null) return false;
     try {
@@ -234,6 +244,15 @@ class _ClientePageState extends State<ClientePage> {
       return false;
     }
   }
+
+  Future<bool> _alternarStatus(ClienteResponse c, bool ativa) async {
+    if (ativa) {
+      return await _inativar(c);
+    } else {
+      return await _reativar(c);
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -318,202 +337,118 @@ class _ClientePageState extends State<ClientePage> {
 
   Widget _construirCartao(ClienteResponse c) {
     final isAtivo = c.ativo ?? true;
-    return Dismissible(
-      key: ValueKey('cliente_${c.id ?? c.telefone ?? c.nome}'),
-      direction: isAtivo ? DismissDirection.endToStart : DismissDirection.none,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: BoxDecoration(
-          color: Colors.red.shade600,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Text(
-              'Inativar',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
-              ),
-            ),
-            SizedBox(width: 8),
-            FaIcon(FontAwesomeIcons.userSlash, color: Colors.white, size: 18),
-          ],
-        ),
-      ),
-      confirmDismiss: (_) async {
-        final confirmou = await _confirmarInativacao(c);
-        if (!confirmou) return false;
-        return _inativar(c);
-      },
-      onDismissed: (_) => _carregar(),
-      child: Material(
-        color: Colors.white,
+
+    final card = Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () async {
-            final result = await Navigator.push<bool>(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ClienteDetalhesPage(cliente: c),
-              ),
-            );
-            if (result == true && mounted) _carregar();
-          },
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppTema.bordaCampo),
-              borderRadius: BorderRadius.circular(12),
+        onTap: () => _abrirFormulario(cliente: c),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: AppTema.bordaCampo,
             ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 22,
-                  backgroundColor: AppTema.fundoDica,
-                  child: Text(
-                    ((c.nome?.trim().isNotEmpty ?? false)
-                            ? c.nome!.trim().characters.first
-                            : '?')
-                        .toUpperCase(),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: AppTema.primaria,
-                    ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppTema.fundoDica,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  (c.nome!.trim().isNotEmpty
+                          ? c.nome!.trim().characters.first
+                          : '?')
+                      .toUpperCase(),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppTema.primaria,
+                    fontSize: 18,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        c.nome ?? 'Sem nome',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppTema.textoEscuro,
-                        ),
+              ),
+
+              const SizedBox(width: 12),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      c.nome!,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: AppTema.textoEscuro,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        c.telefone?.isNotEmpty == true
-                            ? TelefoneFormatter.formatar(c.telefone)
-                            : 'Telefone não informado',
-                        style: const TextStyle(
-                          color: AppTema.textoSecundario,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          if (c.email != null && c.email!.isNotEmpty)
-                            AppTag(c.email!),
-                          if (!isAtivo) ...[
-                            const SizedBox(width: 6),
-                            AppTag(
-                              'Inativo',
-                              fundo: Colors.red.shade100,
-                              cor: Colors.red.shade800,
-                            ),
-                          ],
-                        ],
+                    ),
+
+                    if (!isAtivo) ...[
+                      const SizedBox(height: 6),
+                      AppTag(
+                        'Inativa',
+                        fundo: Colors.red.shade100,
+                        cor: Colors.red.shade800,
                       ),
                     ],
-                  ),
-                ),
-                PopupMenuButton<String>(
-                  icon: const FaIcon(
-                    FontAwesomeIcons.ellipsisVertical,
-                    size: 16,
-                    color: AppTema.primariaEscura,
-                  ),
-                  color: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  onSelected: (opcao) async {
-                    if (opcao == 'editar') {
-                      await _abrirFormulario(cliente: c);
-                    } else if (opcao == 'inativar') {
-                      final confirmou = await _confirmarInativacao(c);
-                      if (confirmou) {
-                        await _inativar(c);
-                        if (mounted) _carregar();
-                      }
-                    } else if (opcao == 'ativar') {
-                      final confirmou = await _confirmarReativacao(c);
-                      if (confirmou) {
-                        await _reativar(c);
-                        if (mounted) _carregar();
-                      }
-                    }
-                  },
-                  itemBuilder: (_) => [
-                    const PopupMenuItem(
-                      value: 'editar',
-                      child: Row(
-                        children: [
-                          FaIcon(
-                            FontAwesomeIcons.penToSquare,
-                            size: 14,
-                            color: AppTema.primariaEscura,
-                          ),
-                          SizedBox(width: 10),
-                          Text(
-                            'Editar',
-                            style: TextStyle(color: AppTema.textoEscuro),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (isAtivo)
-                      PopupMenuItem(
-                        value: 'inativar',
-                        child: Row(
-                          children: [
-                            FaIcon(
-                              FontAwesomeIcons.userSlash,
-                              size: 14,
-                              color: Colors.red.shade600,
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              'Inativar',
-                              style: TextStyle(color: Colors.red.shade600),
-                            ),
-                          ],
-                        ),
-                      )
-                    else
-                      PopupMenuItem(
-                        value: 'ativar',
-                        child: Row(
-                          children: [
-                            FaIcon(
-                              FontAwesomeIcons.userCheck,
-                              size: 14,
-                              color: Colors.green.shade700,
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              'Ativar',
-                              style: TextStyle(color: Colors.green.shade700),
-                            ),
-                          ],
-                        ),
-                      ),
                   ],
                 ),
-              ],
-            ),
+              ),
+
+              const SizedBox(width: 8),
+
+              AppMenuAcoes(
+                onEditar: () => _abrirFormulario(cliente: c),
+                onExcluir: () async {
+                  final confirmou = await _confirmarMudancaStatus(c, isAtivo);
+
+                  if (!confirmou) return;
+
+                  final sucesso = await _alternarStatus(c, isAtivo);
+
+                  if (sucesso && mounted) {
+                    await _carregar();
+                  }
+                },
+                rotuloEditar: 'Editar',
+                rotuloExcluir: isAtivo ? 'Inativar' : 'Reativar',
+                tooltip: 'Ações da categoria',
+              ),
+            ],
           ),
         ),
       ),
+    );
+
+    if (!isAtivo) {
+      return card;
+    }
+   
+    return AppCartaoDeslizavel(
+      chave: 'cliente_${c.id ?? c.nome}',
+      rotuloExclusao: 'Inativar',
+      aoConfirmarExclusao: () async {
+        final confirmou =
+            await _confirmarMudancaStatus(c, true);
+
+        if (!confirmou) {
+          return false;
+        }
+
+        final sucesso = await _alternarStatus(c, true);
+
+        if (sucesso && mounted) {
+          await _carregar();
+        }
+        return false;
+      },
+      child: card,
     );
   }
 }

@@ -8,6 +8,8 @@ import 'package:my_app_teste/core/widgets/app_tag.dart';
 import 'package:my_app_teste/modules/categoria/dto/categoria.dart';
 import 'package:my_app_teste/modules/categoria/page/categoria_form_page.dart';
 import 'package:my_app_teste/modules/categoria/service/categoria_service.dart';
+import 'package:my_app_teste/core/widgets/app_cartao_deslizavel.dart';
+import 'package:my_app_teste/core/widgets/app_menu_acoes.dart'; 
 
 class CategoriaPage extends StatefulWidget {
   const CategoriaPage({super.key});
@@ -283,118 +285,127 @@ class _CategoriaPageState extends State<CategoriaPage> {
 
   Widget _construirCartao(Categoria c) {
     final ativa = c.ativo ?? true;
-    final corFundoSwipe = ativa ? Colors.red.shade600 : const Color(0xFF2E8B57);
-    final textoSwipe = ativa ? 'Inativar' : 'Reativar';
-    final iconeSwipe = ativa
-        ? FontAwesomeIcons.ban
-        : FontAwesomeIcons.arrowRotateLeft;
 
-    return Dismissible(
-      key: ValueKey('categoria_${c.id ?? c.nome}'),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: BoxDecoration(
-          color: corFundoSwipe,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Text(
-              textoSwipe,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
-              ),
-            ),
-            const SizedBox(width: 8),
-            FaIcon(iconeSwipe, color: Colors.white, size: 18),
-          ],
-        ),
-      ),
-      confirmDismiss: (_) async {
-        final inativar = ativa;
-        final confirmou = await _confirmarMudancaStatus(c, inativar);
-        if (!confirmou) return false;
-        await _alternarStatus(c, inativar);
-        return false;
-      },
-      child: Material(
-        color: Colors.white,
+    final cartao = Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => _abrirFormulario(categoria: c),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppTema.bordaCampo),
-              borderRadius: BorderRadius.circular(12),
+        onTap: () => _abrirFormulario(categoria: c),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: AppTema.bordaCampo,
             ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 22,
-                  backgroundColor: AppTema.fundoDica,
-                  child: Text(
-                    (c.nome.trim().isNotEmpty
-                            ? c.nome.trim().characters.first
-                            : '?')
-                        .toUpperCase(),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: AppTema.primaria,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              // ÍCONE/LETRA DA CATEGORIA
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppTema.fundoDica,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  (c.nome.trim().isNotEmpty
+                          ? c.nome.trim().characters.first
+                          : '?')
+                      .toUpperCase(),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppTema.primaria,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      c.nome,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: AppTema.textoEscuro,
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        c.nome,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppTema.textoEscuro,
-                        ),
+
+                    const SizedBox(height: 2),
+
+                    Text(
+                      (c.descricao?.trim().isNotEmpty ?? false)
+                          ? c.descricao!
+                          : 'Sem descrição',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppTema.textoSecundario,
+                        fontSize: 13,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        (c.descricao?.trim().isNotEmpty ?? false)
-                            ? c.descricao!
-                            : 'Sem descrição',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppTema.textoSecundario,
-                          fontSize: 13,
-                        ),
+                    ),
+
+                    if (!ativa) ...[
+                      const SizedBox(height: 6),
+                      AppTag(
+                        'Inativa',
+                        fundo: Colors.red.shade100,
+                        cor: Colors.red.shade800,
                       ),
-                      if (!ativa) ...[
-                        const SizedBox(height: 6),
-                        AppTag(
-                          'Inativa',
-                          fundo: Colors.red.shade100,
-                          cor: Colors.red.shade800,
-                        ),
-                      ],
                     ],
-                  ),
+                  ],
                 ),
-                const FaIcon(
-                  FontAwesomeIcons.chevronRight,
-                  size: 14,
-                  color: AppTema.primariaEscura,
-                ),
-              ],
-            ),
+              ),
+
+              const SizedBox(width: 8),
+
+              AppMenuAcoes(
+                onEditar: () => _abrirFormulario(categoria: c),
+                onExcluir: () async {
+                  final confirmou =
+                      await _confirmarMudancaStatus(c, ativa);
+
+                  if (!confirmou) return;
+
+                  await _alternarStatus(c, ativa);
+                },
+                rotuloEditar: 'Editar',
+                rotuloExcluir: ativa ? 'Inativar' : 'Reativar',
+                tooltip: 'Ações da categoria',
+              ),
+            ],
           ),
         ),
       ),
+    );
+
+    if (!ativa) {
+      return cartao;
+    }
+   
+    return AppCartaoDeslizavel(
+      chave: 'categoria_${c.id ?? c.nome}',
+      rotuloExclusao: 'Inativar',
+      aoConfirmarExclusao: () async {
+        final confirmou =
+            await _confirmarMudancaStatus(c, true);
+
+        if (!confirmou) {
+          return false;
+        }
+
+        await _alternarStatus(c, true);
+
+        return false;
+      },
+      child: cartao,
     );
   }
 }
