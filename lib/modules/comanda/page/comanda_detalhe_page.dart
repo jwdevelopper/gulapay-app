@@ -988,6 +988,105 @@ class _ItemFormSheetState extends State<_ItemFormSheet> {
     }
   }
 
+  Future<void> _selecionarProduto() async {
+    final buscaCtrl = TextEditingController();
+    final produtoSelecionado = await showModalBottomSheet<Produto>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: EstoquePalette.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) {
+          final termo = buscaCtrl.text.trim().toLowerCase();
+          final produtos = _produtos.where((produto) => termo.isEmpty || produto.nome.toLowerCase().contains(termo)).toList();
+          return Padding(
+            padding: EdgeInsets.fromLTRB(20, 12, 20, 16 + MediaQuery.of(ctx).viewInsets.bottom),
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Center(child: Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 18), decoration: BoxDecoration(color: EstoquePalette.border, borderRadius: BorderRadius.circular(999)))),
+              const Text('Escolher produto', style: TextStyle(color: EstoquePalette.text, fontSize: 20, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 4),
+              const Text('Selecione o produto que será lançado na comanda.', style: TextStyle(color: EstoquePalette.textMuted, fontSize: 13)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: buscaCtrl,
+                onChanged: (_) => setLocal(() {}),
+                decoration: InputDecoration(
+                  hintText: 'Buscar produto',
+                  prefixIcon: const Icon(Icons.search_rounded, color: EstoquePalette.textMuted),
+                  filled: true,
+                  fillColor: EstoquePalette.surfaceAlt,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: EstoquePalette.border)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: EstoquePalette.border)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: EstoquePalette.primary, width: 1.5)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: MediaQuery.of(ctx).size.height * 0.48,
+                child: produtos.isEmpty
+                    ? const Center(child: Text('Nenhum produto encontrado.', style: TextStyle(color: EstoquePalette.textMuted)))
+                    : ListView.separated(
+                        itemCount: produtos.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (_, index) {
+                          final produto = produtos[index];
+                          final selecionado = _produto?.id == produto.id;
+                          return Material(
+                            color: selecionado ? EstoquePalette.inputFill : EstoquePalette.surface,
+                            borderRadius: BorderRadius.circular(16),
+                            child: InkWell(
+                              onTap: () => Navigator.pop(ctx, produto),
+                              borderRadius: BorderRadius.circular(16),
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), border: Border.all(color: selecionado ? EstoquePalette.primary : EstoquePalette.border)),
+                                child: Row(children: [
+                                  Container(width: 42, height: 42, decoration: BoxDecoration(color: selecionado ? EstoquePalette.primary : EstoquePalette.inputFill, borderRadius: BorderRadius.circular(13)), child: Icon(Icons.restaurant_rounded, color: selecionado ? Colors.white : EstoquePalette.primary)),
+                                  const SizedBox(width: 12),
+                                  Expanded(child: Text(produto.nome, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: EstoquePalette.text, fontSize: 14, fontWeight: FontWeight.w700))),
+                                  Icon(selecionado ? Icons.check_circle_rounded : Icons.chevron_right_rounded, color: selecionado ? EstoquePalette.primary : EstoquePalette.textMuted),
+                                ]),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ]),
+          );
+        },
+      ),
+    );
+    buscaCtrl.dispose();
+    if (!mounted || produtoSelecionado == null) return;
+    setState(() {
+      _produto = produtoSelecionado;
+      _qtdCtrl.text = '1';
+    });
+  }
+
+  Widget _produtoSelector() {
+    final nome = _produto?.nome ?? 'Selecione um produto';
+    return Material(
+      color: EstoquePalette.surface,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: _selecionarProduto,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(color: EstoquePalette.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: _produto == null ? EstoquePalette.border : EstoquePalette.primary)),
+          child: Row(children: [
+            Container(width: 42, height: 42, decoration: BoxDecoration(color: _produto == null ? EstoquePalette.inputFill : EstoquePalette.primary, borderRadius: BorderRadius.circular(13)), child: Icon(Icons.restaurant_rounded, color: _produto == null ? EstoquePalette.primary : Colors.white)),
+            const SizedBox(width: 12),
+            Expanded(child: Text(nome, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: _produto == null ? EstoquePalette.textMuted : EstoquePalette.text, fontSize: 14, fontWeight: FontWeight.w700))),
+            const Icon(Icons.touch_app_rounded, color: EstoquePalette.textMuted, size: 20),
+          ]),
+        ),
+      ),
+    );
+  }
+
   void _salvar() {
     final qtd = _parseDecimal(_qtdCtrl.text);
     if (!widget.edicao && (_produto?.id == null)) {
@@ -1041,19 +1140,7 @@ class _ItemFormSheetState extends State<_ItemFormSheet> {
             _produtoCard()
           else ...[
             _fieldLabel('Produto', subtitle: 'Obrigatório'),
-            DropdownButtonFormField<int>(
-              isExpanded: true,
-              decoration: _decoration('', hint: 'Selecione um produto').copyWith(labelText: null, floatingLabelBehavior: FloatingLabelBehavior.never),
-              dropdownColor: EstoquePalette.surface,
-              items: _produtos
-                  .where((p) => p.id != null)
-                  .map((p) => DropdownMenuItem(value: p.id, child: Text(p.nome, overflow: TextOverflow.ellipsis, style: const TextStyle(color: EstoquePalette.text))))
-                  .toList(),
-              onChanged: (id) => setState(() {
-                _produto = _produtos.firstWhere((p) => p.id == id);
-                _qtdCtrl.text = '1';
-              }),
-            ),
+            _produtoSelector(),
           ],
           const SizedBox(height: 20),
           _fieldLabel('Quantidade', subtitle: 'Toque nos botões ou digite o valor'),
