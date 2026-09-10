@@ -542,15 +542,8 @@ class _ProdutosPageState extends State<ProdutosPage> {
       body: SafeArea(
         child: Column(
           children: [
-            ProdutoPageHeader(
-              title: _screenTitle,
-              subtitle: _screenSubtitle,
-              hasCategoryFilter: _filters.categoriaId != null,
-              hasActiveFilter: _filters.hasActiveFilter || _search.isNotEmpty,
-              onBackTap: _clearCategoryFilter,
-              onFilterTap: _openFilterSheet,
-              onClearFiltersTap: _clearSearchAndFilter,
-            ),
+            const SizedBox(height: 16),
+            
             ProdutoSearchField(
               controller: _searchController,
               search: _search,

@@ -62,10 +62,12 @@ class _CategoriaPageState extends State<CategoriaPage> {
     final termo = _busca.trim().toLowerCase();
     return _todas.where((c) {
       final ativa = c.ativo ?? true;
-      final casaStatus = _filtroStatus == 'TODAS' ||
+      final casaStatus =
+          _filtroStatus == 'TODAS' ||
           (_filtroStatus == 'ATIVAS' && ativa) ||
           (_filtroStatus == 'INATIVAS' && !ativa);
-      final casaBusca = termo.isEmpty ||
+      final casaBusca =
+          termo.isEmpty ||
           c.nome.toLowerCase().contains(termo) ||
           (c.descricao ?? '').toLowerCase().contains(termo);
       return casaStatus && casaBusca;
@@ -82,13 +84,19 @@ class _CategoriaPageState extends State<CategoriaPage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         title: Row(
           children: [
-            const FaIcon(FontAwesomeIcons.triangleExclamation,
-                color: AppTema.primaria, size: 20),
+            const FaIcon(
+              FontAwesomeIcons.triangleExclamation,
+              color: AppTema.primaria,
+              size: 20,
+            ),
             const SizedBox(width: 10),
-            Text('$acao categoria',
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppTema.textoEscuro)),
+            Text(
+              '$acao categoria',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppTema.textoEscuro,
+              ),
+            ),
           ],
         ),
         content: Text(
@@ -101,7 +109,8 @@ class _CategoriaPageState extends State<CategoriaPage> {
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             style: TextButton.styleFrom(
-                foregroundColor: AppTema.textoSecundario),
+              foregroundColor: AppTema.textoSecundario,
+            ),
             child: const Text('Cancelar'),
           ),
           ElevatedButton(
@@ -110,7 +119,8 @@ class _CategoriaPageState extends State<CategoriaPage> {
               backgroundColor: cor,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             child: Text(acao),
           ),
@@ -174,9 +184,11 @@ class _CategoriaPageState extends State<CategoriaPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(categoria == null
-              ? 'Categoria cadastrada com sucesso!'
-              : 'Categoria atualizada com sucesso!'),
+          content: Text(
+            categoria == null
+                ? 'Categoria cadastrada com sucesso!'
+                : 'Categoria atualizada com sucesso!',
+          ),
           backgroundColor: const Color(0xFF2E8B57),
         ),
       );
@@ -197,31 +209,31 @@ class _CategoriaPageState extends State<CategoriaPage> {
       body: SafeArea(
         child: Column(
           children: [
+            const SizedBox(height: 16),
+
             _construirBuscaEFiltro(),
             Expanded(
               child: _carregando
                   ? const Center(
-                      child:
-                          CircularProgressIndicator(color: AppTema.primaria))
+                      child: CircularProgressIndicator(color: AppTema.primaria),
+                    )
                   : _filtradas.isEmpty
-                      ? AppEstadoVazio(
-                          icone: Icons.category_outlined,
-                          mensagem: _busca.isEmpty && _filtroStatus == 'TODAS'
-                              ? 'Nenhuma categoria cadastrada'
-                              : 'Nenhum resultado para a busca',
-                        )
-                      : RefreshIndicator(
-                          color: AppTema.primaria,
-                          onRefresh: _carregar,
-                          child: ListView.separated(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
-                            itemCount: _filtradas.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 8),
-                            itemBuilder: (_, i) =>
-                                _construirCartao(_filtradas[i]),
-                          ),
-                        ),
+                  ? AppEstadoVazio(
+                      icone: Icons.category_outlined,
+                      mensagem: _busca.isEmpty && _filtroStatus == 'TODAS'
+                          ? 'Nenhuma categoria cadastrada'
+                          : 'Nenhum resultado para a busca',
+                    )
+                  : RefreshIndicator(
+                      color: AppTema.primaria,
+                      onRefresh: _carregar,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
+                        itemCount: _filtradas.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (_, i) => _construirCartao(_filtradas[i]),
+                      ),
+                    ),
             ),
           ],
         ),
@@ -290,11 +302,14 @@ class _CategoriaPageState extends State<CategoriaPage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            Text(textoSwipe,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15)),
+            Text(
+              textoSwipe,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+              ),
+            ),
             const SizedBox(width: 8),
             FaIcon(iconeSwipe, color: Colors.white, size: 18),
           ],
@@ -355,7 +370,9 @@ class _CategoriaPageState extends State<CategoriaPage> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                            color: AppTema.textoSecundario, fontSize: 13),
+                          color: AppTema.textoSecundario,
+                          fontSize: 13,
+                        ),
                       ),
                       if (!ativa) ...[
                         const SizedBox(height: 6),
@@ -368,8 +385,11 @@ class _CategoriaPageState extends State<CategoriaPage> {
                     ],
                   ),
                 ),
-                const FaIcon(FontAwesomeIcons.chevronRight,
-                    size: 14, color: AppTema.primariaEscura),
+                const FaIcon(
+                  FontAwesomeIcons.chevronRight,
+                  size: 14,
+                  color: AppTema.primariaEscura,
+                ),
               ],
             ),
           ),

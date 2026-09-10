@@ -1,4 +1,6 @@
-# Documentação — Módulo Entregador
+# Documentação — Módulo Entregador (histórico)
+
+> **Atenção:** este documento descreve a implementação anterior, baseada em formulário único e salvamento simulado. A referência atual está em [`docs/refatoracao_entregadores.md`](docs/refatoracao_entregadores.md).
 
 > Projeto: Sistema de Comandas e Gestão para Food Service
 > Disciplina: Análise e Projeto de Sistemas — Unipar

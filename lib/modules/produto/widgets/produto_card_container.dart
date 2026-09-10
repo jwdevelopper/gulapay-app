@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:my_app_teste/core/widgets/app_cartao_deslizavel.dart';
 
 import 'produtos_palette.dart';
 
@@ -64,39 +64,9 @@ class ProdutoCardContainer extends StatelessWidget {
       return card;
     }
 
-    return Dismissible(
-      key: ValueKey('produto_$dismissibleKey'),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: BoxDecoration(
-          color: Colors.red.shade600,
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Text(
-              'Excluir',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
-              ),
-            ),
-            SizedBox(width: 8),
-            FaIcon(
-              FontAwesomeIcons.trashCan,
-              color: Colors.white,
-              size: 20,
-            ),
-          ],
-        ),
-      ),
-      confirmDismiss: (_) async {
-        return await onConfirmDelete!();
-      },
+    return AppCartaoDeslizavel(
+      chave: 'produto_$dismissibleKey',
+      aoConfirmarExclusao: onConfirmDelete!,
       child: card,
     );
   }
