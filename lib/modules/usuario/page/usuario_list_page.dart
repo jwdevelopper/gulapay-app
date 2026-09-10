@@ -11,7 +11,6 @@ import 'package:my_app_teste/modules/usuario/dto/usuario_response.dart';
 import 'package:my_app_teste/modules/usuario/page/usuario_form_page.dart';
 import 'package:my_app_teste/modules/usuario/service/usuario_service.dart';
 import 'package:my_app_teste/core/widgets/app_cartao_deslizavel.dart';
-import 'package:my_app_teste/core/widgets/app_menu_acoes.dart';
 
 class UsuarioListaPagina extends StatefulWidget {
   const UsuarioListaPagina({super.key});
