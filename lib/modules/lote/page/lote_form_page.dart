@@ -300,7 +300,14 @@ class _LoteFormPageState extends State<LoteFormPage> {
     children: [
       const AppRotulo('Código', opcional: true),
       const SizedBox(height: 6),
-      AppCampoTexto(controle: _codigo, dica: 'Ex.: L0241', tamanhoMax: 60),
+      AppCampoTexto(
+        controle: _codigo,
+        dica: 'Ex.: L0241',
+        tamanhoMax: ValidadorLote.codigoTamanhoMaximo,
+        formatadores: [
+          FilteringTextInputFormatter.allow(ValidadorLote.codigoPermitido),
+        ],
+      ),
     ],
   );
 
@@ -312,6 +319,7 @@ class _LoteFormPageState extends State<LoteFormPage> {
       AppCampoTexto(
         controle: _quantidade,
         dica: 'Ex.: 5,0',
+        tamanhoMax: ValidadorLote.quantidadeTamanhoMaximo,
         tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
         formatadores: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
       ),

@@ -113,11 +113,31 @@ class DadosLote {
 class ValidadorLote {
   const ValidadorLote._();
 
+  /// Caracteres aceitos no código do lote.
+  ///
+  /// Só letras e números: o código é transcrito da etiqueta do fornecedor
+  /// e usado para conferir com a nota fiscal, então pontuação digitada por
+  /// engano viraria um código que não casa com nada.
+  static final codigoPermitido = RegExp(r'[a-zA-Z0-9]');
+
+  static const codigoTamanhoMaximo = 60;
+
+  /// Teto de dígitos da quantidade inicial.
+  ///
+  /// Onze casas já cobrem qualquer entrada real de estoque e evitam que um
+  /// zero preso no teclado vire um saldo absurdo, difícil de desfazer
+  /// depois (a correção exigiria um ajuste de inventário).
+  static const quantidadeTamanhoMaximo = 11;
+
   /// Devolve a mensagem do primeiro problema encontrado, ou `null` quando
   /// os dados podem ser enviados.
   static String? validar(DadosLote d) {
     if (!d.ehEdicao && d.insumo?.id == null) return 'Selecione o insumo.';
     if (d.validade == null) return 'Informe a validade.';
+
+    final erroCodigo = validarCodigo(d.codigo);
+    if (erroCodigo != null) return erroCodigo;
+
     if (d.ehEdicao) return null;
 
     final quantidade = d.quantidadeNumero;
@@ -131,5 +151,21 @@ class ValidadorLote {
       return 'O custo unitário deve ser maior ou igual a zero.';
     }
     return null;
+  }
+
+  /// Código é opcional; quando informado, só aceita letras e números.
+  ///
+  /// A tela já bloqueia o resto na digitação — esta checagem cobre o que
+  /// chega por outro caminho (colar, ou um lote antigo sendo editado).
+  static String? validarCodigo(String? valor) {
+    final codigo = (valor ?? '').trim();
+    if (codigo.isEmpty) return null;
+    if (codigo.length > codigoTamanhoMaximo) {
+      return 'O código deve ter no máximo $codigoTamanhoMaximo caracteres.';
+    }
+    final temInvalido = codigo
+        .split('')
+        .any((c) => !codigoPermitido.hasMatch(c));
+    return temInvalido ? 'O código aceita apenas letras e números.' : null;
   }
 }
