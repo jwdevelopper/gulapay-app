@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
 
 /// Rótulo de campo de formulário.
 ///
@@ -28,7 +28,7 @@ class AppRotuloCampo extends StatelessWidget {
       TextSpan(
         text: texto,
         style: const TextStyle(
-          color: PaletaApp.text,
+          color: AppTema.texto,
           fontSize: 13,
           fontWeight: FontWeight.w700,
         ),
@@ -37,7 +37,7 @@ class AppRotuloCampo extends StatelessWidget {
             const TextSpan(
               text: ' *',
               style: TextStyle(
-                color: PaletaApp.error,
+                color: AppTema.erro,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -65,7 +65,7 @@ class AppMensagemErroCampo extends StatelessWidget {
       child: Text(
         texto,
         style: const TextStyle(
-          color: PaletaApp.error,
+          color: AppTema.erro,
           fontSize: 11,
           fontWeight: FontWeight.w600,
         ),

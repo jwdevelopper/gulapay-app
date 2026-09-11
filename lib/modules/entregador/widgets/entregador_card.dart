@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/core/utils/telefone_formatter.dart';
 import 'package:my_app_teste/core/widgets/app_cartao_deslizavel.dart';
 import 'package:my_app_teste/core/widgets/app_menu_acoes.dart';
 import 'package:my_app_teste/modules/entregador/dto/entregador_response.dart';
-
 
 class EntregadorCard extends StatelessWidget {
   final EntregadorResponse entregador;
@@ -23,7 +22,7 @@ class EntregadorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final card = Material(
-      color: PaletaApp.surface,
+      color: AppTema.superficie,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onTap,
@@ -31,12 +30,12 @@ class EntregadorCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: PaletaApp.surface,
+            color: AppTema.superficie,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: PaletaApp.border),
+            border: Border.all(color: AppTema.borda),
             boxShadow: const [
               BoxShadow(
-                color: PaletaApp.shadow,
+                color: AppTema.sombra,
                 blurRadius: 14,
                 offset: Offset(0, 6),
               ),
@@ -48,14 +47,12 @@ class EntregadorCard extends StatelessWidget {
                 width: 54,
                 height: 54,
                 decoration: BoxDecoration(
-                  color: PaletaApp.primarySoft.withValues(
-                    alpha: 0.28,
-                  ),
+                  color: AppTema.primariaSuave.withValues(alpha: 0.28),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: const Icon(
                   Icons.delivery_dining_rounded,
-                  color: PaletaApp.text,
+                  color: AppTema.texto,
                   size: 28,
                 ),
               ),
@@ -69,7 +66,7 @@ class EntregadorCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: PaletaApp.text,
+                        color: AppTema.texto,
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
@@ -80,7 +77,7 @@ class EntregadorCard extends StatelessWidget {
                         const Icon(
                           Icons.phone_outlined,
                           size: 14,
-                          color: PaletaApp.textMuted,
+                          color: AppTema.textoSecundario,
                         ),
                         const SizedBox(width: 5),
                         Flexible(
@@ -89,7 +86,7 @@ class EntregadorCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              color: PaletaApp.textMuted,
+                              color: AppTema.textoSecundario,
                               fontSize: 12,
                             ),
                           ),
@@ -103,15 +100,13 @@ class EntregadorCard extends StatelessWidget {
                         vertical: 3,
                       ),
                       decoration: BoxDecoration(
-                        color: PaletaApp.success.withValues(
-                          alpha: 0.12,
-                        ),
+                        color: AppTema.sucesso.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Text(
                         'ATIVO',
                         style: TextStyle(
-                          color: PaletaApp.success,
+                          color: AppTema.sucesso,
                           fontSize: 10,
                           fontWeight: FontWeight.w800,
                         ),

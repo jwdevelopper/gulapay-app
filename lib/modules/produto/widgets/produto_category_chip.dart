@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
+import 'package:my_app_teste/core/widgets/app_chip_filtro.dart';
 
-
+/// Chip de categoria da vitrine de produtos.
+///
+/// É o [AppChipFiltro] com sombra: aqui os chips são a navegação principal
+/// da tela, não um filtro discreto, então o selecionado ganha elevação.
 class ProdutoCategoryChip extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -17,50 +20,11 @@ class ProdutoCategoryChip extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: selected
-              ? PaletaApp.primary
-              : PaletaApp.surfaceAlt,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: selected ? PaletaApp.primary : PaletaApp.border,
-          ),
-          boxShadow: selected
-              ? const [
-                  BoxShadow(
-                    color: Color(0x1FD96A4A),
-                    blurRadius: 10,
-                    offset: Offset(0, 4),
-                  ),
-                ]
-              : const [],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 15,
-              color: selected ? Colors.white : PaletaApp.primary,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: selected ? Colors.white : PaletaApp.text,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => AppChipFiltro(
+    rotulo: label,
+    icone: icon,
+    selecionado: selected,
+    aoTocar: onTap,
+    comSombra: true,
+  );
 }

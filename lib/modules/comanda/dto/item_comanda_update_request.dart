@@ -12,9 +12,9 @@ class ItemComandaUpdateRequest {
   final String? observacao;
 
   Map<String, dynamic> toJson() => {
-        if (quantidade != null) 'quantidade': quantidade,
-        if (valorDesconto != null) 'valorDesconto': valorDesconto,
-        if (valorAcrescimo != null) 'valorAcrescimo': valorAcrescimo,
-        if (observacao != null) 'observacao': observacao,
-      };
+    if (quantidade != null) 'quantidade': quantidade,
+    if (valorDesconto != null) 'valorDesconto': valorDesconto,
+    if (valorAcrescimo != null) 'valorAcrescimo': valorAcrescimo,
+    if (observacao != null) 'observacao': observacao,
+  };
 }

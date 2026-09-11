@@ -1,18 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/core/api_error.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
+import 'package:my_app_teste/core/widgets/app_campo_busca.dart';
+import 'package:my_app_teste/core/widgets/app_carregando.dart';
+import 'package:my_app_teste/core/widgets/app_dialogo_confirmacao.dart';
+import 'package:my_app_teste/core/widgets/app_estado_vazio.dart';
 import 'package:my_app_teste/modules/entregador/dto/entregador_response.dart';
+import 'package:my_app_teste/modules/entregador/dto/filtro_entregadores.dart';
+import 'package:my_app_teste/modules/entregador/page/entregador_form_page.dart';
 import 'package:my_app_teste/modules/entregador/service/entregador_service.dart';
 import 'package:my_app_teste/modules/entregador/widgets/entregador_active_count.dart';
 import 'package:my_app_teste/modules/entregador/widgets/entregador_card.dart';
-import 'package:my_app_teste/modules/entregador/widgets/entregador_empty_state.dart';
 import 'package:my_app_teste/modules/entregador/widgets/entregador_results_header.dart';
-import 'package:my_app_teste/modules/entregador/widgets/entregador_search_field.dart';
 
-import 'entregador_form_page.dart';
-
+/// Cadastro de entregadores.
+///
+/// Cuida de estado, carga e navegação: a busca e a ordem vivem em
+/// [FiltroEntregadores] e cada linha em [EntregadorCard].
+///
+/// Entregador não tem login — é um recurso cadastrado que recebe a comanda
+/// impressa (seção 3.5). "Excluir" aqui é inativar (RNF08): o entregador
+/// sai da lista, mas as entregas que ele já fez continuam apontando para
+/// ele.
 class EntregadorPage extends StatefulWidget {
+  /// Permite injetar um service nos testes.
   final EntregadorService? service;
 
   const EntregadorPage({super.key, this.service});
@@ -22,370 +33,259 @@ class EntregadorPage extends StatefulWidget {
 }
 
 class _EntregadorPageState extends State<EntregadorPage> {
-  // Estes campos sao anulaveis de proposito. Em Flutter Web, um hot reload que
-  // adiciona campos a um State ja montado pode preservar a instancia antiga
-  // com propriedades `undefined`. Os getters e o reassemble recuperam esse
-  // estado sem derrubar a arvore de widgets.
-  TextEditingController? _searchController = TextEditingController();
-  EntregadorService? _service;
-  List<EntregadorResponse>? _entregadores = <EntregadorResponse>[];
-  bool? _loading = true;
-  bool? _ascending = true;
-  String? _search = '';
-  String? _loadError;
+  late final EntregadorService _service = widget.service ?? EntregadorService();
+  final _busca = TextEditingController();
 
-  TextEditingController get _resolvedSearchController =>
-      _searchController ??= TextEditingController();
-
-  EntregadorService get _resolvedService =>
-      _service ??= widget.service ?? EntregadorService();
-
-  List<EntregadorResponse> get _items =>
-      _entregadores ??= <EntregadorResponse>[];
-
-  bool get _isLoading => _loading ?? true;
-  bool get _isAscending => _ascending ?? true;
-  String get _searchValue => _search ?? '';
+  List<EntregadorResponse> _entregadores = [];
+  FiltroEntregadores _filtro = const FiltroEntregadores();
+  bool _carregando = true;
+  String? _erro;
 
   @override
   void initState() {
     super.initState();
-    _ensureInitialized();
-    _load();
+    _carregar();
   }
 
+  /// Recarrega a lista a cada hot reload.
+  ///
+  /// Só roda em desenvolvimento, e existe porque a tela costuma ser
+  /// editada com o app aberto — sem isso, cada alteração deixaria a lista
+  /// congelada no que foi carregado antes.
   @override
   void reassemble() {
     super.reassemble();
-    _ensureInitialized();
-    _load();
-  }
-
-  void _ensureInitialized() {
-    _searchController ??= TextEditingController();
-    _service ??= widget.service ?? EntregadorService();
-    _entregadores ??= <EntregadorResponse>[];
-    _loading ??= true;
-    _ascending ??= true;
-    _search ??= '';
+    _carregar();
   }
 
   @override
   void dispose() {
-    _searchController?.dispose();
-    _searchController = null;
+    _busca.dispose();
     super.dispose();
   }
 
-  List<EntregadorResponse> get _filtered {
-    final query = _searchValue.trim().toLowerCase();
-    final result = _items.where((entregador) {
-      if (query.isEmpty) return true;
-      return entregador.nome.toLowerCase().contains(query) ||
-          entregador.telefone.toLowerCase().contains(query);
-    }).toList();
+  // ---------------------------------------------------------------------
+  // Dados
+  // ---------------------------------------------------------------------
 
-    result.sort((a, b) {
-      final comparison = a.nome.toLowerCase().compareTo(b.nome.toLowerCase());
-      return _isAscending ? comparison : -comparison;
-    });
-    return result;
-  }
-
-  String get _activeCountLabel {
-    if (_isLoading) return 'Carregando entregadores...';
-    if (_loadError != null) return 'Entregadores ativos indisponíveis';
-    final label = _items.length == 1
-        ? 'entregador ativo'
-        : 'entregadores ativos';
-    return '${_items.length} $label';
-  }
-
-  Future<void> _load() async {
-    if (mounted) {
+  Future<void> _carregar({bool mostrarCarregando = true}) async {
+    if (mostrarCarregando) {
       setState(() {
-        _loading = true;
-        _loadError = null;
+        _carregando = true;
+        _erro = null;
       });
     }
-
     try {
-      final entregadores = await _resolvedService.listar(apenasAtivos: true);
-      if (!mounted) return;
-      setState(() => _entregadores = entregadores);
+      final lista = await _service.listar(apenasAtivos: true);
+      if (mounted) {
+        setState(() {
+          _entregadores = lista;
+          _erro = null;
+        });
+      }
     } on ApiError catch (e) {
-      if (!mounted) return;
-      setState(() => _loadError = e.message);
+      if (mounted) setState(() => _erro = e.message);
     } catch (_) {
-      if (!mounted) return;
-      setState(() => _loadError = 'Erro inesperado ao consultar a API.');
+      if (mounted) {
+        setState(() => _erro = 'Erro inesperado ao consultar a API.');
+      }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() => _carregando = false);
     }
   }
 
-  Future<void> _openCreate() async {
-    final created = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => EntregadorFormPage(service: _resolvedService),
-      ),
-    );
-    if (created != true || !mounted) return;
+  List<EntregadorResponse> get _filtrados => _filtro.aplicar(_entregadores);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Entregador cadastrado com sucesso.'),
-        backgroundColor: PaletaApp.success,
-      ),
-    );
-    await _load();
+  /// Contagem exibida no topo. Reflete o total carregado, não o filtrado —
+  /// é a informação operacional ("quantos entregadores tenho hoje"), que
+  /// não deve mudar quando alguém digita na busca.
+  String get _rotuloContagem {
+    if (_carregando) return 'Carregando entregadores…';
+    if (_erro != null) return 'Entregadores ativos indisponíveis';
+    final total = _entregadores.length;
+    return '$total ${total == 1 ? 'entregador ativo' : 'entregadores ativos'}';
   }
 
-  Future<void> _openEdit(EntregadorResponse entregador) async {
-    final changed = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => EntregadorFormPage(
-          entregador: entregador,
-          service: _resolvedService,
-        ),
-      ),
-    );
-    if (changed != true || !mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Entregador atualizado com sucesso.'),
-        backgroundColor: PaletaApp.success,
-      ),
-    );
-    await _load();
+  void _limparBusca() {
+    _busca.clear();
+    setState(() => _filtro = _filtro.copiarCom(texto: ''));
   }
 
-  Future<bool> _confirmDelete(EntregadorResponse entregador) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: const Row(
-          children: [
-            FaIcon(
-              FontAwesomeIcons.triangleExclamation,
-              color: PaletaApp.primary,
-              size: 20,
-            ),
-            SizedBox(width: 10),
-            Text(
-              'Excluir entregador',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: PaletaApp.text,
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          'Deseja excluir "${entregador.nome}"? O entregador será inativado e sairá desta lista.',
-          style: const TextStyle(color: PaletaApp.text),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            style: TextButton.styleFrom(
-              foregroundColor: PaletaApp.textMuted,
-            ),
-            child: const Text('Cancelar'),
+  // ---------------------------------------------------------------------
+  // Ações
+  // ---------------------------------------------------------------------
+
+  Future<void> _abrirFormulario({EntregadorResponse? entregador}) async {
+    final salvou = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            EntregadorFormPage(entregador: entregador, service: _service),
+      ),
+    );
+    if (salvou != true || !mounted) return;
+    _avisar(
+      entregador == null ? 'Entregador cadastrado.' : 'Entregador atualizado.',
+      sucesso: true,
+    );
+    await _carregar();
+  }
+
+  /// Confirma e inativa. Devolve `true` quando o card pode sair da lista.
+  Future<bool> _confirmarEExcluir(EntregadorResponse entregador) async {
+    final confirmou = await AppDialogoConfirmacao.mostrar(
+      context,
+      titulo: 'Excluir entregador',
+      mensagem:
+          'Deseja excluir "${entregador.nome}"? O entregador será inativado '
+          'e sairá desta lista.',
+      rotuloConfirmar: 'Excluir',
+      tom: TomConfirmacao.destrutivo,
+    );
+    if (confirmou != true || entregador.id == null) return false;
+
+    try {
+      await _service.inativar(entregador.id!);
+      if (!mounted) return false;
+      setState(() => _entregadores.removeWhere((e) => e.id == entregador.id));
+      _avisar('Entregador "${entregador.nome}" excluído.', sucesso: true);
+      return true;
+    } on ApiError catch (e) {
+      _avisar('Erro ao excluir: ${e.message}');
+      return false;
+    } catch (_) {
+      _avisar('Erro inesperado ao excluir o entregador.');
+      return false;
+    }
+  }
+
+  void _avisar(String mensagem, {bool sucesso = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensagem),
+        backgroundColor: sucesso ? AppTema.sucesso : AppTema.erro,
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: AppTema.fundo,
+    floatingActionButton: FloatingActionButton(
+      tooltip: 'Cadastrar entregador',
+      onPressed: _abrirFormulario,
+      backgroundColor: AppTema.primaria,
+      foregroundColor: Colors.white,
+      shape: const CircleBorder(),
+      child: const Icon(Icons.add_rounded),
+    ),
+    body: SafeArea(
+      child: Column(
+        children: [
+          EntregadorActiveCount(label: _rotuloContagem),
+          AppCampoBusca(
+            controle: _busca,
+            dica: 'Buscar entregador…',
+            margemHorizontal: 16,
+            aoMudar: (valor) =>
+                setState(() => _filtro = _filtro.copiarCom(texto: valor)),
+            aoLimpar: _limparBusca,
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
+          EntregadorResultsHeader(
+            resultCount: _filtrados.length,
+            ascending: _filtro.crescente,
+            onSortTap: () => setState(() => _filtro = _filtro.inverterOrdem()),
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              color: AppTema.primaria,
+              onRefresh: () => _carregar(mostrarCarregando: false),
+              child: _lista(),
             ),
-            child: const Text('Excluir'),
           ),
         ],
       ),
-    );
-    return confirmed ?? false;
-  }
+    ),
+  );
 
-  Future<bool> _delete(EntregadorResponse entregador) async {
-    if (entregador.id == null) return false;
-
-    try {
-      await _resolvedService.inativar(entregador.id!);
-      if (!mounted) return false;
-      setState(() {
-        _items.removeWhere((item) => item.id == entregador.id);
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Entregador "${entregador.nome}" excluído.'),
-          backgroundColor: PaletaApp.success,
-        ),
-      );
-      return true;
-    } on ApiError catch (e) {
-      if (!mounted) return false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao excluir: ${e.message}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return false;
-    } catch (_) {
-      if (!mounted) return false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Erro inesperado ao excluir o entregador.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return false;
-    }
-  }
-
-  Future<bool> _confirmAndDelete(EntregadorResponse entregador) async {
-    if (!await _confirmDelete(entregador)) return false;
-    return _delete(entregador);
-  }
-
-  void _clearSearch() {
-    _resolvedSearchController.clear();
-    setState(() => _search = '');
-  }
-
-  Widget _buildList() {
-    if (_isLoading) {
+  Widget _lista() {
+    if (_carregando) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 28, 16, 96),
-        children: const [
-          SizedBox(height: 120),
-          Center(
-            child: CircularProgressIndicator(
-              color: PaletaApp.primary,
-            ),
-          ),
-        ],
+        children: const [SizedBox(height: 120), AppCarregando()],
+      );
+    }
+    if (_erro != null) {
+      return _rolavel(
+        AppEstadoVazio(
+          icone: Icons.cloud_off_rounded,
+          titulo: 'Não foi possível carregar',
+          mensagem: _erro!,
+          rotuloBotao: 'Tentar novamente',
+          iconeBotao: Icons.refresh_rounded,
+          secundario: true,
+          aoTocarBotao: _carregar,
+        ),
+      );
+    }
+    if (_entregadores.isEmpty) {
+      return _rolavel(
+        AppEstadoVazio(
+          icone: Icons.delivery_dining_rounded,
+          titulo: 'Sem entregadores por aqui',
+          mensagem:
+              'Cadastre o primeiro entregador para organizar as entregas '
+              'dos pedidos.',
+          rotuloBotao: 'Cadastrar entregador',
+          iconeBotao: Icons.add_rounded,
+          aoTocarBotao: _abrirFormulario,
+        ),
       );
     }
 
-    if (_loadError != null) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 22, 16, 96),
-        children: [
-          EntregadorEmptyState(
-            title: 'Não foi possível carregar',
-            subtitle: _loadError!,
-            icon: Icons.cloud_off_rounded,
-            buttonLabel: 'Tentar novamente',
-            buttonIcon: Icons.refresh_rounded,
-            onPressed: _load,
-            secondary: true,
-          ),
-        ],
-      );
-    }
-
-    if (_items.isEmpty) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 22, 16, 96),
-        children: [
-          EntregadorEmptyState(
-            title: 'Sem entregadores por aqui',
-            subtitle:
-                'Cadastre o primeiro entregador para organizar as entregas dos pedidos.',
-            icon: Icons.delivery_dining_rounded,
-            buttonLabel: 'Cadastrar entregador',
-            buttonIcon: Icons.add_rounded,
-            onPressed: _openCreate,
-          ),
-        ],
-      );
-    }
-
-    if (_filtered.isEmpty) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 22, 16, 96),
-        children: [
-          EntregadorEmptyState(
-            title: 'Nenhum entregador encontrado',
-            subtitle: 'Tente buscar por outro nome ou telefone.',
-            icon: Icons.search_off_rounded,
-            buttonLabel: 'Limpar busca',
-            buttonIcon: Icons.close_rounded,
-            onPressed: _clearSearch,
-            secondary: true,
-          ),
-        ],
+    final filtrados = _filtrados;
+    if (filtrados.isEmpty) {
+      return _rolavel(
+        AppEstadoVazio(
+          icone: Icons.search_off_rounded,
+          titulo: 'Nenhum entregador encontrado',
+          mensagem: 'Tente buscar por outro nome ou telefone.',
+          rotuloBotao: 'Limpar busca',
+          iconeBotao: Icons.close_rounded,
+          secundario: true,
+          aoTocarBotao: _limparBusca,
+        ),
       );
     }
 
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
-      itemCount: _filtered.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        final entregador = _filtered[index];
+      itemCount: filtrados.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      itemBuilder: (_, i) {
+        final entregador = filtrados[i];
         return EntregadorCard(
           entregador: entregador,
-          onTap: () => _openEdit(entregador),
-          onEdit: () => _openEdit(entregador),
-          onConfirmDelete: () => _confirmAndDelete(entregador),
+          onTap: () => _abrirFormulario(entregador: entregador),
+          onEdit: () => _abrirFormulario(entregador: entregador),
+          onConfirmDelete: () => _confirmarEExcluir(entregador),
         );
       },
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: PaletaApp.background,
-      floatingActionButton: FloatingActionButton(
-        tooltip: 'Cadastrar entregador',
-        onPressed: _openCreate,
-        backgroundColor: PaletaApp.primary,
-        foregroundColor: Colors.white,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.add_rounded),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            EntregadorActiveCount(label: _activeCountLabel),
-            EntregadorSearchField(
-              controller: _resolvedSearchController,
-              search: _searchValue,
-              onChanged: (value) => setState(() => _search = value),
-              onClear: _clearSearch,
-            ),
-            EntregadorResultsHeader(
-              resultCount: _filtered.length,
-              ascending: _isAscending,
-              onSortTap: () => setState(() => _ascending = !_isAscending),
-            ),
-            Expanded(
-              child: RefreshIndicator(
-                color: PaletaApp.primary,
-                onRefresh: _load,
-                child: _buildList(),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  /// Mantém o conteúdo rolável mesmo quando cabe na tela — sem isso o
+  /// "puxar para atualizar" não funciona nos estados de erro e de vazio.
+  Widget _rolavel(Widget filho) => ListView(
+    physics: const AlwaysScrollableScrollPhysics(),
+    padding: const EdgeInsets.fromLTRB(16, 22, 16, 96),
+    children: [filho],
+  );
 }

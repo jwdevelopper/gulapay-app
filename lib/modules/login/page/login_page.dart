@@ -1,9 +1,21 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/core/api_error.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
+import 'package:my_app_teste/core/widgets/app_cartao_aviso.dart';
 import 'package:my_app_teste/modules/home/page/home_page.dart';
+import 'package:my_app_teste/modules/login/dto/validacao_login.dart';
 import 'package:my_app_teste/modules/login/service/login_service.dart';
+import 'package:my_app_teste/modules/login/widgets/campo_login.dart';
 
+/// Entrada no app.
+///
+/// Cuida de estado e autenticação; as regras vivem em [ValidadorLogin] e o
+/// campo em [CampoLogin].
+///
+/// O backend autentica por **login** (nome de usuário), não por e-mail —
+/// `POST /auth/login` recebe `{login, senha}`. Não há auto-cadastro: quem
+/// cria usuários é o administrador, pela tela de Usuários.
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -13,248 +25,190 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage>
     with SingleTickerProviderStateMixin {
-  bool _obscureText = true;
+  final _servico = LoginService();
+  final _login = TextEditingController();
+  final _senha = TextEditingController();
 
-  final _formKey = GlobalKey<FormState>();
+  bool _ocultarSenha = true;
+  bool _entrando = false;
+  String? _erro;
 
-  TextEditingController _emailControler = new TextEditingController();
-  TextEditingController _senhaControler = new TextEditingController();
-
-  final _loginService = new LoginService();
-
-  bool _isLoading = false;
-
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
+  late final AnimationController _animacao = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 2),
+  );
+  late final Animation<double> _aparecer = CurvedAnimation(
+    parent: _animacao,
+    curve: Curves.easeIn,
+  );
+  late final Animation<Offset> _subir = Tween<Offset>(
+    begin: const Offset(0, 0.2),
+    end: Offset.zero,
+  ).animate(CurvedAnimation(parent: _animacao, curve: Curves.easeOut));
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: Duration(seconds: 2),
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeIn,
-    );
-    _slideAnimation = Tween<Offset>(begin: Offset(0, 0.2), end: Offset.zero)
-        .animate(
-          CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
-        );
-    _animationController.forward();
+    _animacao.forward();
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
-    _emailControler.dispose();
-    _senhaControler.dispose();
+    _animacao.dispose();
+    _login.dispose();
+    _senha.dispose();
     super.dispose();
   }
 
+  // ---------------------------------------------------------------------
+  // Autenticação
+  // ---------------------------------------------------------------------
+
+  Future<void> _entrar() async {
+    final erroValidacao = ValidadorLogin.validar(
+      login: _login.text,
+      senha: _senha.text,
+    );
+    if (erroValidacao != null) {
+      setState(() => _erro = erroValidacao);
+      return;
+    }
+
+    setState(() {
+      _entrando = true;
+      _erro = null;
+    });
+    try {
+      await _servico.efetuarLogin(_login.text.trim(), _senha.text);
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const Home()),
+      );
+    } on ApiError catch (e) {
+      if (mounted) setState(() => _erro = e.message);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _erro = 'Não foi possível entrar. Tente novamente.');
+      }
+    } finally {
+      if (mounted) setState(() => _entrando = false);
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------
+
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: SlideTransition(
-          position: _slideAnimation,
-          child: Container(
-            padding: EdgeInsets.all(10.0),
-            decoration: BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage("assets/img/login_bg.jpg"),
-                fit: BoxFit.cover,
-              ),
+  Widget build(BuildContext context) => Scaffold(
+    body: FadeTransition(
+      opacity: _aparecer,
+      child: SlideTransition(
+        position: _subir,
+        child: Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/img/login_bg.jpg'),
+              fit: BoxFit.cover,
             ),
+          ),
+          child: SafeArea(
             child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Form(
-                    key: _formKey,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Image.asset(
-                          "assets/img/logo_mascot.png",
-                          height: 175.0,
-                          width: 175.0,
-                        ),
-                        SizedBox(height: 20.0),
-                        TextFormField(
-                          controller: _emailControler,
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: Color(0xF2FFF5DC),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(20.0),
-                              borderSide: BorderSide.none,
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(20.0),
-                              borderSide: BorderSide(
-                                color: const Color.fromARGB(255, 248, 151, 40),
-                              ),
-                            ),
-                            hintText: "Digite seu e-mail",
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12.0),
-                            ),
-                            prefixIcon: IconButton(
-                              onPressed: () {},
-                              icon: FaIcon(
-                                FontAwesomeIcons.user,
-                                color: Color(0xffB8825A),
-                              ),
-                            ),
-                            suffixIcon: IconButton(
-                              onPressed: () {
-                                _emailControler.clear();
-                              },
-                              icon: FaIcon(
-                                FontAwesomeIcons.xmark,
-                                color: Color(0xffB8825A),
-                              ),
-                            ),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return "Informe o e-mail";
-                            }
-                            return null;
-                          },
-                        ),
-                        SizedBox(height: 20.0),
-                        TextFormField(
-                          controller: _senhaControler,
-                          obscureText: _obscureText,
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: Color(0xF2FFF5DC),
-                            hintText: "Digite sua senha",
-                            border: OutlineInputBorder(),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(20.0),
-                              borderSide: BorderSide.none,
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(20.0),
-                              borderSide: BorderSide(
-                                color: const Color.fromARGB(255, 248, 151, 40),
-                              ),
-                            ),
-                            prefixIcon: IconButton(
-                              onPressed: () {},
-                              icon: FaIcon(FontAwesomeIcons.lock, color: Color(0xffB8825A),),
-                            ),
-                            suffixIcon: IconButton(
-                              onPressed: () {
-                                setState(() {
-                                  _obscureText = !_obscureText;
-                                });
-                              },
-                              icon: FaIcon(
-                                _obscureText
-                                    ? FontAwesomeIcons.eyeSlash
-                                    : FontAwesomeIcons.eye,
-                              color: Color(0xffB8825A),),
-                            ),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return "Informe a senha";
-                            } else if (value.length < 6) {
-                              return "A senha deve conter mais de 5 digitos!";
-                            }
-                            return null;
-                          },
-                        ),
-                        SizedBox(height: 20.0),
-                        SizedBox(
-                          height: 60.0,
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: _isLoading
-                                ? null
-                                : () async {
-                                    if (!_formKey.currentState!.validate()) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            "Por favor verifique o formulário!",
-                                          ),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                    } else {
-                                      setState(() {
-                                        _isLoading = true;
-                                      });
-                                      try {
-                                        await _loginService.efetuarLogin(
-                                          _emailControler.text,
-                                          _senhaControler.text,
-                                        );
-                                        if (!context.mounted) return;
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              "Login realizado com sucesso!",
-                                            ),
-                                            backgroundColor: const Color.fromARGB(255, 175, 129, 76),
-                                          ),
-                                        );
-                                        Navigator.pushReplacement(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => Home(),
-                                          ),
-                                        );
-                                      } on ApiError catch (e) {
-                                        if (!context.mounted) return;
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              "Erro ao efetuar login: ${e.message}",
-                                            ),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
-                                      } finally {
-                                        if (mounted) {
-                                          setState(() {
-                                            _isLoading = false;
-                                          });
-                                        }
-                                      }
-                                    }
-                                  },
-                            label: Text("Logar"),
-                            icon: Icon(Icons.login),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color.fromARGB(255, 236, 133, 80),
-                              foregroundColor: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      'assets/img/logo_mascot.png',
+                      height: 175,
+                      width: 175,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 20),
+                    CampoLogin(
+                      controle: _login,
+                      dica: 'Digite seu login',
+                      icone: const FaIcon(
+                        FontAwesomeIcons.user,
+                        color: AppTema.primariaEscura,
+                        size: 18,
+                      ),
+                      iconeAcao: const FaIcon(
+                        FontAwesomeIcons.xmark,
+                        color: AppTema.primariaEscura,
+                        size: 18,
+                      ),
+                      dicaAcao: 'Limpar',
+                      aoTocarAcao: _login.clear,
+                    ),
+                    const SizedBox(height: 20),
+                    CampoLogin(
+                      controle: _senha,
+                      dica: 'Digite sua senha',
+                      icone: const FaIcon(
+                        FontAwesomeIcons.lock,
+                        color: AppTema.primariaEscura,
+                        size: 18,
+                      ),
+                      ocultarTexto: _ocultarSenha,
+                      iconeAcao: FaIcon(
+                        _ocultarSenha
+                            ? FontAwesomeIcons.eyeSlash
+                            : FontAwesomeIcons.eye,
+                        color: AppTema.primariaEscura,
+                        size: 18,
+                      ),
+                      dicaAcao: _ocultarSenha
+                          ? 'Mostrar senha'
+                          : 'Ocultar senha',
+                      aoTocarAcao: () =>
+                          setState(() => _ocultarSenha = !_ocultarSenha),
+                      aoEnviar: _entrar,
+                    ),
+                    if (_erro != null) ...[
+                      const SizedBox(height: 16),
+                      AppCartaoAviso.erro(_erro),
+                    ],
+                    const SizedBox(height: 20),
+                    _botaoEntrar(),
+                  ],
+                ),
               ),
             ),
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+
+  Widget _botaoEntrar() => SizedBox(
+    height: 60,
+    width: double.infinity,
+    child: ElevatedButton.icon(
+      onPressed: _entrando ? null : _entrar,
+      icon: _entrando
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : const Icon(Icons.login_rounded),
+      label: Text(_entrando ? 'Entrando…' : 'Entrar'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppTema.primaria,
+        foregroundColor: Colors.white,
+        disabledBackgroundColor: AppTema.primariaSuave,
+        disabledForegroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+      ),
+    ),
+  );
 }

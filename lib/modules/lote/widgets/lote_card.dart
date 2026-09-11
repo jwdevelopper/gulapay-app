@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/modules/lote/dto/lote_response.dart';
-import 'package:my_app_teste/modules/lote/models/lote_status_validade.dart';
+import 'package:my_app_teste/modules/lote/dto/lote_status_validade.dart';
 import 'package:my_app_teste/modules/lote/utils/lote_formatadores.dart';
 import 'package:my_app_teste/modules/lote/widgets/lote_status_tag.dart';
 
@@ -20,7 +20,7 @@ class LoteCard extends StatelessWidget {
     final exigeAtencao = status.exigeAtencao;
 
     return Material(
-      color: AppTema.cartao,
+      color: AppTema.superficie,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,
@@ -30,7 +30,9 @@ class LoteCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: exigeAtencao ? status.cor.withValues(alpha: 0.5) : AppTema.bordaCampo,
+              color: exigeAtencao
+                  ? status.cor.withValues(alpha: 0.5)
+                  : AppTema.borda,
             ),
           ),
           child: Row(
@@ -38,7 +40,9 @@ class LoteCard extends StatelessWidget {
             children: [
               _BlocoCodigo(lote: lote, status: status),
               const SizedBox(width: 12),
-              Expanded(child: _Informacoes(lote: lote, status: status)),
+              Expanded(
+                child: _Informacoes(lote: lote, status: status),
+              ),
               const SizedBox(width: 10),
               _Quantidade(lote: lote, simbolo: simbolo),
             ],
@@ -98,8 +102,9 @@ class _Informacoes extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final codigo = (lote.codigo ?? '').trim();
-    final descricaoVencimento =
-        LoteStatusValidade.descricaoVencimento(lote.validade);
+    final descricaoVencimento = LoteStatusValidade.descricaoVencimento(
+      lote.validade,
+    );
     final metaPartes = <String>[descricaoVencimento];
     if (codigo.isNotEmpty) metaPartes.add(codigo);
 
@@ -114,7 +119,7 @@ class _Informacoes extends StatelessWidget {
           style: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w700,
-            color: AppTema.textoEscuro,
+            color: AppTema.texto,
           ),
         ),
         const SizedBox(height: 4),
@@ -122,10 +127,7 @@ class _Informacoes extends StatelessWidget {
           metaPartes.join(' · '),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontSize: 12,
-            color: AppTema.textoSecundario,
-          ),
+          style: const TextStyle(fontSize: 12, color: AppTema.textoSecundario),
         ),
         const SizedBox(height: 6),
         LoteStatusTag(status),
@@ -152,7 +154,7 @@ class _Quantidade extends StatelessWidget {
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w800,
-              color: AppTema.textoEscuro,
+              color: AppTema.texto,
             ),
             children: [
               if (simbolo.isNotEmpty)
@@ -170,10 +172,7 @@ class _Quantidade extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           '${LoteFormatadores.formatarMoeda(lote.custoUnitario)}${simbolo.isNotEmpty ? '/$simbolo' : ''}',
-          style: const TextStyle(
-            fontSize: 12,
-            color: AppTema.textoSecundario,
-          ),
+          style: const TextStyle(fontSize: 12, color: AppTema.textoSecundario),
         ),
       ],
     );

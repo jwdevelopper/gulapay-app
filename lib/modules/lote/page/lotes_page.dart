@@ -2,19 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/core/widgets/app_campo_busca.dart';
+import 'package:my_app_teste/core/widgets/app_carregando.dart';
+import 'package:my_app_teste/core/widgets/app_chip_filtro.dart';
 import 'package:my_app_teste/core/widgets/app_estado_vazio.dart';
 import 'package:my_app_teste/modules/insumo/dto/insumo_response.dart';
+import 'package:my_app_teste/modules/lote/dto/filtro_lotes.dart';
 import 'package:my_app_teste/modules/lote/dto/lote_response.dart';
-import 'package:my_app_teste/modules/lote/models/lote_status_validade.dart';
 import 'package:my_app_teste/modules/lote/page/lote_detalhes_page.dart';
 import 'package:my_app_teste/modules/lote/page/lote_form_page.dart';
 import 'package:my_app_teste/modules/lote/service/lote_service.dart';
+import 'package:my_app_teste/modules/lote/widgets/cabecalho_insumo_lotes.dart';
 import 'package:my_app_teste/modules/lote/widgets/lote_card.dart';
 import 'package:my_app_teste/modules/lote/widgets/lote_insumo_seletor.dart';
 
-/// Filtro por validade aplicado no cliente sobre a lista FEFO do backend.
-enum _FiltroValidade { todos, vencidos, ate7, ate30 }
-
+/// Lotes de um insumo, em ordem de validade (FEFO).
+///
+/// A tela tem dois momentos: enquanto nenhum insumo foi escolhido ela só
+/// convida a escolher um — `GET /lotes` exige o `insumoId` —; escolhido o
+/// insumo, mostra a lista com busca e recorte por validade.
+///
+/// Cuida apenas de estado, carga e navegação: o recorte vive em
+/// [FiltroLotes] e a faixa do topo em [CabecalhoInsumoLotes].
 class LotesPage extends StatefulWidget {
   const LotesPage({super.key});
 
@@ -23,15 +31,14 @@ class LotesPage extends StatefulWidget {
 }
 
 class _LotesPageState extends State<LotesPage> {
-  final LoteService _service = LoteService();
-  final TextEditingController _busca = TextEditingController();
+  final _service = LoteService();
+  final _busca = TextEditingController();
 
   InsumoResponse? _insumo;
   List<LoteResponse> _lotes = [];
+  FiltroLotes _filtro = const FiltroLotes();
   bool _carregando = false;
   String? _erro;
-  String _filtroTexto = '';
-  _FiltroValidade _filtroValidade = _FiltroValidade.todos;
 
   @override
   void dispose() {
@@ -39,71 +46,50 @@ class _LotesPageState extends State<LotesPage> {
     super.dispose();
   }
 
+  // ---------------------------------------------------------------------
+  // Dados
+  // ---------------------------------------------------------------------
+
   Future<void> _selecionarInsumo() async {
     final insumo = await LoteInsumoSeletor.abrir(context);
-    if (insumo == null) return;
+    if (insumo == null || !mounted) return;
+    _busca.clear();
     setState(() {
       _insumo = insumo;
       _lotes = [];
-      _filtroTexto = '';
-      _busca.clear();
-      _filtroValidade = _FiltroValidade.todos;
+      _filtro = const FiltroLotes();
     });
     await _carregar();
   }
 
-  Future<void> _carregar() async {
+  /// Recarrega os lotes do insumo escolhido.
+  ///
+  /// [mostrarCarregando] é falso no "puxar para atualizar": ali o próprio
+  /// `RefreshIndicator` já dá o retorno visual.
+  Future<void> _carregar({bool mostrarCarregando = true}) async {
     final insumo = _insumo;
     if (insumo?.id == null) return;
-    setState(() {
-      _carregando = true;
-      _erro = null;
-    });
+    if (mostrarCarregando) {
+      setState(() {
+        _carregando = true;
+        _erro = null;
+      });
+    }
     try {
       final lista = await _service.listar(insumoId: insumo!.id!);
-      if (!mounted) return;
-      setState(() => _lotes = lista);
+      if (mounted) {
+        setState(() {
+          _lotes = lista;
+          _erro = null;
+        });
+      }
     } on ApiError catch (e) {
-      if (!mounted) return;
-      setState(() => _erro = e.message);
+      if (mounted) setState(() => _erro = e.message);
     } catch (e) {
-      if (!mounted) return;
-      setState(() => _erro = 'Erro ao carregar lotes: $e');
+      if (mounted) setState(() => _erro = 'Erro ao carregar lotes: $e');
     } finally {
       if (mounted) setState(() => _carregando = false);
     }
-  }
-
-  bool _correspondeValidade(LoteResponse lote) {
-    final status = LoteStatusValidade.calcular(lote.validade);
-    switch (_filtroValidade) {
-      case _FiltroValidade.todos:
-        return true;
-      case _FiltroValidade.vencidos:
-        return status == LoteStatusValidade.vencido;
-      case _FiltroValidade.ate7:
-        return status == LoteStatusValidade.ate7Dias;
-      case _FiltroValidade.ate30:
-        return status == LoteStatusValidade.ate7Dias ||
-            status == LoteStatusValidade.ate30Dias;
-    }
-  }
-
-  bool _correspondeTexto(LoteResponse lote) {
-    final termo = _filtroTexto.trim().toLowerCase();
-    if (termo.isEmpty) return true;
-    final codigo = (lote.codigo ?? '').toLowerCase();
-    final insumo = (lote.insumoNome ?? '').toLowerCase();
-    return codigo.contains(termo) || insumo.contains(termo);
-  }
-
-  List<LoteResponse> get _filtrados =>
-      _lotes.where((l) => _correspondeTexto(l) && _correspondeValidade(l)).toList();
-
-  int _contar(bool Function(LoteStatusValidade) teste) {
-    return _lotes
-        .where((l) => teste(LoteStatusValidade.calcular(l.validade)))
-        .length;
   }
 
   Future<void> _abrirDetalhes(LoteResponse lote) async {
@@ -119,17 +105,23 @@ class _LotesPageState extends State<LotesPage> {
   Future<void> _abrirCriacao() async {
     final criado = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(
-        builder: (_) => LoteFormPage(insumoInicial: _insumo),
-      ),
+      MaterialPageRoute(builder: (_) => LoteFormPage(insumoInicial: _insumo)),
     );
     if (criado == true) await _carregar();
   }
 
+  void _limparFiltros() {
+    _busca.clear();
+    setState(() => _filtro = const FiltroLotes());
+  }
+
+  // ---------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
     final temInsumo = _insumo != null;
-
     return Scaffold(
       backgroundColor: AppTema.fundo,
       floatingActionButton: temInsumo
@@ -141,227 +133,119 @@ class _LotesPageState extends State<LotesPage> {
               child: const Icon(Icons.add_rounded),
             )
           : null,
-      body: temInsumo ? _corpoComInsumo() : _corpoSelecaoInsumo(),
+      body: temInsumo ? _corpoComInsumo() : _convitePorInsumo(),
     );
   }
 
-  Widget _corpoSelecaoInsumo() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const AppEstadoVazio(
-              icone: Icons.calendar_month_outlined,
-              mensagem:
-                  'Selecione um insumo para visualizar seus lotes em ordem de validade (FEFO).',
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: _selecionarInsumo,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTema.primaria,
-                foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              icon: const Icon(Icons.search),
-              label: const Text(
-                'Selecionar insumo',
-                style: TextStyle(fontWeight: FontWeight.w700),
-              ),
-            ),
-          ],
+  /// Estado inicial: sem insumo não há o que listar.
+  Widget _convitePorInsumo() => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: AppEstadoVazio(
+        icone: Icons.calendar_month_outlined,
+        titulo: 'Escolha um insumo',
+        mensagem:
+            'Os lotes são listados por insumo, em ordem de validade (FEFO).',
+        rotuloBotao: 'Selecionar insumo',
+        iconeBotao: Icons.search_rounded,
+        aoTocarBotao: _selecionarInsumo,
+      ),
+    ),
+  );
+
+  Widget _corpoComInsumo() => Column(
+    children: [
+      CabecalhoInsumoLotes(insumo: _insumo!, aoTrocar: _selecionarInsumo),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+        child: AppCampoBusca(
+          controle: _busca,
+          dica: 'Buscar por código ou insumo…',
+          aoMudar: (valor) =>
+              setState(() => _filtro = _filtro.copiarCom(texto: valor)),
         ),
       ),
-    );
-  }
-
-  Widget _corpoComInsumo() {
-    return Column(
-      children: [
-        _cabecalhoInsumo(),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-          child: AppCampoBusca(
-            controle: _busca,
-            dica: 'Buscar por código ou insumo…',
-            aoMudar: (valor) => setState(() => _filtroTexto = valor),
-          ),
+      _chipsValidade(),
+      const SizedBox(height: 8),
+      Expanded(
+        child: RefreshIndicator(
+          color: AppTema.primaria,
+          onRefresh: () => _carregar(mostrarCarregando: false),
+          child: _lista(),
         ),
-        _chipsFiltro(),
-        const SizedBox(height: 4),
-        Expanded(
-          child: RefreshIndicator(
-            color: AppTema.primaria,
-            onRefresh: _carregar,
-            child: _lista(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _cabecalhoInsumo() {
-    final insumo = _insumo!;
-    final unidade = insumo.unidadePadraoSimbolo ?? insumo.unidadePadrao;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppTema.cartao,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTema.bordaCampo),
       ),
-      child: Row(
-        children: [
-          const Icon(Icons.inventory_2_outlined,
-              color: AppTema.primariaEscura),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  insumo.nome ?? '—',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: AppTema.textoEscuro,
-                  ),
-                ),
-                Text(
-                  unidade != null && unidade.isNotEmpty
-                      ? 'Unidade base: $unidade'
-                      : 'Lotes em ordem FEFO',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppTema.textoSecundario,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: _selecionarInsumo,
-            child: const Text('Trocar'),
-          ),
-        ],
-      ),
-    );
-  }
+    ],
+  );
 
-  Widget _chipsFiltro() {
-    final vencidos = _contar((s) => s == LoteStatusValidade.vencido);
-    final ate7 = _contar((s) => s == LoteStatusValidade.ate7Dias);
+  /// Chips de validade. Vencidos e 7 dias mostram o contador — são as duas
+  /// janelas que exigem ação do operador.
+  Widget _chipsValidade() => AppFileiraChips(
+    chips: [
+      for (final janela in JanelaValidade.values)
+        AppChipFiltro(
+          rotulo: _rotuloComContador(janela),
+          selecionado: _filtro.janela == janela,
+          aoTocar: () =>
+              setState(() => _filtro = _filtro.copiarCom(janela: janela)),
+        ),
+    ],
+  );
 
-    return SizedBox(
-      height: 48,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        children: [
-          _chip('Todos', _FiltroValidade.todos),
-          _chip(
-            '⏰ Vencidos${vencidos > 0 ? ' · $vencidos' : ''}',
-            _FiltroValidade.vencidos,
-          ),
-          _chip(
-            '⚠️ 7d${ate7 > 0 ? ' · $ate7' : ''}',
-            _FiltroValidade.ate7,
-          ),
-          _chip('📅 30d', _FiltroValidade.ate30),
-        ],
-      ),
-    );
-  }
-
-  Widget _chip(String texto, _FiltroValidade valor) {
-    final ativo = _filtroValidade == valor;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
-        label: Text(texto, overflow: TextOverflow.visible, softWrap: false),
-        selected: ativo,
-        showCheckmark: false,
-        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        visualDensity: VisualDensity.compact,
-        labelPadding: const EdgeInsets.symmetric(horizontal: 4),
-        labelStyle: TextStyle(
-          color: ativo ? Colors.white : AppTema.textoSecundario,
-          fontWeight: FontWeight.w600,
-          fontSize: 13,
-        ),
-        backgroundColor: AppTema.cartao,
-        selectedColor: AppTema.primaria,
-        side: BorderSide(
-          color: ativo ? AppTema.primaria : AppTema.bordaCampo,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        onSelected: (_) => setState(() => _filtroValidade = valor),
-      ),
-    );
+  String _rotuloComContador(JanelaValidade janela) {
+    if (janela != JanelaValidade.vencidos &&
+        janela != JanelaValidade.ate7Dias) {
+      return janela.rotulo;
+    }
+    final total = _filtro.contar(_lotes, janela);
+    return total == 0 ? janela.rotulo : '${janela.rotulo} · $total';
   }
 
   Widget _lista() {
     if (_carregando) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 140),
-          Center(child: CircularProgressIndicator(color: AppTema.primaria)),
-        ],
+        children: const [SizedBox(height: 140), AppCarregando()],
       );
     }
-
     if (_erro != null) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(24, 80, 24, 24),
-        children: [
-          AppEstadoVazio(icone: Icons.error_outline, mensagem: _erro!),
-          const SizedBox(height: 16),
-          Center(
-            child: OutlinedButton.icon(
-              onPressed: _carregar,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Tentar novamente'),
-            ),
-          ),
-        ],
+      return _rolavel(
+        AppEstadoVazio(
+          icone: Icons.cloud_off_rounded,
+          titulo: 'Não foi possível carregar',
+          mensagem: _erro!,
+          rotuloBotao: 'Tentar novamente',
+          iconeBotao: Icons.refresh_rounded,
+          aoTocarBotao: _carregar,
+        ),
       );
     }
-
     if (_lotes.isEmpty) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(24, 80, 24, 24),
-        children: const [
-          AppEstadoVazio(
-            icone: Icons.calendar_month_outlined,
-            mensagem:
-                'Nenhum lote cadastrado para este insumo. Use o botão + para criar um lote avulso.',
-          ),
-        ],
+      return _rolavel(
+        AppEstadoVazio(
+          icone: Icons.calendar_month_outlined,
+          titulo: 'Nenhum lote cadastrado',
+          mensagem:
+              'Este insumo ainda não tem lotes. Registre uma entrada em '
+              'Movimentação de Estoque, ou crie um lote avulso para o '
+              'inventário inicial.',
+          rotuloBotao: 'Criar lote avulso',
+          aoTocarBotao: _abrirCriacao,
+        ),
       );
     }
 
-    final filtrados = _filtrados;
+    final filtrados = _filtro.aplicar(_lotes);
     if (filtrados.isEmpty) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(24, 80, 24, 24),
-        children: const [
-          AppEstadoVazio(
-            icone: Icons.search_off,
-            mensagem: 'Nenhum lote corresponde à busca ou ao filtro.',
-          ),
-        ],
+      return _rolavel(
+        AppEstadoVazio(
+          icone: Icons.search_off_rounded,
+          titulo: 'Nada encontrado',
+          mensagem: 'Nenhum lote corresponde à busca ou ao filtro.',
+          rotuloBotao: 'Limpar filtros',
+          iconeBotao: Icons.filter_alt_off_rounded,
+          secundario: true,
+          aoTocarBotao: _limparFiltros,
+        ),
       );
     }
 
@@ -369,11 +253,19 @@ class _LotesPageState extends State<LotesPage> {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
       itemCount: filtrados.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        final lote = filtrados[index];
-        return LoteCard(lote: lote, onTap: () => _abrirDetalhes(lote));
-      },
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      itemBuilder: (_, i) => LoteCard(
+        lote: filtrados[i],
+        onTap: () => _abrirDetalhes(filtrados[i]),
+      ),
     );
   }
+
+  /// Mantém o conteúdo rolável mesmo quando cabe na tela — sem isso o
+  /// "puxar para atualizar" não funciona nos estados de erro e de vazio.
+  Widget _rolavel(Widget filho) => ListView(
+    physics: const AlwaysScrollableScrollPhysics(),
+    padding: const EdgeInsets.fromLTRB(24, 60, 24, 100),
+    children: [filho],
+  );
 }

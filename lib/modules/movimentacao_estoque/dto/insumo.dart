@@ -30,8 +30,8 @@ class Insumo {
       unidadePadraoId: json['unidadePadraoId'] is int
           ? json['unidadePadraoId'] as int
           : (json['unidadePadraoId'] != null
-              ? int.tryParse(json['unidadePadraoId'].toString())
-              : null),
+                ? int.tryParse(json['unidadePadraoId'].toString())
+                : null),
       unidadePadraoSimbolo: json['unidadePadraoSimbolo'] as String?,
       unidadePadraoNome: json['unidadePadraoNome'] as String?,
       estoqueMinimo: _parseDouble(json['estoqueMinimo']),

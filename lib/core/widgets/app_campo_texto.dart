@@ -41,20 +41,22 @@ class AppCampoTexto extends StatelessWidget {
       validator: validador,
       onChanged: aoMudar,
       enabled: habilitado,
-      style: const TextStyle(color: AppTema.textoEscuro),
+      style: const TextStyle(color: AppTema.texto),
       decoration: InputDecoration(
         counterText: '',
         filled: true,
-        fillColor: AppTema.cartao,
+        fillColor: AppTema.superficie,
         hintText: dica,
         hintStyle: const TextStyle(color: Color(0xFFB7A98A)),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
         prefixIcon: prefixo,
         suffixIcon: sufixo,
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppTema.bordaCampo),
+          borderSide: const BorderSide(color: AppTema.borda),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

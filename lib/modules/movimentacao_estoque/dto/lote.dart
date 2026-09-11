@@ -31,8 +31,8 @@ class Lote {
       insumoId: json['insumoId'] is int
           ? json['insumoId'] as int
           : (json['insumoId'] != null
-              ? int.tryParse(json['insumoId'].toString())
-              : null),
+                ? int.tryParse(json['insumoId'].toString())
+                : null),
       insumoNome: json['insumoNome'] as String?,
       unidadePadraoSimbolo: json['unidadePadraoSimbolo'] as String?,
       codigo: json['codigo'] as String?,

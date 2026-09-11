@@ -32,12 +32,12 @@ class ClienteResponse {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'nome': nome,
-        'telefone': telefone,
-        'email': email,
-        'linkWhatsApp': linkWhatsApp,
-        'endereco': endereco?.toJson(),
-        'ativo': ativo,
-      };
+    'id': id,
+    'nome': nome,
+    'telefone': telefone,
+    'email': email,
+    'linkWhatsApp': linkWhatsApp,
+    'endereco': endereco?.toJson(),
+    'ativo': ativo,
+  };
 }

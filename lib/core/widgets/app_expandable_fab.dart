@@ -19,7 +19,8 @@ class AppExpandableFab extends StatefulWidget {
   State<AppExpandableFab> createState() => AppExpandableFabState();
 }
 
-class AppExpandableFabState extends State<AppExpandableFab> with SingleTickerProviderStateMixin {
+class AppExpandableFabState extends State<AppExpandableFab>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _expandAnimation;
   bool _open = false;
@@ -56,10 +57,10 @@ class AppExpandableFabState extends State<AppExpandableFab> with SingleTickerPro
       }
     });
   }
-  
+
   void fechar() {
-    if (_open) { 
-      _toggle(); 
+    if (_open) {
+      _toggle();
     }
   }
 
@@ -92,10 +93,7 @@ class AppExpandableFabState extends State<AppExpandableFab> with SingleTickerPro
             onTap: _toggle,
             child: Padding(
               padding: const EdgeInsets.all(8.0),
-              child: Icon(
-                Icons.expand_more,
-                color: Colors.white,
-              ),
+              child: Icon(Icons.expand_more, color: Colors.white),
             ),
           ),
         ),
@@ -106,9 +104,13 @@ class AppExpandableFabState extends State<AppExpandableFab> with SingleTickerPro
   List<Widget> _buildExpandingActionButtons() {
     final children = <Widget>[];
     final count = widget.children.length;
-    final step = 90.0 / (count - 1); 
+    final step = 90.0 / (count - 1);
 
-    for (var i = 0, angleInDegrees = 0.0; i < count; i++, angleInDegrees += step) {
+    for (
+      var i = 0, angleInDegrees = 0.0;
+      i < count;
+      i++, angleInDegrees += step
+    ) {
       children.add(
         _ExpandingActionButton(
           directionInDegrees: angleInDegrees,
@@ -121,7 +123,7 @@ class AppExpandableFabState extends State<AppExpandableFab> with SingleTickerPro
     return children;
   }
 
- Widget _buildTapToOpenFab() {
+  Widget _buildTapToOpenFab() {
     return IgnorePointer(
       ignoring: _open,
       child: AnimatedContainer(
@@ -140,8 +142,8 @@ class AppExpandableFabState extends State<AppExpandableFab> with SingleTickerPro
           child: FloatingActionButton(
             shape: const CircleBorder(),
             onPressed: _toggle,
-            backgroundColor: AppTema.primaria, 
-            
+            backgroundColor: AppTema.primaria,
+
             child: const Icon(Icons.expand_less, color: Colors.white),
           ),
         ),
@@ -181,10 +183,7 @@ class _ExpandingActionButton extends StatelessWidget {
           ),
         );
       },
-      child: FadeTransition(
-        opacity: progress,
-        child: child,
-      ),
+      child: FadeTransition(opacity: progress, child: child),
     );
   }
 }
@@ -193,11 +192,7 @@ class AppActionButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final Widget icon;
 
-  const AppActionButton({
-    super.key,
-    this.onPressed,
-    required this.icon,
-  });
+  const AppActionButton({super.key, this.onPressed, required this.icon});
 
   @override
   Widget build(BuildContext context) {

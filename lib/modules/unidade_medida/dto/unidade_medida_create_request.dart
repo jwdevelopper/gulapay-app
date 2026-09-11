@@ -12,9 +12,9 @@ class UnidadeMedidaCreateRequest {
   });
 
   Map<String, dynamic> toJson() => {
-        'nome': nome,
-        'simbolo': simbolo,
-        'tipoMedida': tipoMedida,
-        'fatorParaBase': fatorParaBase,
-      };
+    'nome': nome,
+    'simbolo': simbolo,
+    'tipoMedida': tipoMedida,
+    'fatorParaBase': fatorParaBase,
+  };
 }

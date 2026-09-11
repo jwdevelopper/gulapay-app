@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
-
+import 'package:my_app_teste/core/theme/app_tema.dart';
 
 class MovimentacaoCard extends StatelessWidget {
   final String insumoNome;
@@ -39,7 +38,7 @@ class MovimentacaoCard extends StatelessWidget {
       case 'AJUSTE_INVENTARIO':
         return const Color(0xFFF3E5F5);
       default:
-        return PaletaApp.inputFill;
+        return AppTema.preenchimentoCampo;
     }
   }
 
@@ -69,7 +68,7 @@ class MovimentacaoCard extends StatelessWidget {
       case 'ENTRADA_TROCA':
         return const Color(0xFF1565C0);
       case 'SAIDA_VENDA':
-        return PaletaApp.primary;
+        return AppTema.primaria;
       case 'SAIDA_PERDA_VALIDADE':
         return const Color(0xFFD32F2F);
       case 'SAIDA_PERDA_QUEBRA':
@@ -77,12 +76,11 @@ class MovimentacaoCard extends StatelessWidget {
       case 'AJUSTE_INVENTARIO':
         return const Color(0xFF7B1FA2);
       default:
-        return PaletaApp.primary;
+        return AppTema.primaria;
     }
   }
 
-  bool get _isEntrada =>
-      tipo == 'ENTRADA_COMPRA' || tipo == 'ENTRADA_TROCA';
+  bool get _isEntrada => tipo == 'ENTRADA_COMPRA' || tipo == 'ENTRADA_TROCA';
 
   String get _tipoLabel {
     switch (tipo) {
@@ -116,13 +114,13 @@ class MovimentacaoCard extends StatelessWidget {
   Color get _quantidadeColor {
     if (_isEntrada) return const Color(0xFF2E7D32);
     if (tipo == 'AJUSTE_INVENTARIO') return const Color(0xFF7B1FA2);
-    return PaletaApp.error;
+    return AppTema.erro;
   }
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: PaletaApp.surface,
+      color: AppTema.superficie,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onTap,
@@ -130,12 +128,12 @@ class MovimentacaoCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: PaletaApp.surface,
+            color: AppTema.superficie,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: PaletaApp.border),
+            border: Border.all(color: AppTema.borda),
             boxShadow: const [
               BoxShadow(
-                color: PaletaApp.shadow,
+                color: AppTema.sombra,
                 blurRadius: 14,
                 offset: Offset(0, 6),
               ),
@@ -161,7 +159,7 @@ class MovimentacaoCard extends StatelessWidget {
                     Text(
                       insumoNome,
                       style: const TextStyle(
-                        color: PaletaApp.text,
+                        color: AppTema.texto,
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                       ),
@@ -174,7 +172,7 @@ class MovimentacaoCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: PaletaApp.textMuted,
+                        color: AppTema.textoSecundario,
                         fontSize: 12,
                         height: 1.25,
                       ),
@@ -197,11 +195,12 @@ class MovimentacaoCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   if (hora != null || responsavel != null)
                     Text(
-                      [hora, responsavel]
-                          .where((e) => e != null && e.isNotEmpty)
-                          .join(' · '),
+                      [
+                        hora,
+                        responsavel,
+                      ].where((e) => e != null && e.isNotEmpty).join(' · '),
                       style: const TextStyle(
-                        color: PaletaApp.textMuted,
+                        color: AppTema.textoSecundario,
                         fontSize: 10,
                         fontWeight: FontWeight.w500,
                       ),

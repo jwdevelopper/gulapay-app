@@ -23,7 +23,10 @@ class InsumoService {
     }
   }
 
-  Future<List<InsumoResponse>> listar({bool apenasAtivos = true, String? pesquisa}) async {
+  Future<List<InsumoResponse>> listar({
+    bool apenasAtivos = true,
+    String? pesquisa,
+  }) async {
     try {
       final queryParameters = <String, dynamic>{'apenasAtivos': apenasAtivos};
       if (pesquisa != null && pesquisa.trim().isNotEmpty) {
@@ -37,7 +40,10 @@ class InsumoService {
 
       final dados = resposta.data;
       if (dados is List) {
-        return dados.cast<Map<String, dynamic>>().map(InsumoResponse.fromJson).toList();
+        return dados
+            .cast<Map<String, dynamic>>()
+            .map(InsumoResponse.fromJson)
+            .toList();
       }
       if (dados is Map && dados['data'] is List) {
         return (dados['data'] as List)
@@ -54,7 +60,9 @@ class InsumoService {
   Future<InsumoResponse> buscarPorId(int id) async {
     try {
       final resposta = await _dio.get('${ConstantsApi.urlInsumos}/$id');
-      return InsumoResponse.fromJson(Map<String, dynamic>.from(resposta.data as Map));
+      return InsumoResponse.fromJson(
+        Map<String, dynamic>.from(resposta.data as Map),
+      );
     } on DioException catch (e) {
       throw ApiError.fromDioException(e);
     }
@@ -66,7 +74,9 @@ class InsumoService {
         '${ConstantsApi.urlInsumos}/$id',
         data: update.toJson(),
       );
-      return InsumoResponse.fromJson(Map<String, dynamic>.from(resposta.data as Map));
+      return InsumoResponse.fromJson(
+        Map<String, dynamic>.from(resposta.data as Map),
+      );
     } on DioException catch (e) {
       throw ApiError.fromDioException(e);
     }
@@ -78,7 +88,9 @@ class InsumoService {
         '${ConstantsApi.urlInsumos}/$id',
         data: patch.toJson(),
       );
-      return InsumoResponse.fromJson(Map<String, dynamic>.from(resposta.data as Map));
+      return InsumoResponse.fromJson(
+        Map<String, dynamic>.from(resposta.data as Map),
+      );
     } on DioException catch (e) {
       throw ApiError.fromDioException(e);
     }
@@ -88,7 +100,10 @@ class InsumoService {
     return patch(id, InsumoPatch(ativo: ativo));
   }
 
-  Future<List<LoteResponse>> listarLotes(int insumoId, {bool apenasAtivos = true}) async {
+  Future<List<LoteResponse>> listarLotes(
+    int insumoId, {
+    bool apenasAtivos = true,
+  }) async {
     try {
       final resposta = await _dio.get(
         '${ConstantsApi.urlInsumos}/$insumoId/lotes',
@@ -97,7 +112,10 @@ class InsumoService {
 
       final dados = resposta.data;
       if (dados is List) {
-        return dados.cast<Map<String, dynamic>>().map(LoteResponse.fromJson).toList();
+        return dados
+            .cast<Map<String, dynamic>>()
+            .map(LoteResponse.fromJson)
+            .toList();
       }
       if (dados is Map && dados['data'] is List) {
         return (dados['data'] as List)

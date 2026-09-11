@@ -1,19 +1,27 @@
-// lib/modules/cliente/page/cliente_form_page.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/core/utils/telefone_formatter.dart';
 import 'package:my_app_teste/core/widgets/app_barra_acoes.dart';
 import 'package:my_app_teste/core/widgets/app_campo_texto.dart';
+import 'package:my_app_teste/core/widgets/app_cartao_aviso.dart';
 import 'package:my_app_teste/core/widgets/app_dica.dart';
 import 'package:my_app_teste/core/widgets/app_rotulo.dart';
-import '../dto/cliente_create_request.dart';
-import '../dto/cliente_endereco.dart';
-import '../dto/cliente_response.dart';
-import '../dto/cliente_update_request.dart';
-import '../service/cliente_service.dart';
+import 'package:my_app_teste/modules/cliente/dto/cliente_response.dart';
+import 'package:my_app_teste/modules/cliente/dto/validacao_cliente.dart';
+import 'package:my_app_teste/modules/cliente/service/cliente_service.dart';
 
+/// Cadastro e edição de cliente.
+///
+/// Cuida de estado e envio; as regras vivem em [ValidadorCliente].
+///
+/// Nome e telefone são obrigatórios — o telefone identifica o cliente em
+/// todo pedido (seção 3.6) e é enviado só com dígitos, para o mesmo cliente
+/// não entrar duas vezes por causa da máscara. O endereço é opcional, mas
+/// tudo ou nada: só o canal `DELIVERY` exige um, e meio endereço não
+/// entrega pedido nenhum.
 class ClienteFormPage extends StatefulWidget {
   final ClienteResponse? cliente;
 
@@ -26,322 +34,294 @@ class ClienteFormPage extends StatefulWidget {
 }
 
 class _ClienteFormPageState extends State<ClienteFormPage> {
-  final _chaveFormulario = GlobalKey<FormState>();
+  final _nome = TextEditingController();
+  final _telefone = TextEditingController();
+  final _email = TextEditingController();
+  final _cep = TextEditingController();
+  final _logradouro = TextEditingController();
+  final _numero = TextEditingController();
+  final _complemento = TextEditingController();
+  final _bairro = TextEditingController();
+  final _cidade = TextEditingController();
+  final _uf = TextEditingController();
 
-  final _controleNome = TextEditingController();
-  final _controleTelefone = TextEditingController();
-  final _controleEmail = TextEditingController();
-  final _controleCep = TextEditingController();
-  final _controleLogradouro = TextEditingController();
-  final _controleNumero = TextEditingController();
-  final _controleComplemento = TextEditingController();
-  final _controleBairro = TextEditingController();
-  final _controleCidade = TextEditingController();
-  final _controleUf = TextEditingController();
-
-  bool _carregando = false;
+  DadosCliente _dados = const DadosCliente();
+  bool _salvando = false;
+  String? _erro;
 
   @override
   void initState() {
     super.initState();
-    final c = widget.cliente;
-    if (c != null) {
-      _controleNome.text = c.nome ?? '';
-      _controleTelefone.text = TelefoneFormatter.formatar(c.telefone);
-      _controleEmail.text = c.email ?? '';
-      if (c.endereco != null) {
-        _controleCep.text = c.endereco!.cep ?? '';
-        _controleLogradouro.text = c.endereco!.logradouro ?? '';
-        _controleNumero.text = c.endereco!.numero ?? '';
-        _controleComplemento.text = c.endereco!.complemento ?? '';
-        _controleBairro.text = c.endereco!.bairro ?? '';
-        _controleCidade.text = c.endereco!.cidade ?? '';
-        _controleUf.text = c.endereco!.uf ?? '';
-      }
+    final cliente = widget.cliente;
+    if (cliente == null) return;
+
+    _nome.text = cliente.nome ?? '';
+    _telefone.text = TelefoneFormatter.formatar(cliente.telefone);
+    _email.text = cliente.email ?? '';
+    final endereco = cliente.endereco;
+    if (endereco != null) {
+      _cep.text = endereco.cep ?? '';
+      _logradouro.text = endereco.logradouro ?? '';
+      _numero.text = endereco.numero ?? '';
+      _complemento.text = endereco.complemento ?? '';
+      _bairro.text = endereco.bairro ?? '';
+      _cidade.text = endereco.cidade ?? '';
+      _uf.text = endereco.uf ?? '';
     }
+    _dados = DadosCliente(ativo: cliente.ativo ?? true);
   }
 
   @override
   void dispose() {
-    _controleNome.dispose();
-    _controleTelefone.dispose();
-    _controleEmail.dispose();
-    _controleCep.dispose();
-    _controleLogradouro.dispose();
-    _controleNumero.dispose();
-    _controleComplemento.dispose();
-    _controleBairro.dispose();
-    _controleCidade.dispose();
-    _controleUf.dispose();
+    for (final controle in [
+      _nome,
+      _telefone,
+      _email,
+      _cep,
+      _logradouro,
+      _numero,
+      _complemento,
+      _bairro,
+      _cidade,
+      _uf,
+    ]) {
+      controle.dispose();
+    }
     super.dispose();
   }
 
+  // ---------------------------------------------------------------------
+  // Envio
+  // ---------------------------------------------------------------------
+
+  /// Lê os controllers para o objeto de valor, preservando o `ativo`.
+  DadosCliente get _dadosCompletos => _dados.comCampos(
+    nome: _nome.text,
+    telefone: _telefone.text,
+    email: _email.text,
+    cep: _cep.text,
+    logradouro: _logradouro.text,
+    numero: _numero.text,
+    complemento: _complemento.text,
+    bairro: _bairro.text,
+    cidade: _cidade.text,
+    uf: _uf.text,
+  );
+
   Future<void> _salvar() async {
-    if (!_chaveFormulario.currentState!.validate()) return;
+    final dados = _dadosCompletos;
+    final erroValidacao = ValidadorCliente.validar(dados);
+    if (erroValidacao != null) {
+      setState(() => _erro = erroValidacao);
+      return;
+    }
 
-    final endereco = ClienteEndereco(
-      cep: _controleCep.text.trim(),
-      logradouro: _controleLogradouro.text.trim(),
-      numero: _controleNumero.text.trim(),
-      complemento: _controleComplemento.text.trim(),
-      bairro: _controleBairro.text.trim(),
-      cidade: _controleCidade.text.trim(),
-      uf: _controleUf.text.trim(),
-    );
-
-    setState(() => _carregando = true);
+    setState(() {
+      _salvando = true;
+      _erro = null;
+    });
     try {
       if (widget.ehEdicao) {
-        final dto = ClienteUpdateRequest(
-          nome: _controleNome.text.trim(),
-          telefone: _controleTelefone.text.trim(),
-          email: _controleEmail.text.trim(),
-          endereco: endereco,
-          ativo: widget.cliente!.ativo ?? true,
-        );
-        await editarCliente(widget.cliente!.id!, dto);
+        await editarCliente(widget.cliente!.id!, dados.paraEdicao());
       } else {
-        final dto = ClienteCreateRequest(
-          nome: _controleNome.text.trim(),
-          telefone: _controleTelefone.text.trim(),
-          email: _controleEmail.text.trim(),
-          endereco: endereco,
-        );
-        await criarCliente(dto);
+        await criarCliente(dados.paraCriacao());
       }
-      if (!mounted) return;
-      Navigator.pop(context, true);
+      if (mounted) Navigator.pop(context, true);
     } on ApiError catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro: ${e.message}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) setState(() => _erro = e.message);
+    } catch (e) {
+      if (mounted) setState(() => _erro = 'Erro ao salvar: $e');
     } finally {
-      if (mounted) setState(() => _carregando = false);
+      if (mounted) setState(() => _salvando = false);
     }
   }
 
+  // ---------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------
+
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: AppTema.fundo,
+    appBar: AppBar(
       backgroundColor: AppTema.fundo,
-      appBar: AppBar(
-        backgroundColor: AppTema.fundo,
-        foregroundColor: AppTema.textoEscuro,
-        elevation: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              widget.ehEdicao ? 'Editar cliente' : 'Novo cliente',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppTema.textoEscuro,
-              ),
-            ),
-            Text(
-              widget.ehEdicao ? 'Cadastro · Edição' : 'Cadastro · Novo',
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppTema.textoSecundario,
-              ),
-            ),
-          ],
+      foregroundColor: AppTema.texto,
+      elevation: 0,
+      iconTheme: const IconThemeData(color: AppTema.primariaEscura),
+      title: Text(
+        widget.ehEdicao ? 'Editar cliente' : 'Novo cliente',
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: AppTema.texto,
         ),
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                child: Form(
-                  key: _chaveFormulario,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const AppRotulo('Nome completo *'),
-                      const SizedBox(height: 6),
-                      AppCampoTexto(
-                        controle: _controleNome,
-                        dica: 'Ex.: João da Silva',
-                        tamanhoMax: 120,
-                        validador: (v) {
-                          final t = v?.trim() ?? '';
-                          if (t.isEmpty) return 'Informe o nome';
-                          if (t.length < 3) return 'Mínimo de 3 caracteres';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 14),
-                      const AppRotulo('Telefone (WhatsApp) *'),
-                      const SizedBox(height: 6),
-                      AppCampoTexto(
-                        controle: _controleTelefone,
-                        dica: 'Ex.: (11) 99999-0000',
-                        tipoTeclado: TextInputType.phone,
-                        tamanhoMax: TelefoneFormatter.maxCaracteresFormatados,
-                        formatadores: const [TelefoneFormatter()],
-                        validador: (v) {
-                          if (v == null || v.trim().isEmpty) {
-                            return 'Informe o telefone';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 14),
-                      const AppRotulo('E-mail *'),
-                      const SizedBox(height: 6),
-                      AppCampoTexto(
-                        controle: _controleEmail,
-                        dica: 'Ex.: joao@email.com',
-                        tipoTeclado: TextInputType.emailAddress,
-                        tamanhoMax: 150,
-                      ),
-                      const SizedBox(height: 20),
-                      const Divider(color: AppTema.bordaCampo),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: const [
-                          FaIcon(
-                            FontAwesomeIcons.locationDot,
-                            size: 14,
-                            color: AppTema.primariaEscura,
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            'Endereço',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: AppTema.textoEscuro,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      const AppRotulo('CEP *'),
-                      const SizedBox(height: 6),
-                      AppCampoTexto(
-                        controle: _controleCep,
-                        dica: 'Ex.: 01310-100',
-                        tipoTeclado: TextInputType.number,
-                        tamanhoMax: 9,
-                      ),
-                      const SizedBox(height: 14),
-                      const AppRotulo('Logradouro *'),
-                      const SizedBox(height: 6),
-                      AppCampoTexto(
-                        controle: _controleLogradouro,
-                        dica: 'Ex.: Av. Paulista',
-                        tamanhoMax: 150,
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            flex: 2,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const AppRotulo('Número *'),
-                                const SizedBox(height: 6),
-                                AppCampoTexto(
-                                  controle: _controleNumero,
-                                  dica: 'Ex.: 1578',
-                                  tamanhoMax: 10,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            flex: 3,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const AppRotulo('Complemento', opcional: true),
-                                const SizedBox(height: 6),
-                                AppCampoTexto(
-                                  controle: _controleComplemento,
-                                  dica: 'Ex.: Apto 42',
-                                  tamanhoMax: 60,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      const AppRotulo('Bairro *'),
-                      const SizedBox(height: 6),
-                      AppCampoTexto(
-                        controle: _controleBairro,
-                        dica: 'Ex.: Bela Vista',
-                        tamanhoMax: 80,
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            flex: 3,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const AppRotulo('Cidade *'),
-                                const SizedBox(height: 6),
-                                AppCampoTexto(
-                                  controle: _controleCidade,
-                                  dica: 'Ex.: São Paulo',
-                                  tamanhoMax: 80,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            flex: 1,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const AppRotulo('UF *'),
-                                const SizedBox(height: 6),
-                                AppCampoTexto(
-                                  controle: _controleUf,
-                                  dica: 'SP',
-                                  tamanhoMax: 2,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 18),
-                      const AppDica(
-                        'Os campos obrigatórios (*) devem ser preenchidos para salvar o cliente.',
-                      ),
-                    ],
-                  ),
+    ),
+    body: SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+        children: [
+          _campo(
+            'Nome completo',
+            _nome,
+            dica: 'Ex.: João da Silva',
+            tamanhoMax: 120,
+          ),
+          const SizedBox(height: 14),
+          _campo(
+            'Telefone (WhatsApp)',
+            _telefone,
+            dica: 'Ex.: (11) 99999-0000',
+            tipoTeclado: TextInputType.phone,
+            tamanhoMax: TelefoneFormatter.maxCaracteresFormatados,
+            formatadores: const [TelefoneFormatter()],
+          ),
+          const SizedBox(height: 14),
+          _campo(
+            'E-mail',
+            _email,
+            dica: 'Ex.: joao@email.com',
+            tipoTeclado: TextInputType.emailAddress,
+            tamanhoMax: 150,
+            opcional: true,
+          ),
+          const SizedBox(height: 20),
+          const Divider(color: AppTema.borda),
+          const SizedBox(height: 8),
+          _tituloEndereco(),
+          const SizedBox(height: 14),
+          _campo(
+            'CEP',
+            _cep,
+            dica: 'Ex.: 01310-100',
+            tipoTeclado: TextInputType.number,
+            tamanhoMax: 9,
+            opcional: true,
+          ),
+          const SizedBox(height: 14),
+          _campo(
+            'Logradouro',
+            _logradouro,
+            dica: 'Ex.: Av. Paulista',
+            tamanhoMax: 150,
+            opcional: true,
+          ),
+          const SizedBox(height: 14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 2,
+                child: _campo(
+                  'Número',
+                  _numero,
+                  dica: 'Ex.: 1578',
+                  tamanhoMax: 10,
+                  opcional: true,
                 ),
               ),
-            ),
-            AppBarraAcoes(
-              textoConfirmar: widget.ehEdicao ? 'Atualizar' : 'Salvar',
-              iconeConfirmar: const FaIcon(
-                FontAwesomeIcons.chevronRight,
-                size: 14,
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 3,
+                child: _campo(
+                  'Complemento',
+                  _complemento,
+                  dica: 'Ex.: Apto 42',
+                  tamanhoMax: 60,
+                  opcional: true,
+                ),
               ),
-              carregando: _carregando,
-              aoCancelar: () => Navigator.pop(context),
-              aoConfirmar: _salvar,
-            ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          _campo(
+            'Bairro',
+            _bairro,
+            dica: 'Ex.: Bela Vista',
+            tamanhoMax: 80,
+            opcional: true,
+          ),
+          const SizedBox(height: 14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 3,
+                child: _campo(
+                  'Cidade',
+                  _cidade,
+                  dica: 'Ex.: São Paulo',
+                  tamanhoMax: 80,
+                  opcional: true,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _campo(
+                  'UF',
+                  _uf,
+                  dica: 'SP',
+                  tamanhoMax: 2,
+                  opcional: true,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          const AppDica(
+            'O endereço só é exigido em comandas de delivery — mas, se '
+            'preencher, complete: logradouro, número, bairro, cidade e UF.',
+          ),
+          if (_erro != null) ...[
+            const SizedBox(height: 14),
+            AppCartaoAviso.erro(_erro),
           ],
-        ),
+        ],
       ),
-    );
-  }
+    ),
+    bottomNavigationBar: AppBarraAcoes(
+      textoConfirmar: widget.ehEdicao ? 'Atualizar' : 'Salvar',
+      carregando: _salvando,
+      aoCancelar: () => Navigator.pop(context, false),
+      aoConfirmar: _salvar,
+    ),
+  );
+
+  Widget _tituloEndereco() => const Row(
+    children: [
+      FaIcon(
+        FontAwesomeIcons.locationDot,
+        size: 14,
+        color: AppTema.primariaEscura,
+      ),
+      SizedBox(width: 8),
+      Text(
+        'Endereço',
+        style: TextStyle(fontWeight: FontWeight.bold, color: AppTema.texto),
+      ),
+    ],
+  );
+
+  Widget _campo(
+    String rotulo,
+    TextEditingController controle, {
+    required String dica,
+    int? tamanhoMax,
+    TextInputType? tipoTeclado,
+    List<TextInputFormatter>? formatadores,
+    bool opcional = false,
+  }) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      AppRotulo(rotulo, opcional: opcional),
+      const SizedBox(height: 6),
+      AppCampoTexto(
+        controle: controle,
+        dica: dica,
+        tamanhoMax: tamanhoMax,
+        tipoTeclado: tipoTeclado,
+        formatadores: formatadores,
+      ),
+    ],
+  );
 }

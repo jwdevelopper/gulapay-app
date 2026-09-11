@@ -1,14 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/core/api_error.dart';
+import 'package:my_app_teste/core/dto/situacao_cadastro.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/core/widgets/app_campo_busca.dart';
+import 'package:my_app_teste/core/widgets/app_carregando.dart';
+import 'package:my_app_teste/core/widgets/app_chip_filtro.dart';
+import 'package:my_app_teste/core/widgets/app_dialogo_confirmacao.dart';
 import 'package:my_app_teste/core/widgets/app_estado_vazio.dart';
-import 'package:my_app_teste/core/widgets/app_tag.dart';
 import 'package:my_app_teste/modules/categoria/dto/categoria.dart';
+import 'package:my_app_teste/modules/categoria/dto/filtro_categorias.dart';
 import 'package:my_app_teste/modules/categoria/page/categoria_form_page.dart';
 import 'package:my_app_teste/modules/categoria/service/categoria_service.dart';
+import 'package:my_app_teste/modules/categoria/widgets/cartao_categoria.dart';
 
+/// Cadastro de categorias de produto.
+///
+/// Cuida de estado, carga e navegação: o recorte vive em
+/// [FiltroCategorias] e cada linha em [CartaoCategoria].
+///
+/// A listagem pede `apenasAtivos: false` de propósito — o filtro "Inativas"
+/// precisa ter o que mostrar, e é por ele que uma categoria volta.
 class CategoriaPage extends StatefulWidget {
   const CategoriaPage({super.key});
 
@@ -18,14 +29,12 @@ class CategoriaPage extends StatefulWidget {
 
 class _CategoriaPageState extends State<CategoriaPage> {
   final _servico = CategoriaService();
-  final _controleBusca = TextEditingController();
+  final _busca = TextEditingController();
 
-  List<Categoria> _todas = [];
+  List<Categoria> _categorias = [];
+  FiltroCategorias _filtro = const FiltroCategorias();
   bool _carregando = true;
-  String _filtroStatus = 'TODAS';
-  String _busca = '';
-
-  static const _statusOpcoes = <String>['TODAS', 'ATIVAS', 'INATIVAS'];
+  String? _erro;
 
   @override
   void initState() {
@@ -35,143 +44,48 @@ class _CategoriaPageState extends State<CategoriaPage> {
 
   @override
   void dispose() {
-    _controleBusca.dispose();
+    _busca.dispose();
     super.dispose();
   }
 
-  Future<void> _carregar() async {
-    setState(() => _carregando = true);
+  // ---------------------------------------------------------------------
+  // Dados
+  // ---------------------------------------------------------------------
+
+  Future<void> _carregar({bool mostrarCarregando = true}) async {
+    if (mostrarCarregando) {
+      setState(() {
+        _carregando = true;
+        _erro = null;
+      });
+    }
     try {
       final lista = await _servico.listar(apenasAtivos: false);
-      if (!mounted) return;
-      setState(() => _todas = lista);
+      if (mounted) {
+        setState(() {
+          _categorias = lista;
+          _erro = null;
+        });
+      }
     } on ApiError catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao listar: ${e.message}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) setState(() => _erro = e.message);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _erro = 'Não foi possível carregar as categorias.');
+      }
     } finally {
       if (mounted) setState(() => _carregando = false);
     }
   }
 
-  List<Categoria> get _filtradas {
-    final termo = _busca.trim().toLowerCase();
-    return _todas.where((c) {
-      final ativa = c.ativo ?? true;
-      final casaStatus =
-          _filtroStatus == 'TODAS' ||
-          (_filtroStatus == 'ATIVAS' && ativa) ||
-          (_filtroStatus == 'INATIVAS' && !ativa);
-      final casaBusca =
-          termo.isEmpty ||
-          c.nome.toLowerCase().contains(termo) ||
-          (c.descricao ?? '').toLowerCase().contains(termo);
-      return casaStatus && casaBusca;
-    }).toList();
+  void _limparFiltros() {
+    _busca.clear();
+    setState(() => _filtro = const FiltroCategorias());
   }
 
-  Future<bool> _confirmarMudancaStatus(Categoria c, bool inativar) async {
-    final acao = inativar ? 'Inativar' : 'Reativar';
-    final cor = inativar ? Colors.red.shade600 : const Color(0xFF2E8B57);
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: Row(
-          children: [
-            const FaIcon(
-              FontAwesomeIcons.triangleExclamation,
-              color: AppTema.primaria,
-              size: 20,
-            ),
-            const SizedBox(width: 10),
-            Text(
-              '$acao categoria',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: AppTema.textoEscuro,
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          inativar
-              ? 'Deseja inativar "${c.nome}"? A categoria poderá ser reativada depois pelo filtro "INATIVAS".'
-              : 'Deseja reativar "${c.nome}"?',
-          style: const TextStyle(color: AppTema.textoEscuro),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            style: TextButton.styleFrom(
-              foregroundColor: AppTema.textoSecundario,
-            ),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: cor,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: Text(acao),
-          ),
-        ],
-      ),
-    );
-    return ok ?? false;
-  }
-
-  Future<bool> _alternarStatus(Categoria c, bool inativar) async {
-    if (c.id == null) return false;
-    try {
-      if (inativar) {
-        await _servico.inativar(c.id!);
-        if (!mounted) return false;
-        setState(() {
-          final idx = _todas.indexWhere((x) => x.id == c.id);
-          if (idx != -1) _todas[idx].ativo = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Categoria "${c.nome}" inativada.'),
-            backgroundColor: const Color(0xFF2E8B57),
-          ),
-        );
-      } else {
-        final atualizada = await _servico.ativar(c);
-        if (!mounted) return false;
-        setState(() {
-          final idx = _todas.indexWhere((x) => x.id == c.id);
-          if (idx != -1) _todas[idx].ativo = atualizada.ativo ?? true;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Categoria "${c.nome}" reativada.'),
-            backgroundColor: const Color(0xFF2E8B57),
-          ),
-        );
-      }
-      return true;
-    } on ApiError catch (e) {
-      if (!mounted) return false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro: ${e.message}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return false;
-    }
-  }
+  // ---------------------------------------------------------------------
+  // Ações
+  // ---------------------------------------------------------------------
 
   Future<void> _abrirFormulario({Categoria? categoria}) async {
     final salvou = await Navigator.push<bool>(
@@ -180,221 +94,187 @@ class _CategoriaPageState extends State<CategoriaPage> {
         builder: (_) => CategoriaFormPage(categoria: categoria),
       ),
     );
-    if (salvou == true) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            categoria == null
-                ? 'Categoria cadastrada com sucesso!'
-                : 'Categoria atualizada com sucesso!',
-          ),
-          backgroundColor: const Color(0xFF2E8B57),
-        ),
+    if (salvou != true || !mounted) return;
+    _avisar(
+      categoria == null ? 'Categoria cadastrada.' : 'Categoria atualizada.',
+      sucesso: true,
+    );
+    await _carregar();
+  }
+
+  Future<bool> _confirmarMudanca(Categoria c, {required bool inativar}) async {
+    final acao = inativar ? 'Inativar' : 'Reativar';
+    return await AppDialogoConfirmacao.mostrar(
+          context,
+          titulo: '$acao categoria',
+          mensagem: inativar
+              ? 'Deseja inativar "${c.nome}"? Ela poderá ser reativada '
+                    'depois pelo filtro "Inativos".'
+              : 'Deseja reativar "${c.nome}"?',
+          rotuloConfirmar: acao,
+          tom: inativar ? TomConfirmacao.destrutivo : TomConfirmacao.positivo,
+        ) ??
+        false;
+  }
+
+  /// Aplica a mudança de situação e recarrega.
+  Future<void> _alternarSituacao(Categoria c, {required bool inativar}) async {
+    if (c.id == null) return;
+    if (!await _confirmarMudanca(c, inativar: inativar)) return;
+
+    try {
+      if (inativar) {
+        await _servico.inativar(c.id!);
+      } else {
+        await _servico.ativar(c);
+      }
+      _avisar(
+        'Categoria "${c.nome}" ${inativar ? 'inativada' : 'reativada'}.',
+        sucesso: true,
       );
-      _carregar();
+      await _carregar();
+    } on ApiError catch (e) {
+      _avisar('Erro: ${e.message}');
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTema.fundo,
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppTema.primaria,
-        foregroundColor: Colors.white,
-        onPressed: () => _abrirFormulario(),
-        child: const Icon(Icons.add),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 16),
-
-            _construirBuscaEFiltro(),
-            Expanded(
-              child: _carregando
-                  ? const Center(
-                      child: CircularProgressIndicator(color: AppTema.primaria),
-                    )
-                  : _filtradas.isEmpty
-                  ? AppEstadoVazio(
-                      icone: Icons.category_outlined,
-                      mensagem: _busca.isEmpty && _filtroStatus == 'TODAS'
-                          ? 'Nenhuma categoria cadastrada'
-                          : 'Nenhum resultado para a busca',
-                    )
-                  : RefreshIndicator(
-                      color: AppTema.primaria,
-                      onRefresh: _carregar,
-                      child: ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
-                        itemCount: _filtradas.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (_, i) => _construirCartao(_filtradas[i]),
-                      ),
-                    ),
-            ),
-          ],
-        ),
+  void _avisar(String mensagem, {bool sucesso = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensagem),
+        backgroundColor: sucesso ? AppTema.sucesso : AppTema.erro,
       ),
     );
   }
 
-  Widget _construirBuscaEFiltro() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+  // ---------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: AppTema.fundo,
+    floatingActionButton: FloatingActionButton(
+      backgroundColor: AppTema.primaria,
+      foregroundColor: Colors.white,
+      shape: const CircleBorder(),
+      onPressed: _abrirFormulario,
+      child: const Icon(Icons.add_rounded),
+    ),
+    body: SafeArea(
       child: Column(
         children: [
-          AppCampoBusca(
-            controle: _controleBusca,
-            dica: 'Buscar por nome ou descrição...',
-            aoMudar: (v) => setState(() => _busca = v),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 36,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: _statusOpcoes.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (_, i) {
-                final s = _statusOpcoes[i];
-                final selecionado = _filtroStatus == s;
-                return ChoiceChip(
-                  label: Text(s),
-                  selected: selecionado,
-                  onSelected: (_) => setState(() => _filtroStatus = s),
-                  selectedColor: AppTema.primaria,
-                  backgroundColor: Colors.white,
-                  labelStyle: TextStyle(
-                    color: selecionado ? Colors.white : AppTema.textoEscuro,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  side: const BorderSide(color: AppTema.bordaCampo),
-                );
-              },
+          const SizedBox(height: 12),
+          _filtros(),
+          Expanded(
+            child: RefreshIndicator(
+              color: AppTema.primaria,
+              onRefresh: () => _carregar(mostrarCarregando: false),
+              child: _corpo(),
             ),
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
 
-  Widget _construirCartao(Categoria c) {
-    final ativa = c.ativo ?? true;
-    final corFundoSwipe = ativa ? Colors.red.shade600 : const Color(0xFF2E8B57);
-    final textoSwipe = ativa ? 'Inativar' : 'Reativar';
-    final iconeSwipe = ativa
-        ? FontAwesomeIcons.ban
-        : FontAwesomeIcons.arrowRotateLeft;
-
-    return Dismissible(
-      key: ValueKey('categoria_${c.id ?? c.nome}'),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: BoxDecoration(
-          color: corFundoSwipe,
-          borderRadius: BorderRadius.circular(12),
+  Widget _filtros() => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+    child: Column(
+      children: [
+        AppCampoBusca(
+          controle: _busca,
+          dica: 'Buscar por nome ou descrição…',
+          aoMudar: (v) => setState(() => _filtro = _filtro.copiarCom(texto: v)),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Text(
-              textoSwipe,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
+        const SizedBox(height: 10),
+        AppFileiraChips(
+          recuoLateral: 0,
+          chips: [
+            for (final situacao in SituacaoCadastro.values)
+              AppChipFiltro(
+                rotulo: situacao.rotulo,
+                selecionado: _filtro.situacao == situacao,
+                aoTocar: () => setState(
+                  () => _filtro = _filtro.copiarCom(situacao: situacao),
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            FaIcon(iconeSwipe, color: Colors.white, size: 18),
           ],
         ),
-      ),
-      confirmDismiss: (_) async {
-        final inativar = ativa;
-        final confirmou = await _confirmarMudancaStatus(c, inativar);
-        if (!confirmou) return false;
-        await _alternarStatus(c, inativar);
-        return false;
-      },
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => _abrirFormulario(categoria: c),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppTema.bordaCampo),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 22,
-                  backgroundColor: AppTema.fundoDica,
-                  child: Text(
-                    (c.nome.trim().isNotEmpty
-                            ? c.nome.trim().characters.first
-                            : '?')
-                        .toUpperCase(),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: AppTema.primaria,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        c.nome,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppTema.textoEscuro,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        (c.descricao?.trim().isNotEmpty ?? false)
-                            ? c.descricao!
-                            : 'Sem descrição',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppTema.textoSecundario,
-                          fontSize: 13,
-                        ),
-                      ),
-                      if (!ativa) ...[
-                        const SizedBox(height: 6),
-                        AppTag(
-                          'Inativa',
-                          fundo: Colors.red.shade100,
-                          cor: Colors.red.shade800,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const FaIcon(
-                  FontAwesomeIcons.chevronRight,
-                  size: 14,
-                  color: AppTema.primariaEscura,
-                ),
-              ],
-            ),
-          ),
+      ],
+    ),
+  );
+
+  Widget _corpo() {
+    if (_carregando) return const AppCarregando();
+    if (_erro != null) {
+      return _rolavel(
+        AppEstadoVazio(
+          icone: Icons.cloud_off_rounded,
+          titulo: 'Não foi possível carregar',
+          mensagem: _erro!,
+          rotuloBotao: 'Tentar novamente',
+          iconeBotao: Icons.refresh_rounded,
+          aoTocarBotao: _carregar,
         ),
-      ),
+      );
+    }
+
+    final filtradas = _filtro.aplicar(_categorias);
+    if (filtradas.isEmpty) {
+      return _rolavel(
+        _filtro.vazio
+            ? AppEstadoVazio(
+                icone: Icons.category_outlined,
+                titulo: 'Nenhuma categoria cadastrada',
+                mensagem:
+                    'As categorias organizam o catálogo e a vitrine de '
+                    'produtos. Cadastre a primeira para começar.',
+                rotuloBotao: 'Nova categoria',
+                aoTocarBotao: _abrirFormulario,
+              )
+            : AppEstadoVazio(
+                icone: Icons.search_off_rounded,
+                titulo: 'Nada encontrado',
+                mensagem: 'Nenhuma categoria corresponde aos filtros.',
+                rotuloBotao: 'Limpar filtros',
+                iconeBotao: Icons.filter_alt_off_rounded,
+                secundario: true,
+                aoTocarBotao: _limparFiltros,
+              ),
+      );
+    }
+
+    return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
+      itemCount: filtradas.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      itemBuilder: (_, i) {
+        final categoria = filtradas[i];
+        final ativa = categoria.ativo ?? true;
+        return CartaoCategoria(
+          categoria: categoria,
+          aoEditar: () => _abrirFormulario(categoria: categoria),
+          aoInativar: () => _alternarSituacao(categoria, inativar: true),
+          aoReativar: () => _alternarSituacao(categoria, inativar: false),
+          aoArrastar: () async {
+            await _alternarSituacao(categoria, inativar: ativa);
+            // O card continua na lista: a categoria trocou de situação, não
+            // deixou de existir.
+            return false;
+          },
+        );
+      },
     );
   }
+
+  /// Mantém o conteúdo rolável mesmo quando cabe na tela — sem isso o
+  /// "puxar para atualizar" não funciona nos estados de erro e de vazio.
+  Widget _rolavel(Widget filho) => ListView(
+    physics: const AlwaysScrollableScrollPhysics(),
+    padding: const EdgeInsets.fromLTRB(16, 40, 16, 90),
+    children: [filho],
+  );
 }

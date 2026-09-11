@@ -31,12 +31,12 @@ class ClienteEndereco {
   }
 
   Map<String, dynamic> toJson() => {
-        'logradouro': logradouro,
-        'numero': numero,
-        'complemento': complemento,
-        'bairro': bairro,
-        'cidade': cidade,
-        'uf': uf,
-        'cep': cep,
-      };
+    'logradouro': logradouro,
+    'numero': numero,
+    'complemento': complemento,
+    'bairro': bairro,
+    'cidade': cidade,
+    'uf': uf,
+    'cep': cep,
+  };
 }

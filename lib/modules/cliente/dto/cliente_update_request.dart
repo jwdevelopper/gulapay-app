@@ -16,10 +16,10 @@ class ClienteUpdateRequest {
   });
 
   Map<String, dynamic> toJson() => {
-        'nome': nome,
-        'telefone': telefone,
-        'email': email,
-        'endereco': endereco?.toJson(),
-        'ativo': ativo,
-      };
+    'nome': nome,
+    'telefone': telefone,
+    'email': email,
+    'endereco': endereco?.toJson(),
+    'ativo': ativo,
+  };
 }

@@ -1,64 +1,62 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/core/theme/decoracoes_app.dart';
-import 'package:my_app_teste/core/widgets/app_linha_resumo.dart';
-import 'package:my_app_teste/core/widgets/app_botao_icone.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/dto/insumo.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/dto/lote.dart';
+import 'package:my_app_teste/modules/movimentacao_estoque/dto/tipo_movimentacao.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/dto/unidade_medida.dart';
+import 'package:my_app_teste/modules/movimentacao_estoque/dto/validacao_movimentacao.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/service/movimentacao_estoque_service.dart';
+import 'package:my_app_teste/core/widgets/app_cabecalho_wizard.dart';
+import 'package:my_app_teste/modules/movimentacao_estoque/widgets/form/etapa_insumo_quantidade.dart';
+import 'package:my_app_teste/modules/movimentacao_estoque/widgets/form/etapa_lote_detalhes.dart';
+import 'package:my_app_teste/modules/movimentacao_estoque/widgets/form/etapa_tipo.dart';
+import 'package:my_app_teste/core/widgets/app_rodape_wizard.dart';
+import 'package:my_app_teste/modules/movimentacao_estoque/widgets/form/seletor_insumo.dart';
+import 'package:my_app_teste/modules/movimentacao_estoque/widgets/form/seletor_unidade.dart';
+import 'package:my_app_teste/modules/movimentacao_estoque/widgets/form/tela_sucesso.dart';
 
-class _ChoiceOption {
-  final String label;
-  final String description;
-  final String value;
-  final IconData icon;
-  const _ChoiceOption({required this.label, required this.description, required this.value, required this.icon});
-}
-
-const List<_ChoiceOption> _tipoOptions = [
-  _ChoiceOption(label: 'Compra', description: 'Entrada de fornecedor', value: 'ENTRADA_COMPRA', icon: Icons.shopping_cart_rounded),
-  _ChoiceOption(label: 'Perda validade', description: 'Insumo vencido', value: 'SAIDA_PERDA_VALIDADE', icon: Icons.timer_off_rounded),
-  _ChoiceOption(label: 'Perda quebra', description: 'Quebra/avaria', value: 'SAIDA_PERDA_QUEBRA', icon: Icons.broken_image_rounded),
-  _ChoiceOption(label: 'Troca', description: 'Entrada por troca', value: 'ENTRADA_TROCA', icon: Icons.swap_horiz_rounded),
-  _ChoiceOption(label: 'Ajuste de inventário', description: 'Corrige saldo pós-contagem física', value: 'AJUSTE_INVENTARIO', icon: Icons.tune_rounded),
-];
-
+/// Formulário de nova movimentação de estoque, em 3 etapas.
+///
+/// Esta classe cuida apenas de estado, navegação entre etapas e envio. A
+/// aparência de cada etapa vive em `widgets/form/` e as regras de campo
+/// obrigatório em [ValidadorMovimentacao].
 class MovimentacaoFormPage extends StatefulWidget {
   const MovimentacaoFormPage({super.key});
+
   @override
   State<MovimentacaoFormPage> createState() => _MovimentacaoFormPageState();
 }
 
 class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
+  static const _totalEtapas = 3;
+
   final _service = MovimentacaoEstoqueService();
+
   final _quantidade = TextEditingController();
   final _custoUnitario = TextEditingController();
   final _codigoLote = TextEditingController();
   final _justificativa = TextEditingController();
-  final _validade = TextEditingController();
 
   List<Insumo> _insumos = [];
   List<Lote> _lotes = [];
   List<UnidadeMedida> _unidades = [];
-  String? _selectedTipo;
-  Insumo? _selectedInsumo;
-  Lote? _selectedLote;
-  UnidadeMedida? _selectedUnidade;
-  bool _saving = false;
-  bool _success = false;
-  int _step = 0;
-  String? _validationMessage;
-  bool _tipoError = false;
-  bool _insumoError = false;
-  bool _quantidadeError = false;
-  bool _unidadeError = false;
+
+  String? _tipo;
+  Insumo? _insumo;
+  Lote? _lote;
+  UnidadeMedida? _unidade;
+  DateTime? _validade;
+
+  int _etapa = 0;
+  bool _salvando = false;
+  bool _sucesso = false;
+  ResultadoValidacao _validacao = const ResultadoValidacao.ok();
 
   @override
   void initState() {
     super.initState();
-    _loadInsumos();
-    _loadUnidades();
+    _carregarInsumos();
+    _carregarUnidades();
   }
 
   @override
@@ -67,596 +65,305 @@ class _MovimentacaoFormPageState extends State<MovimentacaoFormPage> {
     _custoUnitario.dispose();
     _codigoLote.dispose();
     _justificativa.dispose();
-    _validade.dispose();
     super.dispose();
   }
 
-  bool get _isEntrada => _selectedTipo == 'ENTRADA_COMPRA' || _selectedTipo == 'ENTRADA_TROCA';
+  // ---------------------------------------------------------------------
+  // Dados
+  // ---------------------------------------------------------------------
 
-  String get _stepLabel {
-    switch (_step) {
-      case 0: return 'Tipo';
-      case 1: return 'Insumo & quantidade';
-      default: return 'Lote & detalhes';
+  DadosMovimentacao get _dados => DadosMovimentacao(
+    tipo: _tipo,
+    insumo: _insumo,
+    unidade: _unidade,
+    lote: _lote,
+    quantidade: _quantidade.text,
+    validade: _validade,
+    custoUnitario: _custoUnitario.text,
+    codigoLote: _codigoLote.text,
+    justificativa: _justificativa.text,
+    possuiLotes: _lotes.isNotEmpty,
+  );
+
+  Future<void> _carregarInsumos() async {
+    try {
+      final lista = await _service.listarInsumos(apenasAtivos: false);
+      if (!mounted) return;
+      setState(
+        () => _insumos = lista
+            .map((e) => Insumo.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList(),
+      );
+    } catch (e) {
+      _avisarFalhaDeCarga('insumos', e);
     }
   }
 
-  String get _tipoLabel {
-    for (final o in _tipoOptions) {
-      if (o.value == _selectedTipo) return o.label;
+  Future<void> _carregarUnidades() async {
+    try {
+      final lista = await _service.listarUnidades();
+      if (!mounted) return;
+      setState(
+        () => _unidades = lista
+            .map(
+              (e) =>
+                  UnidadeMedida.fromJson(Map<String, dynamic>.from(e as Map)),
+            )
+            .toList(),
+      );
+    } catch (e) {
+      _avisarFalhaDeCarga('unidades de medida', e);
     }
-    return 'Nova movimentação';
   }
 
-  String get _headerTitle {
-    if (_step == 0) return 'Nova movimentação';
-    return _tipoLabel;
-  }
-
-  Future<void> _loadInsumos() async {
+  Future<void> _carregarLotes(int insumoId) async {
     try {
-      final list = await _service.listarInsumos(apenasAtivos: false);
+      final lista = await _service.listarLotes(insumoId);
       if (!mounted) return;
-      setState(() => _insumos = list.map((e) => Insumo.fromJson(Map<String, dynamic>.from(e as Map))).toList());
-    } catch (_) {}
+      setState(
+        () => _lotes = lista
+            .map((e) => Lote.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList(),
+      );
+    } catch (e) {
+      _avisarFalhaDeCarga('lotes', e);
+    }
   }
 
-  Future<void> _loadUnidades() async {
-    try {
-      final list = await _service.listarUnidades();
-      if (!mounted) return;
-      setState(() => _unidades = list.map((e) => UnidadeMedida.fromJson(Map<String, dynamic>.from(e as Map))).toList());
-    } catch (_) {}
+  /// Antes as três cargas usavam `catch (_) {}` — a lista ficava vazia sem
+  /// explicação quando a API falhava.
+  void _avisarFalhaDeCarga(String recurso, Object erro) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Não foi possível carregar $recurso: $erro')),
+    );
   }
 
-  Future<void> _loadLotes(int insumoId) async {
-    try {
-      final list = await _service.listarLotes(insumoId);
-      if (!mounted) return;
-      setState(() => _lotes = list.map((e) => Lote.fromJson(Map<String, dynamic>.from(e as Map))).toList());
-    } catch (_) {}
-  }
-
-  double _parseQty() => double.tryParse(_quantidade.text.replaceAll(',', '.')) ?? 0;
-  double _parseCusto() => double.tryParse(_custoUnitario.text.replaceAll(',', '.')) ?? 0;
-
-  void _clearValidation() {
-    _tipoError = false;
-    _insumoError = false;
-    _quantidadeError = false;
-    _unidadeError = false;
-    _validationMessage = null;
-  }
-
-  bool _validateStep() {
-    setState(_clearValidation);
-    if (_step == 0) {
-      if (_selectedTipo == null) {
-        setState(() { _tipoError = true; _validationMessage = 'Selecione o tipo de movimentação.'; });
-        return false;
+  /// Unidades com o mesmo tipo de medida do insumo escolhido.
+  List<UnidadeMedida> get _unidadesCompativeis {
+    final padraoId = _insumo?.unidadePadraoId;
+    if (padraoId == null) return _unidades;
+    String? tipoMedida;
+    for (final u in _unidades) {
+      if (u.id == padraoId) {
+        tipoMedida = u.tipoMedida;
+        break;
       }
-      return true;
     }
-    if (_step == 1) {
-      var errors = 0;
-      if (_selectedInsumo == null) { _insumoError = true; errors++; }
-      if (_parseQty() <= 0) { _quantidadeError = true; errors++; }
-      if (_selectedUnidade == null) { _unidadeError = true; errors++; }
-      if (errors > 0) {
-        setState(() => _validationMessage = '$errors campo(s) obrigatório(s).');
-        return false;
-      }
-      return true;
-    }
-    return true;
+    if (tipoMedida == null) return _unidades;
+    return _unidades.where((u) => u.tipoMedida == tipoMedida).toList();
   }
 
-  Future<void> _next() async {
-    if (!_validateStep()) return;
-    if (_step == 1 && _selectedInsumo?.id != null) {
-      await _loadLotes(_selectedInsumo!.id!);
+  // ---------------------------------------------------------------------
+  // Validação e navegação
+  // ---------------------------------------------------------------------
+
+  /// Limpa a marcação de um campo assim que o usuário o corrige.
+  void _limparErro(CampoMovimentacao campo) {
+    if (!_validacao.erroEm(campo)) return;
+    setState(() => _validacao = _validacao.sem(campo));
+  }
+
+  Future<void> _avancar() async {
+    final resultado = ValidadorMovimentacao.validarEtapa(_etapa, _dados);
+    setState(() => _validacao = resultado);
+    if (!resultado.valido) return;
+
+    if (_etapa == 1 && _insumo?.id != null) {
+      await _carregarLotes(_insumo!.id!);
     }
-    if (_step < 2) {
-      setState(() => _step++);
+    if (_etapa < _totalEtapas - 1) {
+      setState(() => _etapa++);
       return;
     }
-    await _submit();
+    await _enviar();
   }
 
-  void _prev() {
-    if (_step > 0) setState(() => _step--);
+  void _voltar() {
+    if (_etapa == 0) {
+      Navigator.pop(context);
+      return;
+    }
+    setState(() {
+      _etapa--;
+      _validacao = const ResultadoValidacao.ok();
+    });
   }
 
-  Future<void> _submit() async {
-    setState(() => _saving = true);
-    final payload = <String, dynamic>{
-      'tipo': _selectedTipo,
-      'insumoId': _selectedInsumo?.id,
-      'unidadeId': _selectedUnidade?.id,
-      'quantidade': _parseQty(),
-    };
-    if (_selectedLote != null) payload['loteId'] = _selectedLote!.id;
-    if (_parseCusto() > 0) payload['custoUnitario'] = _parseCusto();
-    if (_validade.text.trim().isNotEmpty) payload['validade'] = _validade.text.trim();
-    if (_codigoLote.text.trim().isNotEmpty) payload['codigoLote'] = _codigoLote.text.trim();
-    if (_justificativa.text.trim().isNotEmpty) payload['justificativa'] = _justificativa.text.trim();
-
+  Future<void> _enviar() async {
+    setState(() => _salvando = true);
     try {
-      await _service.criarMovimentacao(payload);
+      await _service.criarMovimentacao(_dados.paraPayload());
       if (!mounted) return;
-      setState(() => _success = true);
+      setState(() => _sucesso = true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erro: $e')));
       }
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) setState(() => _salvando = false);
     }
   }
 
-  void _openInsumoSelector() {
-    showModalBottomSheet<void>(
-      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
-      builder: (ctx) => FractionallySizedBox(
-        heightFactor: 0.72,
-        child: Container(
-          decoration: const BoxDecoration(color: PaletaApp.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-          child: SafeArea(top: false, child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: PaletaApp.borderSoft, borderRadius: BorderRadius.circular(999)))),
-              const SizedBox(height: 18),
-              Row(children: [
-                const Expanded(child: Text('Escolher insumo', style: TextStyle(color: PaletaApp.text, fontSize: 18, fontWeight: FontWeight.w700))),
-                IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close_rounded), color: PaletaApp.text),
-              ]),
-              const SizedBox(height: 8),
-              Expanded(child: _insumos.isEmpty
-                ? const Center(child: Text('Sem insumos cadastrados', style: TextStyle(color: PaletaApp.text, fontSize: 16, fontWeight: FontWeight.w700)))
-                : ListView.separated(
-                    itemCount: _insumos.length, separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final insumo = _insumos[index];
-                      final selected = insumo.id == _selectedInsumo?.id;
-                      return InkWell(
-                        onTap: () { setState(() { _selectedInsumo = insumo; _insumoError = false; _validationMessage = null;
-                          if (insumo.unidadePadraoId != null) {
-                            for (final u in _unidades) { if (u.id == insumo.unidadePadraoId) { _selectedUnidade = u; break; } }
-                          }
-                        }); Navigator.pop(ctx); },
-                        borderRadius: BorderRadius.circular(18),
-                        child: Container(padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: selected ? PaletaApp.warningBg : PaletaApp.surfaceAlt,
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: selected ? PaletaApp.primary : PaletaApp.border)),
-                          child: Row(children: [
-                            Container(width: 40, height: 40,
-                              decoration: BoxDecoration(color: selected ? PaletaApp.primary : PaletaApp.inputFill, borderRadius: BorderRadius.circular(14)),
-                              child: Icon(Icons.inventory_2_rounded, color: selected ? Colors.white : PaletaApp.primary, size: 20)),
-                            const SizedBox(width: 14),
-                            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text(insumo.nome, style: const TextStyle(color: PaletaApp.text, fontSize: 15, fontWeight: FontWeight.w700)),
-                              const SizedBox(height: 2),
-                              Text('Saldo atual: ${insumo.estoqueAtual?.toStringAsFixed(1) ?? '0'} ${insumo.unidadePadraoSimbolo ?? ''}',
-                                style: const TextStyle(color: PaletaApp.textMuted, fontSize: 12)),
-                            ])),
-                            if (selected) const Icon(Icons.check_rounded, color: PaletaApp.primary) else const SizedBox(width: 18),
-                          ])));
-                    })),
-            ]),
-          )),
-        ),
-      ),
+  // ---------------------------------------------------------------------
+  // Seleções
+  // ---------------------------------------------------------------------
+
+  void _abrirSelecaoInsumo() {
+    abrirSelecaoInsumo(
+      context,
+      insumos: _insumos,
+      selecionado: _insumo,
+      aoSelecionar: (insumo) {
+        setState(() {
+          _insumo = insumo;
+          _lote = null;
+          // Pré-seleciona a unidade padrão do insumo.
+          for (final u in _unidades) {
+            if (u.id == insumo.unidadePadraoId) {
+              _unidade = u;
+              break;
+            }
+          }
+        });
+        _limparErro(CampoMovimentacao.insumo);
+      },
     );
   }
 
-  String? get _insumoTipoMedida {
-    if (_selectedInsumo?.unidadePadraoId == null) return null;
-    for (final u in _unidades) {
-      if (u.id == _selectedInsumo!.unidadePadraoId) return u.tipoMedida;
-    }
-    return null;
-  }
-
-  List<UnidadeMedida> get _unidadesCompativeis {
-    final tipo = _insumoTipoMedida;
-    if (tipo == null) return _unidades;
-    return _unidades.where((u) => u.tipoMedida == tipo).toList();
-  }
-
-  void _openUnidadeSelector() {
-    if (_selectedInsumo == null) {
-      setState(() {
-        _insumoError = true;
-        _validationMessage = 'Selecione o insumo antes da unidade.';
-      });
+  void _abrirSelecaoUnidade() {
+    if (_insumo == null) {
+      setState(
+        () => _validacao = const ResultadoValidacao(
+          camposComErro: {CampoMovimentacao.insumo},
+          mensagem: 'Selecione o insumo antes da unidade.',
+        ),
+      );
       return;
     }
-    final unidades = _unidadesCompativeis;
-    showModalBottomSheet<void>(
-      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
-      builder: (ctx) => FractionallySizedBox(
-        heightFactor: 0.55,
-        child: Container(
-          decoration: const BoxDecoration(color: PaletaApp.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-          child: SafeArea(top: false, child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: PaletaApp.borderSoft, borderRadius: BorderRadius.circular(999)))),
-              const SizedBox(height: 18),
-              Row(children: [
-                const Expanded(child: Text('Unidade de medida', style: TextStyle(color: PaletaApp.text, fontSize: 18, fontWeight: FontWeight.w700))),
-                IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close_rounded), color: PaletaApp.text),
-              ]),
-              const SizedBox(height: 4),
-              Text(
-                'Compatíveis com ${_selectedInsumo!.nome} (${_selectedInsumo!.unidadePadraoSimbolo ?? '-'})',
-                style: const TextStyle(color: PaletaApp.textMuted, fontSize: 12, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
-              Expanded(child: unidades.isEmpty
-                ? const Center(child: Text('Nenhuma unidade compatível cadastrada', style: TextStyle(color: PaletaApp.textMuted, fontSize: 14, fontWeight: FontWeight.w600)))
-                : ListView.separated(
-                itemCount: unidades.length, separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (context, index) {
-                  final u = unidades[index];
-                  final selected = u.id == _selectedUnidade?.id;
-                  return InkWell(
-                    onTap: () { setState(() { _selectedUnidade = u; _unidadeError = false; _validationMessage = null; }); Navigator.pop(ctx); },
-                    borderRadius: BorderRadius.circular(18),
-                    child: Container(padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: selected ? PaletaApp.warningBg : PaletaApp.surfaceAlt,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: selected ? PaletaApp.primary : PaletaApp.border)),
-                      child: Row(children: [
-                        Text(u.simbolo ?? u.nome, style: TextStyle(color: selected ? PaletaApp.primary : PaletaApp.text, fontSize: 16, fontWeight: FontWeight.w700)),
-                        const SizedBox(width: 14),
-                        Expanded(child: Text(u.nome, style: const TextStyle(color: PaletaApp.text, fontSize: 14, fontWeight: FontWeight.w600))),
-                        if (selected) const Icon(Icons.check_rounded, color: PaletaApp.primary),
-                      ])));
-                })),
-            ]),
-          )),
-        ),
-      ),
+    abrirSelecaoUnidade(
+      context,
+      unidades: _unidadesCompativeis,
+      selecionada: _unidade,
+      nomeInsumo: _insumo!.nome,
+      simboloInsumo: _insumo!.unidadePadraoSimbolo ?? '-',
+      aoSelecionar: (unidade) {
+        setState(() => _unidade = unidade);
+        _limparErro(CampoMovimentacao.unidade);
+      },
     );
   }
 
-  Widget _buildHeader() {
-    return Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        AppBotaoIcone(icone: Icons.arrow_back_rounded, aoTocar: () {
-          if (_step == 0) {
-            Navigator.pop(context);
-          } else {
-            _prev();
-          }
-        }),
-        const SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(_headerTitle, style: const TextStyle(color: PaletaApp.text, fontSize: 20, fontWeight: FontWeight.w700, height: 1.05)),
-          const SizedBox(height: 2),
-          Text('Etapa ${_step + 1} de 3 · $_stepLabel', style: const TextStyle(color: PaletaApp.textMuted, fontSize: 12)),
-        ])),
-      ]));
+  // ---------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------
+
+  String get _rotuloEtapa {
+    switch (_etapa) {
+      case 0:
+        return 'Tipo';
+      case 1:
+        return 'Insumo & quantidade';
+      default:
+        return 'Lote & detalhes';
+    }
   }
 
-  Widget _buildProgress() {
-    return Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(children: List.generate(3, (i) => Expanded(
-        child: Container(height: 4, margin: EdgeInsets.only(right: i == 2 ? 0 : 8),
-          decoration: BoxDecoration(color: i <= _step ? PaletaApp.primary : PaletaApp.borderSoft, borderRadius: BorderRadius.circular(999)))))));
-  }
+  String get _titulo =>
+      _etapa == 0 ? 'Nova movimentação' : rotuloTipoMovimentacao(_tipo);
 
-  Widget _buildTextField({required TextEditingController controller, required String hint, required ValueChanged<String> onChanged,
-    int maxLines = 1, TextInputType keyboardType = TextInputType.text, bool error = false, bool price = false, bool largeText = false, String? suffix}) {
-    final big = price || largeText;
-    return Container(
-      decoration: DecoracoesApp.campo(erro: error),
-      child: TextField(controller: controller, onChanged: onChanged, maxLines: maxLines, keyboardType: keyboardType,
-        style: TextStyle(color: PaletaApp.text, fontSize: big ? 28 : 15, fontWeight: big ? FontWeight.w700 : FontWeight.w500),
-        decoration: InputDecoration(hintText: hint, hintStyle: const TextStyle(color: PaletaApp.textMuted),
-          prefixText: price ? 'R\$ ' : null,
-          prefixStyle: const TextStyle(color: PaletaApp.textMuted, fontSize: 20, fontWeight: FontWeight.w700),
-          suffixText: suffix, suffixStyle: const TextStyle(color: PaletaApp.textMuted, fontSize: 14, fontWeight: FontWeight.w600),
-          border: InputBorder.none, contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: big ? 20 : 16))));
-  }
-
-  Widget _buildErrorBanner() {
-    if (_validationMessage == null) return const SizedBox.shrink();
-    return Container(width: double.infinity, padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: PaletaApp.warningBg, borderRadius: BorderRadius.circular(16), border: Border.all(color: PaletaApp.error)),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Padding(padding: EdgeInsets.only(top: 1), child: Icon(Icons.warning_amber_rounded, color: PaletaApp.error, size: 18)),
-        const SizedBox(width: 10),
-        Expanded(child: Text(_validationMessage!, style: const TextStyle(color: PaletaApp.text, fontSize: 12, fontWeight: FontWeight.w600, height: 1.35))),
-      ]));
-  }
-
-  Widget _buildInfoCard(String text) {
-    return Container(width: double.infinity, padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: PaletaApp.warningBg, borderRadius: BorderRadius.circular(16), border: Border.all(color: PaletaApp.warningBorder)),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Padding(padding: EdgeInsets.only(top: 1), child: Icon(Icons.lightbulb_outline_rounded, color: PaletaApp.primary, size: 18)),
-        const SizedBox(width: 10),
-        Expanded(child: Text(text, style: const TextStyle(color: PaletaApp.text, fontSize: 12, height: 1.35, fontWeight: FontWeight.w500))),
-      ]));
-  }
-
-  Widget _buildTypeOption(_ChoiceOption option) {
-    final selected = _selectedTipo == option.value;
-    return InkWell(onTap: () => setState(() { _selectedTipo = option.value; _tipoError = false; _validationMessage = null; }),
-      borderRadius: BorderRadius.circular(16),
-      child: Container(padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: selected ? PaletaApp.warningBg : PaletaApp.surfaceAlt, borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: selected ? PaletaApp.primary : PaletaApp.border)),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Container(width: 34, height: 34,
-              decoration: BoxDecoration(color: selected ? PaletaApp.primary : PaletaApp.inputFill, borderRadius: BorderRadius.circular(12)),
-              child: Icon(option.icon, color: selected ? Colors.white : PaletaApp.primary, size: 18)),
-            const Spacer(),
-            if (selected) const Icon(Icons.check_circle_rounded, color: PaletaApp.primary, size: 18),
-          ]),
-          const SizedBox(height: 14),
-          Text(option.label, style: const TextStyle(color: PaletaApp.text, fontSize: 15, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 4),
-          Text(option.description, style: const TextStyle(color: PaletaApp.textMuted, fontSize: 11, height: 1.2)),
-        ])));
-  }
-
-  Widget _buildStep0() {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('Tipo de movimentação *', style: TextStyle(color: PaletaApp.text, fontSize: 13, fontWeight: FontWeight.w700)),
-      const SizedBox(height: 8),
-      GridView.count(crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10, shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(), childAspectRatio: 1.25,
-        children: _tipoOptions.map(_buildTypeOption).toList()),
-      if (_selectedTipo == 'SAIDA_PERDA_VALIDADE') ...[
-        const SizedBox(height: 16),
-        _buildInfoCard('Perda por validade exige que você selecione qual lote venceu na próxima etapa.'),
-      ],
-      const SizedBox(height: 16),
-      if (_tipoError) ...[const SizedBox(height: 4)],
-      _buildErrorBanner(),
-    ]);
-  }
-
-  Widget _buildInsumoSelector() {
-    final has = _selectedInsumo != null;
-    return InkWell(onTap: _openInsumoSelector, borderRadius: BorderRadius.circular(16),
-      child: Container(padding: const EdgeInsets.all(14),
-        decoration: DecoracoesApp.campo(erro: _insumoError),
-        child: Row(children: [
-          Container(width: 42, height: 42,
-            decoration: BoxDecoration(color: has ? PaletaApp.primary : PaletaApp.inputFill, borderRadius: BorderRadius.circular(14)),
-            child: Icon(Icons.inventory_2_rounded, color: has ? Colors.white : PaletaApp.primary, size: 20)),
-          const SizedBox(width: 14),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Insumo *', style: TextStyle(color: PaletaApp.text, fontSize: 13, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 4),
-            Text(has ? _selectedInsumo!.nome : 'Selecione o insumo',
-              style: TextStyle(color: has ? PaletaApp.text : PaletaApp.textMuted, fontSize: 14, fontWeight: FontWeight.w600)),
-            if (has) Text('Saldo atual: ${_selectedInsumo!.estoqueAtual?.toStringAsFixed(1) ?? '0'} ${_selectedInsumo!.unidadePadraoSimbolo ?? ''}',
-              style: const TextStyle(color: PaletaApp.textMuted, fontSize: 11)),
-          ])),
-          const Icon(Icons.chevron_right_rounded, color: PaletaApp.textMuted),
-        ])));
-  }
-
-  Widget _buildUnidadeSelector() {
-    final has = _selectedUnidade != null;
-    return InkWell(onTap: _openUnidadeSelector, borderRadius: BorderRadius.circular(16),
-      child: Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(color: PaletaApp.surfaceAlt, borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: _unidadeError ? PaletaApp.error : PaletaApp.border)),
-        child: Row(children: [
-          Text(has ? (_selectedUnidade!.simbolo ?? _selectedUnidade!.nome) : 'Unidade',
-            style: TextStyle(color: has ? PaletaApp.text : PaletaApp.textMuted, fontSize: 14, fontWeight: FontWeight.w700)),
-          const SizedBox(width: 4),
-          const Icon(Icons.expand_more_rounded, color: PaletaApp.textMuted, size: 20),
-        ])));
-  }
-
-  Widget _buildStep1() {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      _buildInsumoSelector(),
-      if (_insumoError) ...[const SizedBox(height: 6), const Text('Selecione um insumo.', style: TextStyle(color: PaletaApp.error, fontSize: 11, fontWeight: FontWeight.w600))],
-      const SizedBox(height: 16),
-      const Text('Quantidade *', style: TextStyle(color: PaletaApp.text, fontSize: 13, fontWeight: FontWeight.w700)),
-      const SizedBox(height: 8),
-      Row(children: [
-        Expanded(child: _buildTextField(controller: _quantidade, hint: '0', onChanged: (_) { if (_quantidadeError) setState(() { _quantidadeError = false; _validationMessage = null; }); },
-          keyboardType: const TextInputType.numberWithOptions(decimal: true), largeText: true, error: _quantidadeError)),
-        const SizedBox(width: 10),
-        _buildUnidadeSelector(),
-      ]),
-      if (_quantidadeError) ...[const SizedBox(height: 6), const Text('Informe a quantidade.', style: TextStyle(color: PaletaApp.error, fontSize: 11, fontWeight: FontWeight.w600))],
-      const SizedBox(height: 16),
-      _buildErrorBanner(),
-    ]);
-  }
-
-  Widget _buildLoteSelector() {
-    if (_lotes.isEmpty) return const SizedBox.shrink();
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [
-        const Text('Lote a baixar *', style: TextStyle(color: PaletaApp.text, fontSize: 13, fontWeight: FontWeight.w700)),
-        const Spacer(),
-        Text('Ordenado por validade (FEFO)', style: TextStyle(color: PaletaApp.textMuted, fontSize: 10, fontWeight: FontWeight.w500)),
-      ]),
-      const SizedBox(height: 8),
-      ..._lotes.map((lote) {
-        final selected = _selectedLote?.id == lote.id;
-        final vencido = lote.isVencido;
-        return Padding(padding: const EdgeInsets.only(bottom: 8),
-          child: InkWell(onTap: () => setState(() => _selectedLote = lote), borderRadius: BorderRadius.circular(16),
-            child: Container(padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: selected ? PaletaApp.warningBg : PaletaApp.surfaceAlt,
-                borderRadius: BorderRadius.circular(16), border: Border.all(color: selected ? PaletaApp.primary : PaletaApp.border)),
-              child: Row(children: [
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    Text(lote.codigo ?? 'L${lote.id}', style: const TextStyle(color: PaletaApp.text, fontSize: 14, fontWeight: FontWeight.w700)),
-                    if (vencido) ...[const SizedBox(width: 8),
-                      Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: PaletaApp.error, borderRadius: BorderRadius.circular(4)),
-                        child: const Text('VENCIDO', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800)))],
-                  ]),
-                  const SizedBox(height: 4),
-                  Text('${lote.quantidadeRestante?.toStringAsFixed(1) ?? '0'} ${lote.unidadePadraoSimbolo ?? ''} restantes · custo R\$ ${lote.custoUnitario?.toStringAsFixed(2).replaceAll('.', ',') ?? '0'}',
-                    style: const TextStyle(color: PaletaApp.textMuted, fontSize: 11)),
-                ])),
-                if (selected) const Icon(Icons.check_circle_rounded, color: PaletaApp.primary, size: 20)
-                  else const Icon(Icons.radio_button_unchecked_rounded, color: PaletaApp.border, size: 20),
-              ]))));
-      }),
-    ]);
-  }
-
-  Widget _buildStep2() {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      if (!_isEntrada) ...[_buildLoteSelector(), const SizedBox(height: 16)],
-      if (_isEntrada) ...[
-        const Text('Validade *', style: TextStyle(color: PaletaApp.text, fontSize: 13, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
-        _buildTextField(controller: _validade, hint: '2026-12-31', onChanged: (_) {}, keyboardType: TextInputType.datetime),
-        const SizedBox(height: 16),
-        const Text('Custo unitário *', style: TextStyle(color: PaletaApp.text, fontSize: 13, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
-        _buildTextField(controller: _custoUnitario, hint: '0,00', onChanged: (_) {},
-          keyboardType: const TextInputType.numberWithOptions(decimal: true), price: true),
-        const SizedBox(height: 16),
-        const Text('Código do lote', style: TextStyle(color: PaletaApp.text, fontSize: 13, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
-        _buildTextField(controller: _codigoLote, hint: 'Ex.: NF-8821', onChanged: (_) {}),
-        const SizedBox(height: 16),
-        _buildInfoCard('Novo lote será criado com a validade e custo informados.'),
-        const SizedBox(height: 16),
-      ],
-      const Text('Observação opcional', style: TextStyle(color: PaletaApp.text, fontSize: 13, fontWeight: FontWeight.w700)),
-      const SizedBox(height: 8),
-      _buildTextField(controller: _justificativa, hint: 'Motivo ou observação...', onChanged: (_) {}, maxLines: 3),
-      const SizedBox(height: 16),
-      _buildSummary(),
-    ]);
-  }
-
-  Widget _buildSummary() {
-    return Container(width: double.infinity, padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: PaletaApp.surface, borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: PaletaApp.borderSoft),
-        boxShadow: const [BoxShadow(color: PaletaApp.shadow, blurRadius: 12, offset: Offset(0, 4))]),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('RESUMO', style: TextStyle(color: PaletaApp.textMuted, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.4)),
-        const SizedBox(height: 12),
-        AppLinhaResumo(rotulo: 'Tipo', valor: _tipoLabel),
-        const Divider(height: 18, color: PaletaApp.borderSoft),
-        AppLinhaResumo(rotulo: 'Insumo', valor: _selectedInsumo?.nome ?? '-'),
-        const Divider(height: 18, color: PaletaApp.borderSoft),
-        AppLinhaResumo(rotulo: 'Quantidade', valor: '${_quantidade.text.isEmpty ? '0' : _quantidade.text} ${_selectedUnidade?.simbolo ?? ''}'),
-        if (_selectedLote != null) ...[
-          const Divider(height: 18, color: PaletaApp.borderSoft),
-          AppLinhaResumo(rotulo: 'Lote', valor: _selectedLote!.codigo ?? '#${_selectedLote!.id}'),
-        ],
-        if (_parseCusto() > 0) ...[
-          const Divider(height: 18, color: PaletaApp.borderSoft),
-          AppLinhaResumo(rotulo: 'Custo unitário', valor: 'R\$ ${_parseCusto().toStringAsFixed(2).replaceAll('.', ',')}'),
-        ],
-      ]));
-  }
-
-  Widget _buildSuccessScreen() {
-    return Scaffold(backgroundColor: PaletaApp.background,
-      body: SafeArea(child: Padding(padding: const EdgeInsets.all(24),
-        child: Column(children: [
-          const Spacer(),
-          Container(width: 80, height: 80,
-            decoration: BoxDecoration(color: PaletaApp.primary, shape: BoxShape.circle),
-            child: const Icon(Icons.check_rounded, color: Colors.white, size: 44)),
-          const SizedBox(height: 24),
-          const Text('Movimentação registrada!', style: TextStyle(color: PaletaApp.text, fontSize: 22, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 12),
-          _buildSummary(),
-          const Spacer(),
-          SafeArea(top: false, child: Row(children: [
-            Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(context, true),
-              style: OutlinedButton.styleFrom(foregroundColor: PaletaApp.text, backgroundColor: PaletaApp.surfaceAlt,
-                side: const BorderSide(color: PaletaApp.border), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                padding: const EdgeInsets.symmetric(vertical: 16)),
-              child: const Text('Voltar'))),
-            const SizedBox(width: 12),
-            Expanded(child: ElevatedButton.icon(onPressed: () => Navigator.pop(context, true),
-              style: ElevatedButton.styleFrom(backgroundColor: PaletaApp.primary, foregroundColor: Colors.white,
-                elevation: 4, shadowColor: PaletaApp.primaryPressed.withValues(alpha: 0.35),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                padding: const EdgeInsets.symmetric(vertical: 16)),
-              icon: const Icon(Icons.check_rounded, size: 18), label: const Text('Concluído'))),
-          ])),
-        ]))));
-  }
-
-  Widget _buildBottomButtons() {
-    final leftLabel = _step == 0 ? 'Cancelar' : 'Voltar';
-    String rightLabel;
-    if (_step == 2) {
-      if (_isEntrada) { rightLabel = 'Registrar compra'; }
-      else { rightLabel = 'Registrar saída'; }
-    } else { rightLabel = 'Continuar'; }
-
-    return SafeArea(top: false,
-      child: Padding(padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-        child: Row(children: [
-          Expanded(child: OutlinedButton(
-            onPressed: _step == 0 ? () => Navigator.pop(context) : _prev,
-            style: OutlinedButton.styleFrom(foregroundColor: PaletaApp.text, backgroundColor: PaletaApp.surfaceAlt,
-              side: const BorderSide(color: PaletaApp.border),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              padding: const EdgeInsets.symmetric(vertical: 16)),
-            child: Text(leftLabel))),
-          const SizedBox(width: 12),
-          Expanded(child: ElevatedButton(
-            onPressed: _saving ? null : _next,
-            style: ElevatedButton.styleFrom(backgroundColor: PaletaApp.primary, foregroundColor: Colors.white,
-              disabledBackgroundColor: PaletaApp.primarySoft.withValues(alpha: 0.55),
-              disabledForegroundColor: Colors.white.withValues(alpha: 0.8),
-              elevation: 4, shadowColor: PaletaApp.primaryPressed.withValues(alpha: 0.35),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              padding: const EdgeInsets.symmetric(vertical: 16)),
-            child: _saving
-              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-              : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Text(rightLabel),
-                  if (_step < 2) ...[const SizedBox(width: 8), const Icon(Icons.chevron_right_rounded, size: 18)],
-                  if (_step == 2) ...[const SizedBox(width: 8), const Icon(Icons.check_rounded, size: 18)],
-                ]))),
-        ])));
-  }
-
-  Widget _buildStepBody() {
-    switch (_step) {
-      case 0: return _buildStep0();
-      case 1: return _buildStep1();
-      default: return _buildStep2();
+  Widget _corpoDaEtapa() {
+    switch (_etapa) {
+      case 0:
+        return EtapaTipo(
+          tipoSelecionado: _tipo,
+          validacao: _validacao,
+          aoSelecionar: (valor) {
+            setState(() {
+              _tipo = valor;
+              _lote = null;
+            });
+            _limparErro(CampoMovimentacao.tipo);
+          },
+        );
+      case 1:
+        return EtapaInsumoQuantidade(
+          insumo: _insumo,
+          unidade: _unidade,
+          controladorQuantidade: _quantidade,
+          validacao: _validacao,
+          aoAbrirInsumo: _abrirSelecaoInsumo,
+          aoAbrirUnidade: _abrirSelecaoUnidade,
+          aoAlterarQuantidade: (_) => _limparErro(CampoMovimentacao.quantidade),
+        );
+      default:
+        return EtapaLoteDetalhes(
+          dados: _dados,
+          lotes: _lotes,
+          validacao: _validacao,
+          controladorCusto: _custoUnitario,
+          controladorCodigoLote: _codigoLote,
+          controladorJustificativa: _justificativa,
+          aoSelecionarValidade: (data) {
+            setState(() => _validade = data);
+            _limparErro(CampoMovimentacao.validade);
+          },
+          aoSelecionarLote: (lote) {
+            setState(() => _lote = lote);
+            _limparErro(CampoMovimentacao.lote);
+          },
+          aoEditarCampo: _limparErro,
+        );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_success) return _buildSuccessScreen();
-    return Scaffold(backgroundColor: PaletaApp.background,
-      body: SafeArea(child: Column(children: [
-        _buildHeader(),
-        _buildProgress(),
-        const SizedBox(height: 12),
-        Expanded(child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-          child: _buildStepBody())),
-        _buildBottomButtons(),
-      ])));
+    if (_sucesso) {
+      return TelaSucessoMovimentacao(
+        dados: _dados,
+        aoConcluir: () => Navigator.pop(context, true),
+      );
+    }
+
+    final ultimaEtapa = _etapa == _totalEtapas - 1;
+    return Scaffold(
+      backgroundColor: AppTema.fundo,
+      body: SafeArea(
+        child: Column(
+          children: [
+            AppCabecalhoWizard(
+              titulo: _titulo,
+              etapa: _etapa,
+              totalEtapas: _totalEtapas,
+              rotuloEtapa: _rotuloEtapa,
+              aoVoltar: _voltar,
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                child: _corpoDaEtapa(),
+              ),
+            ),
+            AppRodapeWizard(
+              rotuloEsquerda: _etapa == 0 ? 'Cancelar' : 'Voltar',
+              rotuloDireita: ultimaEtapa
+                  ? (_dados.ehEntrada ? 'Registrar entrada' : 'Registrar saída')
+                  : 'Continuar',
+              iconeDireita: ultimaEtapa
+                  ? Icons.check_rounded
+                  : Icons.chevron_right_rounded,
+              carregando: _salvando,
+              aoVoltar: _voltar,
+              aoAvancar: _avancar,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
-

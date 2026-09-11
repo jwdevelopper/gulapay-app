@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
-
+import 'package:my_app_teste/core/theme/app_tema.dart';
 
 class ProdutoTag extends StatelessWidget {
   final String label;
@@ -19,9 +18,7 @@ class ProdutoTag extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: filled
-            ? color.withValues(alpha: 0.12)
-            : PaletaApp.surfaceAlt,
+        color: filled ? color.withValues(alpha: 0.12) : AppTema.superficieAlt,
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color.withValues(alpha: 0.22)),
       ),

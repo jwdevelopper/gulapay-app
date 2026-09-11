@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
-
+import 'package:my_app_teste/core/theme/app_tema.dart';
 
 class InsumoSaldoCard extends StatelessWidget {
   final String nome;
@@ -52,7 +51,7 @@ class InsumoSaldoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: PaletaApp.surface,
+      color: AppTema.superficie,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onTap,
@@ -60,16 +59,14 @@ class InsumoSaldoCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: PaletaApp.surface,
+            color: AppTema.superficie,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: _abaixoDoMinimo
-                  ? PaletaApp.warningBorder
-                  : PaletaApp.border,
+              color: _abaixoDoMinimo ? AppTema.avisoBorda : AppTema.borda,
             ),
             boxShadow: const [
               BoxShadow(
-                color: PaletaApp.shadow,
+                color: AppTema.sombra,
                 blurRadius: 14,
                 offset: Offset(0, 6),
               ),
@@ -83,7 +80,7 @@ class InsumoSaldoCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: _abaixoDoMinimo
                       ? const Color(0xFFFFF3E0)
-                      : PaletaApp.inputFill,
+                      : AppTema.preenchimentoCampo,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
@@ -91,8 +88,8 @@ class InsumoSaldoCard extends StatelessWidget {
                       ? Icons.warning_amber_rounded
                       : Icons.inventory_2_rounded,
                   color: _abaixoDoMinimo
-                      ? PaletaApp.primary
-                      : PaletaApp.textMuted,
+                      ? AppTema.primaria
+                      : AppTema.textoSecundario,
                   size: 22,
                 ),
               ),
@@ -104,7 +101,7 @@ class InsumoSaldoCard extends StatelessWidget {
                     Text(
                       nome,
                       style: const TextStyle(
-                        color: PaletaApp.text,
+                        color: AppTema.texto,
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                       ),
@@ -115,7 +112,7 @@ class InsumoSaldoCard extends StatelessWidget {
                     Text(
                       _subtitleText,
                       style: const TextStyle(
-                        color: PaletaApp.textMuted,
+                        color: AppTema.textoSecundario,
                         fontSize: 12,
                         height: 1.25,
                       ),
@@ -130,7 +127,7 @@ class InsumoSaldoCard extends StatelessWidget {
                   Text(
                     _saldoText,
                     style: const TextStyle(
-                      color: PaletaApp.text,
+                      color: AppTema.texto,
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
                     ),
@@ -140,7 +137,7 @@ class InsumoSaldoCard extends StatelessWidget {
                     Text(
                       '-${percentAbaixo!.toStringAsFixed(0)}%',
                       style: const TextStyle(
-                        color: PaletaApp.error,
+                        color: AppTema.erro,
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                       ),
@@ -149,7 +146,7 @@ class InsumoSaldoCard extends StatelessWidget {
                     Text(
                       fefoLabel!,
                       style: const TextStyle(
-                        color: PaletaApp.textMuted,
+                        color: AppTema.textoSecundario,
                         fontSize: 10,
                         fontWeight: FontWeight.w500,
                       ),

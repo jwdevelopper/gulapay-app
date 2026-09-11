@@ -10,7 +10,7 @@ class MesaService {
   Future<List<MesaDto>> listarMesas() async {
     try {
       final response = await _dio.get(ConstantsApi.urlMesas);
-      
+
       final List<dynamic> data = response.data;
       return data.map((json) => MesaDto.fromJson(json)).toList();
     } on DioException catch (e) {
@@ -21,7 +21,7 @@ class MesaService {
   Future<MesaDto> buscarMesaPorId(int id) async {
     try {
       final response = await _dio.get('${ConstantsApi.urlMesas}/$id');
-      
+
       return MesaDto.fromJson(response.data);
     } on DioException catch (e) {
       throw ApiError.fromDioException(e);
@@ -34,7 +34,7 @@ class MesaService {
         ConstantsApi.urlMesas,
         data: mesa.toJson(),
       );
-      
+
       return MesaDto.fromJson(response.data);
     } on DioException catch (e) {
       throw ApiError.fromDioException(e);
@@ -47,7 +47,7 @@ class MesaService {
         '${ConstantsApi.urlMesas}/$id',
         data: mesa.toJson(),
       );
-      
+
       return MesaDto.fromJson(response.data);
     } on DioException catch (e) {
       throw ApiError.fromDioException(e);

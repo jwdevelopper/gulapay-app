@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
 import 'package:my_app_teste/core/widgets/app_botao_icone.dart';
 import 'package:my_app_teste/core/widgets/app_data.dart';
 import 'package:my_app_teste/core/widgets/app_linha_resumo.dart';
 import 'package:my_app_teste/core/widgets/app_rotulo_campo.dart';
 
 void main() {
+  // Monta com o mesmo tema e locale do MaterialApp de produção, para que
+  // os testes vejam exatamente o que o app renderiza.
   Widget montar(Widget filho) => MaterialApp(
+    theme: AppTema.claro(),
     localizationsDelegates: const [
       GlobalMaterialLocalizations.delegate,
       GlobalWidgetsLocalizations.delegate,
@@ -154,7 +157,7 @@ void main() {
         find.byType(DatePickerDialog),
       );
       final tema = Theme.of(tester.element(find.byWidget(dialogo)));
-      expect(tema.colorScheme.primary, PaletaApp.primary);
+      expect(tema.colorScheme.primary, AppTema.primaria);
     });
   });
 }

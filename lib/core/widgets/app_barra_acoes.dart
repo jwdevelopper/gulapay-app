@@ -25,7 +25,7 @@ class AppBarraAcoes extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       decoration: const BoxDecoration(
         color: AppTema.fundo,
-        border: Border(top: BorderSide(color: AppTema.bordaCampo)),
+        border: Border(top: BorderSide(color: AppTema.borda)),
       ),
       child: Row(
         children: [
@@ -35,16 +35,20 @@ class AppBarraAcoes extends StatelessWidget {
               onPressed: carregando ? null : aoCancelar,
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: AppTema.cartao,
-                foregroundColor: AppTema.textoEscuro,
-                side: const BorderSide(color: AppTema.bordaCampo),
+                backgroundColor: AppTema.superficie,
+                foregroundColor: AppTema.texto,
+                side: const BorderSide(color: AppTema.borda),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: Text(textoCancelar,
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w600)),
+              child: Text(
+                textoCancelar,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 10),
@@ -65,7 +69,9 @@ class AppBarraAcoes extends StatelessWidget {
                       height: 22,
                       width: 22,
                       child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2.5),
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
                     )
                   : Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -73,7 +79,9 @@ class AppBarraAcoes extends StatelessWidget {
                         Text(
                           textoConfirmar,
                           style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w700),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                         if (iconeConfirmar != null) ...[
                           const SizedBox(width: 8),

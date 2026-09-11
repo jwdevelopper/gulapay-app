@@ -16,6 +16,15 @@ final class TelefoneFormatter extends TextInputFormatter {
 
   const TelefoneFormatter();
 
+  /// Só os dígitos do valor, sem máscara nem sinal de país.
+  ///
+  /// É esta forma que vai para a API: o telefone identifica o cliente
+  /// (seção 3.6) e é único, então `(44) 99999-0000` e `44999990000`
+  /// precisam ser o mesmo valor — senão o mesmo cliente entra duas vezes e
+  /// o link do WhatsApp sai quebrado.
+  static String somenteDigitos(String? value) =>
+      (value ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+
   /// Formata um valor já existente para uso em controllers, cards e detalhes.
   static String formatar(String? value) {
     final original = value?.trim() ?? '';

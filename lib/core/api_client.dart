@@ -28,7 +28,8 @@ class ApiClient {
       InterceptorsWrapper(
         onRequest: (options, handler) async {
           try {
-            final isAuthEndpoint = options.path.contains(ConstantsApi.urlLogin) ||
+            final isAuthEndpoint =
+                options.path.contains(ConstantsApi.urlLogin) ||
                 options.path.contains(ConstantsApi.urlRegistrarUsuario);
 
             if (!isAuthEndpoint) {

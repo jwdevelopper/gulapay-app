@@ -40,19 +40,19 @@ class MovimentacaoEstoque {
       insumoId: json['insumoId'] is int
           ? json['insumoId'] as int
           : (json['insumoId'] != null
-              ? int.tryParse(json['insumoId'].toString())
-              : null),
+                ? int.tryParse(json['insumoId'].toString())
+                : null),
       insumoNome: json['insumoNome'] as String?,
       loteId: json['loteId'] is int
           ? json['loteId'] as int
           : (json['loteId'] != null
-              ? int.tryParse(json['loteId'].toString())
-              : null),
+                ? int.tryParse(json['loteId'].toString())
+                : null),
       unidadeId: json['unidadeId'] is int
           ? json['unidadeId'] as int
           : (json['unidadeId'] != null
-              ? int.tryParse(json['unidadeId'].toString())
-              : null),
+                ? int.tryParse(json['unidadeId'].toString())
+                : null),
       unidadeSimbolo: json['unidadeSimbolo'] as String?,
       quantidade: _parseDouble(json['quantidade']),
       quantidadeUnidadePadrao: _parseDouble(json['quantidadeUnidadePadrao']),
@@ -70,8 +70,7 @@ class MovimentacaoEstoque {
     return double.tryParse(value.toString());
   }
 
-  bool get isEntrada =>
-      tipo == 'ENTRADA_COMPRA' || tipo == 'ENTRADA_TROCA';
+  bool get isEntrada => tipo == 'ENTRADA_COMPRA' || tipo == 'ENTRADA_TROCA';
 
   bool get isSaida =>
       tipo == 'SAIDA_VENDA' ||

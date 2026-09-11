@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/core/widgets/app_menu_acoes.dart';
 import 'package:my_app_teste/modules/produto/dto/produto.dart';
 
@@ -54,7 +54,7 @@ class ProdutoCard extends StatelessWidget {
               color: accentColor.withValues(alpha: 0.28),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(icon, color: PaletaApp.text, size: 26),
+            child: Icon(icon, color: AppTema.texto, size: 26),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -64,7 +64,7 @@ class ProdutoCard extends StatelessWidget {
                 Text(
                   produto.nome,
                   style: const TextStyle(
-                    color: PaletaApp.text,
+                    color: AppTema.texto,
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                   ),
@@ -77,7 +77,7 @@ class ProdutoCard extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: PaletaApp.textMuted,
+                    color: AppTema.textoSecundario,
                     fontSize: 12,
                     height: 1.25,
                   ),
@@ -91,7 +91,7 @@ class ProdutoCard extends StatelessWidget {
                     if (categoriaNome.isNotEmpty)
                       ProdutoTag(
                         label: categoriaNome,
-                        color: PaletaApp.primary,
+                        color: AppTema.primaria,
                         filled: false,
                       ),
                   ],
@@ -107,7 +107,7 @@ class ProdutoCard extends StatelessWidget {
               Text(
                 priceText,
                 style: const TextStyle(
-                  color: PaletaApp.text,
+                  color: AppTema.texto,
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                 ),

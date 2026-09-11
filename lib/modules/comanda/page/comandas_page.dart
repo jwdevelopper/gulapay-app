@@ -1,83 +1,185 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
 import 'package:my_app_teste/core/api_error.dart';
-import '../dto/comanda_response.dart';
-import '../service/comanda_service.dart';
-import 'comanda_detalhe_page.dart';
-import 'comanda_form_page.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
+import 'package:my_app_teste/core/widgets/app_carregando.dart';
+import 'package:my_app_teste/core/widgets/app_estado_vazio.dart';
+import 'package:my_app_teste/modules/comanda/dto/comanda_response.dart';
+import 'package:my_app_teste/modules/comanda/dto/filtro_comandas.dart';
+import 'package:my_app_teste/modules/comanda/page/comanda_detalhe_page.dart';
+import 'package:my_app_teste/modules/comanda/page/comanda_form_page.dart';
+import 'package:my_app_teste/modules/comanda/service/comanda_service.dart';
+import 'package:my_app_teste/modules/comanda/widgets/cartao_comanda.dart';
+import 'package:my_app_teste/modules/comanda/widgets/filtros_comandas.dart';
 
+/// Listagem de comandas, com filtro por status e por canal de venda.
+///
+/// Cuida apenas de estado, carga e navegação. Os chips vivem em
+/// [FiltrosComandas], cada linha em [CartaoComanda] e o filtro em si é o
+/// objeto de valor [FiltroComandas].
 class ComandasPage extends StatefulWidget {
   const ComandasPage({super.key});
-  @override State<ComandasPage> createState() => _ComandasPageState();
+
+  @override
+  State<ComandasPage> createState() => _ComandasPageState();
 }
 
 class _ComandasPageState extends State<ComandasPage> {
   final _service = ComandaService();
+
   List<ComandaResponse> _comandas = [];
-  String? _status;
-  String? _tipo;
-  bool _loading = true;
+  FiltroComandas _filtro = const FiltroComandas();
+  bool _carregando = true;
   String? _erro;
 
-  @override void initState() { super.initState(); _load(); }
-  Future<void> _load() async {
-    setState(() { _loading = true; _erro = null; });
-    try { _comandas = await _service.listar(status: _status, tipoOrigem: _tipo); }
-    on ApiError catch (e) { _erro = e.message; }
-    catch (_) { _erro = 'Não foi possível carregar as comandas.'; }
-    if (mounted) setState(() => _loading = false);
+  @override
+  void initState() {
+    super.initState();
+    _carregar();
   }
 
-  Future<void> _new() async { if (await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const ComandaFormPage())) == true) _load(); }
-  String _money(double value) => 'R\$ ${value.toStringAsFixed(2).replaceAll('.', ',')}';
-  Color _statusColor(String status) => switch (status) { 'FECHADA' => PaletaApp.success, 'CANCELADA' => PaletaApp.error, 'AGUARDANDO_PAGAMENTO' => Colors.orange, _ => PaletaApp.primary };
+  // ---------------------------------------------------------------------
+  // Dados
+  // ---------------------------------------------------------------------
 
-  @override Widget build(BuildContext context) => Scaffold(
-    backgroundColor: PaletaApp.background,
+  /// Recarrega a lista com o filtro atual.
+  ///
+  /// [mostrarCarregando] é falso no "puxar para atualizar": ali o próprio
+  /// `RefreshIndicator` já dá o retorno visual, e trocar a lista pelo
+  /// indicador de tela cheia faria o conteúdo piscar.
+  Future<void> _carregar({bool mostrarCarregando = true}) async {
+    if (mostrarCarregando) {
+      setState(() {
+        _carregando = true;
+        _erro = null;
+      });
+    }
+    String? erro;
+    List<ComandaResponse> comandas = const [];
+    try {
+      comandas = await _service.listar(
+        status: _filtro.status,
+        tipoOrigem: _filtro.tipoOrigem,
+      );
+    } on ApiError catch (e) {
+      erro = e.message;
+    } catch (_) {
+      erro = 'Não foi possível carregar as comandas.';
+    }
+    if (!mounted) return;
+    setState(() {
+      _erro = erro;
+      if (erro == null) _comandas = comandas;
+      _carregando = false;
+    });
+  }
+
+  void _aplicarFiltro(FiltroComandas novo) {
+    setState(() => _filtro = novo);
+    _carregar();
+  }
+
+  // ---------------------------------------------------------------------
+  // Navegação
+  // ---------------------------------------------------------------------
+
+  Future<void> _abrirNovaComanda() async {
+    final criada = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const ComandaFormPage()),
+    );
+    if (criada == true) _carregar();
+  }
+
+  Future<void> _abrirDetalhe(ComandaResponse comanda) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => ComandaDetalhePage(id: comanda.id!)),
+    );
+    if (mounted) _carregar();
+  }
+
+  // ---------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: AppTema.fundo,
     floatingActionButton: FloatingActionButton(
-      onPressed: _new,
-      backgroundColor: PaletaApp.primary,
+      onPressed: _abrirNovaComanda,
+      backgroundColor: AppTema.primaria,
       foregroundColor: Colors.white,
       shape: const CircleBorder(),
       child: const Icon(Icons.add_rounded),
     ),
     floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-    body: SafeArea(child: Column(children: [
-      const SizedBox(height: 10),
-      _filters(),
-      Expanded(child: RefreshIndicator(onRefresh: _load, color: PaletaApp.primary, child: _body())),
-    ])),
+    body: SafeArea(
+      child: Column(
+        children: [
+          const SizedBox(height: 10),
+          FiltrosComandas(filtro: _filtro, aoMudar: _aplicarFiltro),
+          const SizedBox(height: 8),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () => _carregar(mostrarCarregando: false),
+              color: AppTema.primaria,
+              child: _corpo(),
+            ),
+          ),
+        ],
+      ),
+    ),
   );
 
-  Widget _filters() => SingleChildScrollView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [
-    _chip('Todas', _status == null, () { setState(() => _status = null); _load(); }),
-    for (final value in ['ABERTA', 'AGUARDANDO_PAGAMENTO', 'FECHADA', 'CANCELADA']) _chip(value, _status == value, () { setState(() => _status = value); _load(); }),
-    const SizedBox(width: 4),
-    for (final value in ['MESA', 'BALCAO', 'DELIVERY']) _chip(value, _tipo == value, () { setState(() => _tipo = _tipo == value ? null : value); _load(); }),
-  ]));
-  Widget _chip(String label, bool selected, VoidCallback onTap) => Padding(
-        padding: const EdgeInsets.only(right: 8, bottom: 8),
-        child: GestureDetector(
-          onTap: onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: selected ? PaletaApp.primary : PaletaApp.surfaceAlt,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: selected ? PaletaApp.primary : PaletaApp.border),
-            ),
-            child: Text(label.replaceAll('_', ' '), style: TextStyle(color: selected ? Colors.white : PaletaApp.text, fontSize: 13, fontWeight: FontWeight.w700)),
-          ),
-        ),
-      );
-  Widget _body() {
-    if (_loading) return const Center(child: CircularProgressIndicator(color: PaletaApp.primary));
-    if (_erro != null) return ListView(physics: const AlwaysScrollableScrollPhysics(), children: [const SizedBox(height: 100), Center(child: Text(_erro!, style: TextStyle(color: PaletaApp.text))), Center(child: TextButton(onPressed: _load, style: TextButton.styleFrom(foregroundColor: PaletaApp.primary), child: const Text('Tentar novamente')))]);
-    if (_comandas.isEmpty) return ListView(physics: const AlwaysScrollableScrollPhysics(), children: const [SizedBox(height: 80), Center(child: Icon(Icons.receipt_long_outlined, size: 48, color: PaletaApp.primary)), SizedBox(height: 14), Center(child: Text('Nenhuma comanda encontrada.', style: TextStyle(color: PaletaApp.text, fontWeight: FontWeight.w600)))]);
-    return ListView.separated(physics: const AlwaysScrollableScrollPhysics(), padding: const EdgeInsets.fromLTRB(16, 8, 16, 96), itemCount: _comandas.length, separatorBuilder: (_, __) => const SizedBox(height: 10), itemBuilder: (_, i) {
-      final c = _comandas[i];
-      return Card(color: PaletaApp.surface, elevation: 0, shadowColor: PaletaApp.shadow, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: PaletaApp.border)), child: ListTile(onTap: () async { await Navigator.push(context, MaterialPageRoute(builder: (_) => ComandaDetalhePage(id: c.id!))); _load(); }, contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4), leading: Container(width: 44, height: 44, decoration: BoxDecoration(color: PaletaApp.inputFill, borderRadius: BorderRadius.circular(14)), child: Icon(c.tipoOrigem == 'MESA' ? Icons.table_restaurant : c.tipoOrigem == 'DELIVERY' ? Icons.delivery_dining : Icons.point_of_sale, color: PaletaApp.primary)), title: Text(c.codigo.isEmpty ? 'Comanda #${c.id}' : c.codigo, style: const TextStyle(fontWeight: FontWeight.w700, color: PaletaApp.text)), subtitle: Text([c.tipoOrigem, if (c.clienteNome != null) c.clienteNome!, if (c.mesaNumero != null) 'Mesa ${c.mesaNumero}'].join(' • '), style: const TextStyle(color: PaletaApp.textMuted, fontSize: 12)), trailing: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [Text(_money(c.totalLiquido), style: const TextStyle(fontWeight: FontWeight.w700, color: PaletaApp.text)), Text(c.status.replaceAll('_', ' '), style: TextStyle(fontSize: 11, color: _statusColor(c.status), fontWeight: FontWeight.w700))])));
-    });
+  Widget _corpo() {
+    if (_carregando) return const AppCarregando();
+    if (_erro != null) return _rolavel(_estadoErro());
+    if (_comandas.isEmpty) return _rolavel(_estadoVazio());
+
+    return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+      itemCount: _comandas.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      itemBuilder: (_, i) => CartaoComanda(
+        comanda: _comandas[i],
+        aoTocar: () => _abrirDetalhe(_comandas[i]),
+      ),
+    );
   }
+
+  /// Mantém o conteúdo rolável mesmo quando cabe na tela — sem isso o
+  /// "puxar para atualizar" não funciona nos estados de erro e de vazio.
+  Widget _rolavel(Widget filho) => ListView(
+    physics: const AlwaysScrollableScrollPhysics(),
+    padding: const EdgeInsets.fromLTRB(16, 40, 16, 96),
+    children: [filho],
+  );
+
+  Widget _estadoErro() => AppEstadoVazio(
+    icone: Icons.cloud_off_rounded,
+    titulo: 'Não foi possível carregar',
+    mensagem: _erro!,
+    rotuloBotao: 'Tentar novamente',
+    iconeBotao: Icons.refresh_rounded,
+    aoTocarBotao: _carregar,
+  );
+
+  Widget _estadoVazio() => _filtro.vazio
+      ? AppEstadoVazio(
+          icone: Icons.receipt_long_outlined,
+          titulo: 'Nenhuma comanda aberta',
+          mensagem: 'Abra a primeira comanda para começar a vender.',
+          rotuloBotao: 'Nova comanda',
+          aoTocarBotao: _abrirNovaComanda,
+        )
+      : AppEstadoVazio(
+          icone: Icons.search_off_rounded,
+          titulo: 'Nada encontrado',
+          mensagem: 'Nenhuma comanda corresponde aos filtros aplicados.',
+          rotuloBotao: 'Limpar filtros',
+          iconeBotao: Icons.filter_alt_off_rounded,
+          secundario: true,
+          aoTocarBotao: () => _aplicarFiltro(const FiltroComandas()),
+        );
 }

@@ -1,17 +1,26 @@
-// lib/modules/cliente/page/cliente_page.dart
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/core/api_error.dart';
+import 'package:my_app_teste/core/dto/situacao_cadastro.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
-import 'package:my_app_teste/core/utils/telefone_formatter.dart';
 import 'package:my_app_teste/core/widgets/app_campo_busca.dart';
+import 'package:my_app_teste/core/widgets/app_carregando.dart';
+import 'package:my_app_teste/core/widgets/app_chip_filtro.dart';
+import 'package:my_app_teste/core/widgets/app_dialogo_confirmacao.dart';
 import 'package:my_app_teste/core/widgets/app_estado_vazio.dart';
-import 'package:my_app_teste/core/widgets/app_tag.dart';
-import '../dto/cliente_response.dart';
-import '../service/cliente_service.dart';
-import 'cliente_form_page.dart';
-import 'cliente_detalhe_page.dart';
+import 'package:my_app_teste/modules/cliente/dto/cliente_response.dart';
+import 'package:my_app_teste/modules/cliente/dto/filtro_clientes.dart';
+import 'package:my_app_teste/modules/cliente/page/cliente_detalhe_page.dart';
+import 'package:my_app_teste/modules/cliente/page/cliente_form_page.dart';
+import 'package:my_app_teste/modules/cliente/service/cliente_service.dart';
+import 'package:my_app_teste/modules/cliente/widgets/cartao_cliente.dart';
 
+/// Cadastro de clientes.
+///
+/// Cuida de estado, carga e navegação: o recorte vive em [FiltroClientes] e
+/// cada linha em [CartaoCliente].
+///
+/// Cliente não é excluído — é inativado e pode voltar (RNF08), porque todo
+/// pedido já feito aponta para ele.
 class ClientePage extends StatefulWidget {
   const ClientePage({super.key});
 
@@ -20,13 +29,12 @@ class ClientePage extends StatefulWidget {
 }
 
 class _ClientePageState extends State<ClientePage> {
-  final _controleBusca = TextEditingController();
-  List<ClienteResponse> _todos = [];
-  bool _carregando = true;
-  String _busca = '';
-  String _filtroStatus = 'TODOS';
+  final _busca = TextEditingController();
 
-  static const _statusOpcoes = <String>['TODOS', 'ATIVOS', 'INATIVOS'];
+  List<ClienteResponse> _clientes = [];
+  FiltroClientes _filtro = const FiltroClientes();
+  bool _carregando = true;
+  String? _erro;
 
   @override
   void initState() {
@@ -36,484 +44,256 @@ class _ClientePageState extends State<ClientePage> {
 
   @override
   void dispose() {
-    _controleBusca.dispose();
+    _busca.dispose();
     super.dispose();
   }
 
-  Future<void> _carregar() async {
-    setState(() => _carregando = true);
+  // ---------------------------------------------------------------------
+  // Dados
+  // ---------------------------------------------------------------------
+
+  Future<void> _carregar({bool mostrarCarregando = true}) async {
+    if (mostrarCarregando) {
+      setState(() {
+        _carregando = true;
+        _erro = null;
+      });
+    }
     try {
       final lista = await listarClientes();
-      if (!mounted) return;
-      setState(() => _todos = lista);
+      if (mounted) {
+        setState(() {
+          _clientes = lista;
+          _erro = null;
+        });
+      }
     } on ApiError catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao listar: ${e.message}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) setState(() => _erro = e.message);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _erro = 'Não foi possível carregar os clientes.');
+      }
     } finally {
       if (mounted) setState(() => _carregando = false);
     }
   }
 
-  List<ClienteResponse> get _filtrados {
-    final termo = _busca.trim().toLowerCase();
-    return _todos.where((c) {
-      final casaStatus =
-          _filtroStatus == 'TODOS' ||
-          (_filtroStatus == 'ATIVOS' && (c.ativo ?? true)) ||
-          (_filtroStatus == 'INATIVOS' && !(c.ativo ?? true));
-      final casaBusca =
-          termo.isEmpty ||
-          (c.nome ?? '').toLowerCase().contains(termo) ||
-          (c.telefone ?? '').contains(termo);
-      return casaStatus && casaBusca;
-    }).toList();
+  void _limparFiltros() {
+    _busca.clear();
+    setState(() => _filtro = const FiltroClientes());
   }
 
+  // ---------------------------------------------------------------------
+  // Ações
+  // ---------------------------------------------------------------------
+
   Future<void> _abrirFormulario({ClienteResponse? cliente}) async {
-    final resultado = await Navigator.push<bool>(
+    final salvou = await Navigator.push<bool>(
       context,
       MaterialPageRoute(builder: (_) => ClienteFormPage(cliente: cliente)),
     );
-    if (resultado == true && mounted) _carregar();
+    if (salvou == true && mounted) await _carregar();
   }
 
-  Future<bool> _confirmarInativacao(ClienteResponse c) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: const Row(
-          children: [
-            FaIcon(
-              FontAwesomeIcons.triangleExclamation,
-              color: AppTema.primaria,
-              size: 20,
-            ),
-            SizedBox(width: 10),
-            Text(
-              'Inativar cliente',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: AppTema.textoEscuro,
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          'Deseja inativar "${c.nome ?? 'este cliente'}"? '
-          'O histórico de pedidos será preservado.',
-          style: const TextStyle(color: AppTema.textoEscuro),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            style: TextButton.styleFrom(
-              foregroundColor: AppTema.textoSecundario,
-            ),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text('Inativar'),
-          ),
-        ],
-      ),
+  Future<void> _abrirDetalhe(ClienteResponse cliente) async {
+    final alterou = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => ClienteDetalhesPage(cliente: cliente)),
     );
-    return ok ?? false;
+    if (alterou == true && mounted) await _carregar();
   }
 
-  Future<bool> _confirmarReativacao(ClienteResponse c) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: const Row(
-          children: [
-            FaIcon(
-              FontAwesomeIcons.userCheck,
-              color: AppTema.primaria,
-              size: 20,
-            ),
-            SizedBox(width: 10),
-            Text(
-              'Ativar cliente',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: AppTema.textoEscuro,
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          'Deseja reativar "${c.nome ?? 'este cliente'}"?',
-          style: const TextStyle(color: AppTema.textoEscuro),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            style: TextButton.styleFrom(
-              foregroundColor: AppTema.textoSecundario,
-            ),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2E8B57),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text('Ativar'),
-          ),
-        ],
-      ),
-    );
-    return ok ?? false;
-  }
+  Future<bool> _confirmarInativacao(ClienteResponse c) async =>
+      await AppDialogoConfirmacao.mostrar(
+        context,
+        titulo: 'Inativar cliente',
+        mensagem:
+            'Deseja inativar "${c.nome ?? 'este cliente'}"? '
+            'O histórico de pedidos será preservado.',
+        rotuloConfirmar: 'Inativar',
+        tom: TomConfirmacao.destrutivo,
+      ) ??
+      false;
 
-  Future<bool> _reativar(ClienteResponse c) async {
-    if (c.id == null) return false;
-    try {
-      await reativarCliente(c.id!, c);
-      if (!mounted) return false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Cliente "${c.nome ?? ''}" reativado.'),
-          backgroundColor: const Color(0xFF2E8B57),
-        ),
-      );
-      return true;
-    } on ApiError catch (e) {
-      if (!mounted) return false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao reativar: ${e.message}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return false;
-    }
-  }
-
+  /// Inativa e devolve se deu certo — o `Dismissible` usa o retorno para
+  /// decidir se o card some ou volta ao lugar.
   Future<bool> _inativar(ClienteResponse c) async {
     if (c.id == null) return false;
     try {
       await inativarCliente(c.id!);
-      if (!mounted) return false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Cliente "${c.nome ?? ''}" inativado.'),
-          backgroundColor: const Color(0xFF2E8B57),
-        ),
-      );
+      _avisar('Cliente "${c.nome ?? ''}" inativado.', sucesso: true);
       return true;
     } on ApiError catch (e) {
-      if (!mounted) return false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao inativar: ${e.message}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _avisar('Erro ao inativar: ${e.message}');
       return false;
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTema.fundo,
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppTema.primaria,
-        foregroundColor: Colors.white,
-        onPressed: () => _abrirFormulario(),
-        child: const Icon(Icons.add),
-      ),
-      body: Column(
-        children: [
-          _construirBusca(),
-          Expanded(
-            child: _carregando
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppTema.primaria),
-                  )
-                : _filtrados.isEmpty
-                ? AppEstadoVazio(
-                    icone: Icons.people_outline,
-                    mensagem: _busca.isEmpty && _filtroStatus == 'TODOS'
-                        ? 'Nenhum cliente cadastrado'
-                        : 'Nenhum resultado para a busca',
-                  )
-                : RefreshIndicator(
-                    color: AppTema.primaria,
-                    onRefresh: _carregar,
-                    child: ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
-                      itemCount: _filtrados.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
-                      itemBuilder: (_, i) => _construirCartao(_filtrados[i]),
-                    ),
-                  ),
-          ),
-        ],
+  Future<void> _reativar(ClienteResponse c) async {
+    if (c.id == null) return;
+    final confirmou =
+        await AppDialogoConfirmacao.mostrar(
+          context,
+          titulo: 'Ativar cliente',
+          mensagem: 'Deseja reativar "${c.nome ?? 'este cliente'}"?',
+          rotuloConfirmar: 'Ativar',
+          tom: TomConfirmacao.positivo,
+        ) ??
+        false;
+    if (!confirmou) return;
+
+    try {
+      await reativarCliente(c.id!, c);
+      _avisar('Cliente "${c.nome ?? ''}" reativado.', sucesso: true);
+      await _carregar();
+    } on ApiError catch (e) {
+      _avisar('Erro ao reativar: ${e.message}');
+    }
+  }
+
+  /// Caminho do menu de 3 pontos: confirma, inativa e recarrega. O do
+  /// arrastar é separado porque o `Dismissible` já tira o card da lista.
+  Future<void> _inativarPeloMenu(ClienteResponse c) async {
+    if (!await _confirmarInativacao(c)) return;
+    if (await _inativar(c) && mounted) await _carregar();
+  }
+
+  void _avisar(String mensagem, {bool sucesso = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensagem),
+        backgroundColor: sucesso ? AppTema.sucesso : AppTema.erro,
       ),
     );
   }
 
-  Widget _construirBusca() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+  // ---------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: AppTema.fundo,
+    floatingActionButton: FloatingActionButton(
+      backgroundColor: AppTema.primaria,
+      foregroundColor: Colors.white,
+      shape: const CircleBorder(),
+      onPressed: _abrirFormulario,
+      child: const Icon(Icons.add_rounded),
+    ),
+    body: SafeArea(
       child: Column(
         children: [
-          AppCampoBusca(
-            controle: _controleBusca,
-            dica: 'Buscar por nome ou telefone...',
-            aoMudar: (v) => setState(() => _busca = v),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 36,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: _statusOpcoes.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (_, i) {
-                final opcao = _statusOpcoes[i];
-                final selecionado = _filtroStatus == opcao;
-                return ChoiceChip(
-                  label: Text(opcao),
-                  selected: selecionado,
-                  onSelected: (_) => setState(() => _filtroStatus = opcao),
-                  selectedColor: AppTema.primaria,
-                  backgroundColor: Colors.white,
-                  labelStyle: TextStyle(
-                    color: selecionado ? Colors.white : AppTema.textoEscuro,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  side: const BorderSide(color: AppTema.bordaCampo),
-                );
-              },
+          _filtros(),
+          Expanded(
+            child: RefreshIndicator(
+              color: AppTema.primaria,
+              onRefresh: () => _carregar(mostrarCarregando: false),
+              child: _corpo(),
             ),
           ),
         ],
       ),
+    ),
+  );
+
+  Widget _filtros() => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+    child: Column(
+      children: [
+        AppCampoBusca(
+          controle: _busca,
+          dica: 'Buscar por nome ou telefone…',
+          aoMudar: (v) => setState(() => _filtro = _filtro.copiarCom(texto: v)),
+        ),
+        const SizedBox(height: 10),
+        AppFileiraChips(
+          recuoLateral: 0,
+          chips: [
+            for (final situacao in SituacaoCadastro.values)
+              AppChipFiltro(
+                rotulo: situacao.rotulo,
+                selecionado: _filtro.situacao == situacao,
+                aoTocar: () => setState(
+                  () => _filtro = _filtro.copiarCom(situacao: situacao),
+                ),
+              ),
+          ],
+        ),
+      ],
+    ),
+  );
+
+  Widget _corpo() {
+    if (_carregando) return const AppCarregando();
+    if (_erro != null) {
+      return _rolavel(
+        AppEstadoVazio(
+          icone: Icons.cloud_off_rounded,
+          titulo: 'Não foi possível carregar',
+          mensagem: _erro!,
+          rotuloBotao: 'Tentar novamente',
+          iconeBotao: Icons.refresh_rounded,
+          aoTocarBotao: _carregar,
+        ),
+      );
+    }
+
+    final filtrados = _filtro.aplicar(_clientes);
+    if (filtrados.isEmpty) {
+      return _rolavel(
+        _filtro.vazio
+            ? AppEstadoVazio(
+                icone: Icons.people_outline_rounded,
+                titulo: 'Nenhum cliente cadastrado',
+                mensagem:
+                    'O telefone do cliente identifica todo pedido. '
+                    'Cadastre o primeiro para começar a vender.',
+                rotuloBotao: 'Novo cliente',
+                aoTocarBotao: _abrirFormulario,
+              )
+            : AppEstadoVazio(
+                icone: Icons.search_off_rounded,
+                titulo: 'Nada encontrado',
+                mensagem: 'Nenhum cliente corresponde aos filtros aplicados.',
+                rotuloBotao: 'Limpar filtros',
+                iconeBotao: Icons.filter_alt_off_rounded,
+                secundario: true,
+                aoTocarBotao: _limparFiltros,
+              ),
+      );
+    }
+
+    return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
+      itemCount: filtrados.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      itemBuilder: (_, i) {
+        final cliente = filtrados[i];
+        return CartaoCliente(
+          cliente: cliente,
+          aoAbrir: () => _abrirDetalhe(cliente),
+          aoEditar: () => _abrirFormulario(cliente: cliente),
+          aoInativar: () => _inativarPeloMenu(cliente),
+          aoReativar: () => _reativar(cliente),
+          aoConfirmarArrastar: () async {
+            if (!await _confirmarInativacao(cliente)) return false;
+            final ok = await _inativar(cliente);
+            if (ok && mounted) await _carregar();
+            return ok;
+          },
+        );
+      },
     );
   }
 
-  Widget _construirCartao(ClienteResponse c) {
-    final isAtivo = c.ativo ?? true;
-    return Dismissible(
-      key: ValueKey('cliente_${c.id ?? c.telefone ?? c.nome}'),
-      direction: isAtivo ? DismissDirection.endToStart : DismissDirection.none,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: BoxDecoration(
-          color: Colors.red.shade600,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Text(
-              'Inativar',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
-              ),
-            ),
-            SizedBox(width: 8),
-            FaIcon(FontAwesomeIcons.userSlash, color: Colors.white, size: 18),
-          ],
-        ),
-      ),
-      confirmDismiss: (_) async {
-        final confirmou = await _confirmarInativacao(c);
-        if (!confirmou) return false;
-        return _inativar(c);
-      },
-      onDismissed: (_) => _carregar(),
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () async {
-            final result = await Navigator.push<bool>(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ClienteDetalhesPage(cliente: c),
-              ),
-            );
-            if (result == true && mounted) _carregar();
-          },
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppTema.bordaCampo),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 22,
-                  backgroundColor: AppTema.fundoDica,
-                  child: Text(
-                    ((c.nome?.trim().isNotEmpty ?? false)
-                            ? c.nome!.trim().characters.first
-                            : '?')
-                        .toUpperCase(),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: AppTema.primaria,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        c.nome ?? 'Sem nome',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppTema.textoEscuro,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        c.telefone?.isNotEmpty == true
-                            ? TelefoneFormatter.formatar(c.telefone)
-                            : 'Telefone não informado',
-                        style: const TextStyle(
-                          color: AppTema.textoSecundario,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          if (c.email != null && c.email!.isNotEmpty)
-                            AppTag(c.email!),
-                          if (!isAtivo) ...[
-                            const SizedBox(width: 6),
-                            AppTag(
-                              'Inativo',
-                              fundo: Colors.red.shade100,
-                              cor: Colors.red.shade800,
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                PopupMenuButton<String>(
-                  icon: const FaIcon(
-                    FontAwesomeIcons.ellipsisVertical,
-                    size: 16,
-                    color: AppTema.primariaEscura,
-                  ),
-                  color: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  onSelected: (opcao) async {
-                    if (opcao == 'editar') {
-                      await _abrirFormulario(cliente: c);
-                    } else if (opcao == 'inativar') {
-                      final confirmou = await _confirmarInativacao(c);
-                      if (confirmou) {
-                        await _inativar(c);
-                        if (mounted) _carregar();
-                      }
-                    } else if (opcao == 'ativar') {
-                      final confirmou = await _confirmarReativacao(c);
-                      if (confirmou) {
-                        await _reativar(c);
-                        if (mounted) _carregar();
-                      }
-                    }
-                  },
-                  itemBuilder: (_) => [
-                    const PopupMenuItem(
-                      value: 'editar',
-                      child: Row(
-                        children: [
-                          FaIcon(
-                            FontAwesomeIcons.penToSquare,
-                            size: 14,
-                            color: AppTema.primariaEscura,
-                          ),
-                          SizedBox(width: 10),
-                          Text(
-                            'Editar',
-                            style: TextStyle(color: AppTema.textoEscuro),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (isAtivo)
-                      PopupMenuItem(
-                        value: 'inativar',
-                        child: Row(
-                          children: [
-                            FaIcon(
-                              FontAwesomeIcons.userSlash,
-                              size: 14,
-                              color: Colors.red.shade600,
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              'Inativar',
-                              style: TextStyle(color: Colors.red.shade600),
-                            ),
-                          ],
-                        ),
-                      )
-                    else
-                      PopupMenuItem(
-                        value: 'ativar',
-                        child: Row(
-                          children: [
-                            FaIcon(
-                              FontAwesomeIcons.userCheck,
-                              size: 14,
-                              color: Colors.green.shade700,
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              'Ativar',
-                              style: TextStyle(color: Colors.green.shade700),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  /// Mantém o conteúdo rolável mesmo quando cabe na tela — sem isso o
+  /// "puxar para atualizar" não funciona nos estados de erro e de vazio.
+  Widget _rolavel(Widget filho) => ListView(
+    physics: const AlwaysScrollableScrollPhysics(),
+    padding: const EdgeInsets.fromLTRB(16, 40, 16, 90),
+    children: [filho],
+  );
 }

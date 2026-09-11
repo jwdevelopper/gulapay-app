@@ -8,7 +8,10 @@ import '../dto/cliente_update_request.dart';
 
 final _dio = ApiClient.dio;
 
-Future<List<ClienteResponse>> listarClientes({bool apenasAtivos = false, String? telefone}) async {
+Future<List<ClienteResponse>> listarClientes({
+  bool apenasAtivos = false,
+  String? telefone,
+}) async {
   try {
     final queryParameters = <String, dynamic>{'apenasAtivos': apenasAtivos};
     if (telefone != null && telefone.trim().isNotEmpty) {
@@ -40,7 +43,10 @@ Future<ClienteResponse> criarCliente(ClienteCreateRequest dados) async {
 }
 
 // Editar cliente
-Future<ClienteResponse> editarCliente(int id, ClienteUpdateRequest dados) async {
+Future<ClienteResponse> editarCliente(
+  int id,
+  ClienteUpdateRequest dados,
+) async {
   try {
     final response = await _dio.put(
       '${ConstantsApi.urlClientes}/$id',

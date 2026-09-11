@@ -34,7 +34,10 @@ class LoteService {
 
       final dados = resposta.data;
       if (dados is List) {
-        return dados.cast<Map<String, dynamic>>().map(LoteResponse.fromJson).toList();
+        return dados
+            .cast<Map<String, dynamic>>()
+            .map(LoteResponse.fromJson)
+            .toList();
       }
       if (dados is Map && dados['data'] is List) {
         return (dados['data'] as List)
@@ -51,7 +54,9 @@ class LoteService {
   Future<LoteResponse> buscarPorId(int id) async {
     try {
       final resposta = await _dio.get('${ConstantsApi.urlLotes}/$id');
-      return LoteResponse.fromJson(Map<String, dynamic>.from(resposta.data as Map));
+      return LoteResponse.fromJson(
+        Map<String, dynamic>.from(resposta.data as Map),
+      );
     } on DioException catch (e) {
       throw ApiError.fromDioException(e);
     }
@@ -63,7 +68,9 @@ class LoteService {
         '${ConstantsApi.urlLotes}/$id',
         data: update.toJson(),
       );
-      return LoteResponse.fromJson(Map<String, dynamic>.from(resposta.data as Map));
+      return LoteResponse.fromJson(
+        Map<String, dynamic>.from(resposta.data as Map),
+      );
     } on DioException catch (e) {
       throw ApiError.fromDioException(e);
     }
@@ -75,7 +82,9 @@ class LoteService {
         '${ConstantsApi.urlLotes}/$id',
         data: patch.toJson(),
       );
-      return LoteResponse.fromJson(Map<String, dynamic>.from(resposta.data as Map));
+      return LoteResponse.fromJson(
+        Map<String, dynamic>.from(resposta.data as Map),
+      );
     } on DioException catch (e) {
       throw ApiError.fromDioException(e);
     }

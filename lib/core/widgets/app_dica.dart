@@ -12,7 +12,7 @@ class AppDica extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppTema.fundoDica,
+        color: AppTema.avisoFundo,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
@@ -23,8 +23,10 @@ class AppDica extends StatelessWidget {
           Expanded(
             child: Text(
               texto,
-              style:
-                  const TextStyle(color: AppTema.textoSecundario, fontSize: 13),
+              style: const TextStyle(
+                color: AppTema.textoSecundario,
+                fontSize: 13,
+              ),
             ),
           ),
         ],

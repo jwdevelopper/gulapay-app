@@ -10,8 +10,8 @@ class UnidadeMedidaUpdateRequest {
   });
 
   Map<String, dynamic> toJson() => {
-        'nome': nome,
-        'simbolo': simbolo,
-        'ativo': ativo,
-      };
+    'nome': nome,
+    'simbolo': simbolo,
+    'ativo': ativo,
+  };
 }

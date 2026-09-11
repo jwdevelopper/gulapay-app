@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/core/widgets/app_cartao_deslizavel.dart';
-
 
 /// Envolve o conteúdo visual do card de produto com a interação de swipe-to-delete
 /// no padrão da tela de Usuário: [Dismissible] com background vermelho + ícone de
@@ -35,7 +34,7 @@ class ProdutoCardContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final card = Material(
-      color: PaletaApp.surface,
+      color: AppTema.superficie,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onTap,
@@ -44,12 +43,12 @@ class ProdutoCardContainer extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: PaletaApp.surface,
+            color: AppTema.superficie,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: PaletaApp.border),
+            border: Border.all(color: AppTema.borda),
             boxShadow: const [
               BoxShadow(
-                color: PaletaApp.shadow,
+                color: AppTema.sombra,
                 blurRadius: 14,
                 offset: Offset(0, 6),
               ),

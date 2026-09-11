@@ -37,18 +37,18 @@ class AppMenuAcoes extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final corExcluir = Colors.red.shade600;
+    final corExcluir = AppTema.erro;
 
     return PopupMenuButton<String>(
       tooltip: tooltip,
       padding: EdgeInsets.zero,
       offset: const Offset(0, 8),
-      color: AppTema.cartao,
+      color: AppTema.superficie,
       surfaceTintColor: Colors.transparent,
       elevation: 10,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppTema.bordaCampo),
+        side: const BorderSide(color: AppTema.borda),
       ),
       constraints: const BoxConstraints(minWidth: 176),
       onSelected: (value) {
@@ -66,16 +66,9 @@ class AppMenuAcoes extends StatelessWidget {
           value: 'editar',
           child: Row(
             children: [
-              const Icon(
-                Icons.edit_rounded,
-                size: 18,
-                color: AppTema.textoEscuro,
-              ),
+              const Icon(Icons.edit_rounded, size: 18, color: AppTema.texto),
               const SizedBox(width: 12),
-              Text(
-                rotuloEditar,
-                style: const TextStyle(color: AppTema.textoEscuro),
-              ),
+              Text(rotuloEditar, style: const TextStyle(color: AppTema.texto)),
             ],
           ),
         ),
@@ -83,11 +76,7 @@ class AppMenuAcoes extends StatelessWidget {
           value: 'excluir',
           child: Row(
             children: [
-              Icon(
-                Icons.delete_outline_rounded,
-                size: 18,
-                color: corExcluir,
-              ),
+              Icon(Icons.delete_outline_rounded, size: 18, color: corExcluir),
               const SizedBox(width: 12),
               Text(
                 rotuloExcluir,

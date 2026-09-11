@@ -1,39 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:my_app_teste/core/api_client.dart';
 import 'package:my_app_teste/core/auth_session.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
-import 'package:my_app_teste/modules/categoria/page/categoria_page.dart';
-import 'package:my_app_teste/modules/cliente/page/cliente_page.dart';
-import 'package:my_app_teste/modules/dashboard/page/dashboard_page.dart';
-import 'package:my_app_teste/modules/entregador/page/entregador_page.dart';
+import 'package:my_app_teste/core/widgets/app_dialogo_confirmacao.dart';
+import 'package:my_app_teste/modules/home/dto/aba_principal.dart';
+import 'package:my_app_teste/modules/home/dto/abas_home.dart';
+import 'package:my_app_teste/modules/home/widgets/barra_inferior_home.dart';
+import 'package:my_app_teste/modules/home/widgets/folha_notificacoes.dart';
+import 'package:my_app_teste/modules/home/widgets/menu_lateral.dart';
 import 'package:my_app_teste/modules/login/page/login_page.dart';
-import 'package:my_app_teste/modules/mesa/page/mesa_page.dart';
-import 'package:my_app_teste/modules/movimentacao_estoque/page/estoque_page.dart';
-import 'package:my_app_teste/modules/comanda/page/comandas_page.dart';
-import 'package:my_app_teste/modules/produto/page/produto_page.dart';
-import 'package:my_app_teste/modules/unidade_medida/page/unidade_medida_page.dart';
-import 'package:my_app_teste/modules/usuario/page/usuario_list_page.dart';
-import 'package:my_app_teste/modules/insumo/pages/insumos_list_page.dart';
-import 'package:my_app_teste/modules/lote/page/lotes_page.dart';
-import 'package:my_app_teste/modules/pedidos/page/pedidos_page.dart';
 
-class _AbaPrincipal {
-  final String tituloAppBar;
-  final String rotuloInferior;
-  final IconData icone;
-  final Widget pagina;
-  final bool apenasAdmin;
-
-  const _AbaPrincipal({
-    required this.tituloAppBar,
-    required this.rotuloInferior,
-    required this.icone,
-    required this.pagina,
-    this.apenasAdmin = false,
-  });
-}
-
+/// Casca do app: AppBar, menu lateral, barra inferior e a aba aberta.
+///
+/// Cuida apenas da navegação entre abas. O catálogo de telas vive em
+/// [construirAbas], e cada peça da casca em `widgets/`.
+///
+/// As páginas ficam num `IndexedStack`: todas montadas, só uma visível.
+/// É o que preserva o estado de cada aba — a busca digitada em Produtos
+/// continua lá depois de passar por Mesas e voltar.
 class Home extends StatefulWidget {
   const Home({super.key});
 
@@ -42,108 +26,20 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final _chaveScaffold = GlobalKey<ScaffoldState>();
 
-  int _indiceSelecionado = 0; // Índice lógico da página atual
-  int _indiceVisualNavBar = 0; // Índice visual apenas para a NavBar (bolha)
-  
+  late final List<AbaPrincipal> _todasAbas = construirAbas(
+    aoAbrirAba: _abrirAbaPeloTitulo,
+  );
+
+  /// Índice da aba aberta, dentro de [_abasVisiveis].
+  int _indiceAba = 0;
+
+  /// Posição da bolha na barra inferior. Não acompanha [_indiceAba]: quando
+  /// a aba aberta não está na barra, a bolha fica sobre o botão "Mais".
+  int _indiceBolha = 0;
+
   bool _ehAdministrador = false;
-
-  late final List<_AbaPrincipal> _todasAbas = [
-    _AbaPrincipal(
-      tituloAppBar: 'Início',
-      rotuloInferior: 'Início',
-      icone: Icons.home_outlined,
-      pagina: DashboardPage(
-        onNavegarParaAba: (indice) {
-          setState(() => _indiceSelecionado = indice);
-        },
-      ),
-    ),
-    const _AbaPrincipal(
-      tituloAppBar: 'Mesas',
-      rotuloInferior: 'Mesas',
-      icone: Icons.grid_view_outlined,
-      pagina: MesaPage(),
-    ),
-    const _AbaPrincipal(
-      tituloAppBar: 'Produtos',
-      rotuloInferior: 'Produtos',
-      icone: Icons.shopping_bag_outlined,
-      pagina: ProdutoPage(),
-    ),
-    const _AbaPrincipal(
-      tituloAppBar: 'Comandas',
-      rotuloInferior: 'Comandas',
-      icone: Icons.receipt_long_outlined,
-      pagina: ComandasPage(),
-    ),
-    const _AbaPrincipal(
-      tituloAppBar: 'Pedidos',
-      rotuloInferior: 'Pedidos',
-      icone: Icons.receipt_long_outlined,
-      pagina: PedidosPagina(),
-    ),
-    const _AbaPrincipal(
-      tituloAppBar: 'Estoque',
-      rotuloInferior: 'Estoque',
-      icone: Icons.inventory_2_outlined,
-      pagina: EstoquePage(),
-    ),
-    const _AbaPrincipal(
-      tituloAppBar: 'Categorias',
-      rotuloInferior: 'Categorias',
-      icone: Icons.category_outlined,
-      pagina: CategoriaPage(),
-    ),
-    const _AbaPrincipal(
-      tituloAppBar: 'Clientes',
-      rotuloInferior: 'Clientes',
-      icone: Icons.groups_outlined,
-      pagina: ClientePage(),
-    ),
-    const _AbaPrincipal(
-      tituloAppBar: 'Insumos',
-      rotuloInferior: 'Insumos',
-      icone: Icons.local_grocery_store_outlined,
-      pagina: InsumosListPage(),
-    ),
-    const _AbaPrincipal(
-      tituloAppBar: 'Lotes',
-      rotuloInferior: 'Lotes',
-      icone: Icons.layers_outlined,
-      pagina: LotesPage(),
-    ),
-    const _AbaPrincipal(
-      tituloAppBar: 'Unidades de Medida',
-      rotuloInferior: 'Unidades',
-      icone: Icons.straighten_outlined,
-      pagina: UnidadeMedidaPage(),
-    ),
-    const _AbaPrincipal(
-      tituloAppBar: 'Entregadores',
-      rotuloInferior: 'Entregas',
-      icone: Icons.delivery_dining_outlined,
-      pagina: EntregadorPage(),
-    ),
-    const _AbaPrincipal(
-      tituloAppBar: 'Usuários',
-      rotuloInferior: 'Equipe',
-      icone: Icons.people_outline,
-      pagina: UsuarioListaPagina(),
-      apenasAdmin: true,
-    ),
-  ];
-
-  List<_AbaPrincipal> get _abasVisiveis =>
-      _todasAbas.where((aba) => !aba.apenasAdmin || _ehAdministrador).toList();
-
-  List<_AbaPrincipal> get _abasNavBar => _abasVisiveis.where((aba) {
-    return aba.rotuloInferior == 'Início' ||
-        aba.rotuloInferior == 'Mesas' ||
-        aba.rotuloInferior == 'Pedidos' ||
-        aba.rotuloInferior == 'Clientes';
-  }).toList();
 
   @override
   void initState() {
@@ -151,107 +47,76 @@ class _HomeState extends State<Home> {
     _carregarPerfil();
   }
 
+  // ---------------------------------------------------------------------
+  // Abas
+  // ---------------------------------------------------------------------
+
+  List<AbaPrincipal> get _abasVisiveis =>
+      _todasAbas.where((aba) => !aba.apenasAdmin || _ehAdministrador).toList();
+
+  List<AbaPrincipal> get _abasDaBarra =>
+      _abasVisiveis.where((aba) => aba.fixaNaBarra).toList();
+
   Future<void> _carregarPerfil() async {
     final admin = await SessaoAutenticacao.ehAdministrador();
     if (!mounted) return;
     setState(() {
       _ehAdministrador = admin;
-      if (_indiceSelecionado >= _abasVisiveis.length) {
-        _indiceSelecionado = 0;
-      }
-      _sincronizarNavBar();
+      // A lista de abas encolhe para quem não é admin; se a aba aberta caiu
+      // fora dela, volta para o início.
+      if (_indiceAba >= _abasVisiveis.length) _indiceAba = 0;
+      _sincronizarBolha();
     });
   }
 
-  // Função central para alinhar a posição da bolha com a página que está aberta
-  void _sincronizarNavBar() {
-    final abaAtual = _abasVisiveis[_indiceSelecionado];
-    int navIndex = _abasNavBar.indexOf(abaAtual);
-    
-    if (navIndex == -1) {
-      // Se a página selecionada não estiver na NavBar, coloca a bolha no botão "Mais"
-      navIndex = _abasNavBar.length;
-    }
-    _indiceVisualNavBar = navIndex;
+  /// Alinha a bolha da barra com a aba aberta.
+  void _sincronizarBolha() {
+    final atual = _abasVisiveis[_indiceAba];
+    final naBarra = _abasDaBarra.indexOf(atual);
+    // Fora da barra, a bolha descansa sobre o "Mais" — a última posição.
+    _indiceBolha = naBarra == -1 ? _abasDaBarra.length : naBarra;
   }
 
-  void _aoTocarAba(int indice) {
-    final aba = _abasNavBar[indice];
-    final indiceCompleto = _abasVisiveis.indexOf(aba);
-    if (indiceCompleto >= 0) {
-      setState(() {
-        _indiceSelecionado = indiceCompleto;
-        _indiceVisualNavBar = indice;
-      });
-    }
-  }
-
-  void _selecionarPeloMenu(int indice) {
-    Navigator.pop(context);
+  /// Abre uma aba pelo índice em [_abasVisiveis].
+  void _irParaAba(int indice) {
+    if (indice < 0 || indice >= _abasVisiveis.length) return;
     setState(() {
-      _indiceSelecionado = indice;
-      _sincronizarNavBar(); // Atualiza a posição da bolha baseado na nova seleção
+      _indiceAba = indice;
+      _sincronizarBolha();
     });
   }
 
-  Widget _construirMenuLateral(List<_AbaPrincipal> abas) {
-    final selecionado = _indiceSelecionado.clamp(0, abas.length - 1);
-    return Drawer(
-      backgroundColor: AppTema.fundo,
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          const DrawerHeader(
-            decoration: BoxDecoration(color: AppTema.primaria),
-            child: Align(
-              alignment: Alignment.bottomLeft,
-              child: Text(
-                'Menu',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-          for (var i = 0; i < abas.length; i++)
-            ListTile(
-              leading: Icon(abas[i].icone),
-              title: Text(abas[i].tituloAppBar),
-              selected: i == selecionado,
-              selectedColor: AppTema.primariaEscura,
-              iconColor: AppTema.textoSecundario,
-              textColor: AppTema.textoEscuro,
-              selectedTileColor: AppTema.fundoDica,
-              onTap: () => _selecionarPeloMenu(i),
-            ),
-        ],
-      ),
-    );
+  /// Abre uma aba pelo título (ver [TitulosAba]). Ignora um título que não
+  /// está visível ao perfil atual.
+  void _abrirAbaPeloTitulo(String titulo) {
+    final indice = indiceDaAba(_abasVisiveis, titulo);
+    if (indice >= 0) _irParaAba(indice);
   }
 
-  Future<void> _confirmarLogout() async {
-    final sair = await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Sair'),
-          content: const Text('Deseja encerrar a sessão?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Sair'),
-            ),
-          ],
-        );
-      },
+  void _aoTocarNaBarra(int indiceNaBarra) {
+    final aba = _abasDaBarra[indiceNaBarra];
+    _irParaAba(_abasVisiveis.indexOf(aba));
+  }
+
+  void _aoSelecionarNoMenu(int indice) {
+    Navigator.pop(context);
+    _irParaAba(indice);
+  }
+
+  // ---------------------------------------------------------------------
+  // Sessão
+  // ---------------------------------------------------------------------
+
+  Future<void> _confirmarSaida() async {
+    final sair = await AppDialogoConfirmacao.mostrar(
+      context,
+      titulo: 'Sair',
+      mensagem: 'Deseja encerrar a sessão?',
+      rotuloConfirmar: 'Sair',
+      icone: Icons.logout_rounded,
     );
     if (sair != true || !mounted) return;
+
     await ApiClient.removerToken();
     if (!mounted) return;
     Navigator.pushReplacement(
@@ -260,137 +125,70 @@ class _HomeState extends State<Home> {
     );
   }
 
-  void _abrirNotificacoes() {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppTema.cartao,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Notificações',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppTema.textoEscuro,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Nenhuma notificação no momento.',
-                  style: TextStyle(
-                    color: AppTema.textoSecundario,
-                    fontSize: 15,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
+  // ---------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
-    final abasDrawer = _abasVisiveis;
-    final abasNavBar = _abasNavBar;
-
-    final abaAtual = _indiceSelecionado < abasDrawer.length
-        ? abasDrawer[_indiceSelecionado]
-        : abasDrawer.first;
+    final abas = _abasVisiveis;
+    final indice = _indiceAba.clamp(0, abas.length - 1);
 
     return Scaffold(
-      key: _scaffoldKey, 
-      onDrawerChanged: (isOpened) {
-        // Se o usuário fechar o menu clicando fora, retornamos a bolha para o lugar correto
-        if (!isOpened) {
-          setState(() {
-            _sincronizarNavBar();
-          });
-        }
-      },
+      key: _chaveScaffold,
       backgroundColor: AppTema.fundo,
-      drawer: _construirMenuLateral(abasDrawer),
-      appBar: AppBar(
-        title: Text(
-          abaAtual.tituloAppBar,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: AppTema.textoEscuro,
-          ),
-        ),
-        backgroundColor: AppTema.fundo,
-        foregroundColor: AppTema.textoEscuro,
-        iconTheme: const IconThemeData(color: AppTema.primariaEscura),
-        elevation: 0,
-        actions: [
-          IconButton(
-            tooltip: 'Notificações',
-            onPressed: _abrirNotificacoes,
-            icon: const Icon(Icons.notifications_outlined),
-          ),
-          IconButton(
-            tooltip: 'Sair',
-            onPressed: _confirmarLogout,
-            icon: const Icon(Icons.logout_rounded),
-          ),
-          const SizedBox(width: 4),
-        ],
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(1),
-          child: Divider(height: 1, color: AppTema.bordaCampo),
-        ),
+      // Fechar o menu tocando fora não escolhe aba nenhuma: a bolha volta
+      // para onde estava.
+      onDrawerChanged: (aberto) {
+        if (!aberto) setState(_sincronizarBolha);
+      },
+      drawer: MenuLateralHome(
+        abas: abas,
+        selecionado: indice,
+        aoSelecionar: _aoSelecionarNoMenu,
       ),
+      appBar: _appBar(abas[indice].tituloAppBar),
       body: IndexedStack(
-        index: _indiceSelecionado.clamp(0, abasDrawer.length - 1),
-        children: abasDrawer.map((a) => a.pagina).toList(),
+        index: indice,
+        children: [for (final aba in abas) aba.pagina],
       ),
-
-      bottomNavigationBar: CurvedNavigationBar(
-        height: 65, 
-        index: _indiceVisualNavBar, 
-        backgroundColor: AppTema.fundo,
-        color: Color.lerp(AppTema.fundo, Colors.black, 0.08)!,
-        buttonBackgroundColor: AppTema.primaria,
-        animationDuration: const Duration(milliseconds: 300),
-        animationCurve: Curves.easeInOut,
-
-        items: [
-          ...abasNavBar.map((aba) {
-            final bool isSelected = abasNavBar.indexOf(aba) == _indiceVisualNavBar;
-            return Icon(
-              aba.icone,
-              size: 30,
-              color: isSelected ? Colors.white : AppTema.textoSecundario,
-            );
-          }),
-          
-          Icon(
-            Icons.more_horiz,
-            size: 30,
-            color: _indiceVisualNavBar == abasNavBar.length ? Colors.white : AppTema.textoSecundario,
-          ),
-        ],
-        
-        onTap: (index) {
-          if (index < abasNavBar.length) {
-            _aoTocarAba(index);
-          } else {
-            setState(() {
-              _indiceVisualNavBar = index;
-            });
-            _scaffoldKey.currentState?.openDrawer();
-          }
+      bottomNavigationBar: BarraInferiorHome(
+        abas: _abasDaBarra,
+        indiceVisual: _indiceBolha,
+        aoTocarAba: _aoTocarNaBarra,
+        aoTocarMais: () {
+          setState(() => _indiceBolha = _abasDaBarra.length);
+          _chaveScaffold.currentState?.openDrawer();
         },
       ),
     );
   }
+
+  PreferredSizeWidget _appBar(String titulo) => AppBar(
+    title: Text(
+      titulo,
+      style: const TextStyle(fontWeight: FontWeight.bold, color: AppTema.texto),
+    ),
+    backgroundColor: AppTema.fundo,
+    foregroundColor: AppTema.texto,
+    iconTheme: const IconThemeData(color: AppTema.primariaEscura),
+    elevation: 0,
+    actions: [
+      IconButton(
+        tooltip: 'Notificações',
+        onPressed: () => abrirFolhaNotificacoes(context),
+        icon: const Icon(Icons.notifications_outlined),
+      ),
+      IconButton(
+        tooltip: 'Sair',
+        onPressed: _confirmarSaida,
+        icon: const Icon(Icons.logout_rounded),
+      ),
+      const SizedBox(width: 4),
+    ],
+    bottom: const PreferredSize(
+      preferredSize: Size.fromHeight(1),
+      child: Divider(height: 1, color: AppTema.borda),
+    ),
+  );
 }

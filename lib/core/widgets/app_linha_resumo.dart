@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
 
 /// Linha "rótulo à esquerda, valor à direita" dos cartões de resumo.
 ///
@@ -19,7 +19,7 @@ class AppLinhaResumo extends StatelessWidget {
         Text(
           rotulo,
           style: const TextStyle(
-            color: PaletaApp.textMuted,
+            color: AppTema.textoSecundario,
             fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
@@ -30,7 +30,7 @@ class AppLinhaResumo extends StatelessWidget {
             valor,
             textAlign: TextAlign.right,
             style: const TextStyle(
-              color: PaletaApp.text,
+              color: AppTema.texto,
               fontSize: 13,
               fontWeight: FontWeight.w700,
             ),

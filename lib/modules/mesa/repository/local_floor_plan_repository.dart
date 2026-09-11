@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:my_app_teste/modules/mesa/model/restaurant_models.dart';
+import 'package:my_app_teste/modules/mesa/dto/restaurant_models.dart';
 
 class LocalFloorPlanRepository {
   static const _storageKey = 'gulapay_floor_plan_v1';

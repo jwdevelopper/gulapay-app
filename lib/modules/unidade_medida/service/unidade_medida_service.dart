@@ -20,7 +20,8 @@ Future<List<UnidadeMedidaResponse>> listarUnidadesMedida() async {
 }
 
 Future<UnidadeMedidaResponse> criarUnidadeMedida(
-    UnidadeMedidaCreateRequest dados) async {
+  UnidadeMedidaCreateRequest dados,
+) async {
   try {
     final response = await _dio.post(
       ConstantsApi.urlUnidadesMedida,
@@ -33,7 +34,9 @@ Future<UnidadeMedidaResponse> criarUnidadeMedida(
 }
 
 Future<UnidadeMedidaResponse> editarUnidadeMedida(
-    int id, UnidadeMedidaUpdateRequest dados) async {
+  int id,
+  UnidadeMedidaUpdateRequest dados,
+) async {
   try {
     final response = await _dio.put(
       '${ConstantsApi.urlUnidadesMedida}/$id',
@@ -54,7 +57,9 @@ Future<void> inativarUnidadeMedida(int id) async {
 }
 
 Future<UnidadeMedidaResponse> reativarUnidadeMedida(
-    int id, UnidadeMedidaResponse dados) async {
+  int id,
+  UnidadeMedidaResponse dados,
+) async {
   final dto = UnidadeMedidaUpdateRequest(
     nome: dados.nome ?? '',
     simbolo: dados.simbolo ?? '',

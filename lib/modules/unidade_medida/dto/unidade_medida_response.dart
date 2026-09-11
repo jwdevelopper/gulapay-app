@@ -26,11 +26,11 @@ class UnidadeMedidaResponse {
       );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'nome': nome,
-        'simbolo': simbolo,
-        'tipoMedida': tipoMedida,
-        'fatorParaBase': fatorParaBase,
-        'ativo': ativo,
-      };
+    'id': id,
+    'nome': nome,
+    'simbolo': simbolo,
+    'tipoMedida': tipoMedida,
+    'fatorParaBase': fatorParaBase,
+    'ativo': ativo,
+  };
 }

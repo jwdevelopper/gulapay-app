@@ -11,7 +11,7 @@ class InsumoResponse {
   bool? ativo;
 
   InsumoResponse({
-    this.id, 
+    this.id,
     this.nome,
     this.unidadePadraoId,
     this.unidadePadraoSimbolo,
@@ -20,7 +20,7 @@ class InsumoResponse {
     this.estoqueMinimo,
     this.estoqueAtual,
     this.abaixoDoMinimo,
-    this.ativo
+    this.ativo,
   });
 
   factory InsumoResponse.fromJson(Map<String, dynamic> json) {
@@ -37,5 +37,4 @@ class InsumoResponse {
       ativo: json['ativo'],
     );
   }
-
 }

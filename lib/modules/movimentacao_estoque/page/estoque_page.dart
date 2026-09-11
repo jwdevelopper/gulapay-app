@@ -1,14 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/core/widgets/app_data.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/core/widgets/app_botao_icone.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
+import 'package:my_app_teste/core/widgets/app_campo_busca.dart';
+import 'package:my_app_teste/modules/movimentacao_estoque/dto/filtro_estoque.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/dto/insumo.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/dto/movimentacao_estoque.dart';
+import 'package:my_app_teste/modules/movimentacao_estoque/page/movimentacao_form_page.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/service/movimentacao_estoque_service.dart';
-import 'package:my_app_teste/modules/movimentacao_estoque/widgets/estoque_widgets.dart';
+import 'package:my_app_teste/modules/movimentacao_estoque/widgets/aba_historico.dart';
+import 'package:my_app_teste/modules/movimentacao_estoque/widgets/aba_saldos.dart';
+import 'package:my_app_teste/modules/movimentacao_estoque/widgets/abas_estoque.dart';
+import 'package:my_app_teste/modules/movimentacao_estoque/widgets/folha_filtros_estoque.dart';
+import 'package:my_app_teste/modules/movimentacao_estoque/widgets/tipo_filter_chips.dart';
 
-import 'movimentacao_form_page.dart';
-
+/// Tela de estoque, em duas abas: histórico de movimentações e saldos por
+/// insumo.
+///
+/// Esta classe cuida apenas de carregar os dados, guardar o filtro e a
+/// busca, e orquestrar as abas. A aparência vive em `widgets/` e as regras
+/// de filtragem em [FiltroEstoque].
 class EstoquePage extends StatefulWidget {
   const EstoquePage({super.key});
 
@@ -18,845 +28,134 @@ class EstoquePage extends StatefulWidget {
 
 class _EstoquePageState extends State<EstoquePage>
     with SingleTickerProviderStateMixin {
-  final MovimentacaoEstoqueService _service = MovimentacaoEstoqueService();
-  final TextEditingController _searchController = TextEditingController();
+  final _service = MovimentacaoEstoqueService();
+  final _controleBusca = TextEditingController();
 
-  late TabController _tabController;
+  late final TabController _abas;
 
   List<Insumo> _insumos = [];
-  List<MovimentacaoEstoque> _allMovimentacoes = [];
-  bool _loading = true;
-  String _selectedFilter = 'TUDO';
-  String _search = '';
-  int _tabIndex = 0;
-  int? _filterInsumoId;
-  DateTime? _filterDateFrom;
-  DateTime? _filterDateTo;
-
-  bool get _hasAdvancedFilters =>
-      _filterInsumoId != null || _filterDateFrom != null || _filterDateTo != null;
+  List<MovimentacaoEstoque> _movimentacoes = [];
+  bool _carregando = true;
+  String _busca = '';
+  int _abaAtual = 0;
+  FiltroEstoque _filtro = const FiltroEstoque();
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
-        setState(() => _tabIndex = _tabController.index);
-      }
-    });
-    _loadData();
+    _abas = TabController(length: 2, vsync: this)
+      ..addListener(() {
+        if (!_abas.indexIsChanging) {
+          setState(() => _abaAtual = _abas.index);
+        }
+      });
+    _carregar();
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
-    _searchController.dispose();
+    _abas.dispose();
+    _controleBusca.dispose();
     super.dispose();
   }
 
-  Future<void> _loadData() async {
-    setState(() => _loading = true);
+  // ---------------------------------------------------------------------
+  // Dados
+  // ---------------------------------------------------------------------
+
+  /// Carrega os insumos e, para cada um, seu histórico.
+  ///
+  /// A API não expõe um endpoint de "todas as movimentações", então a tela
+  /// consulta insumo a insumo. Uma falha isolada não derruba a carga — o
+  /// insumo apenas fica sem histórico.
+  Future<void> _carregar() async {
+    setState(() => _carregando = true);
     try {
-      final insumoList = await _service.listarInsumos(apenasAtivos: false);
+      final brutos = await _service.listarInsumos(apenasAtivos: false);
       if (!mounted) return;
-      final insumos = insumoList
-          .map((item) => Insumo.fromJson(Map<String, dynamic>.from(item as Map)))
+      final insumos = brutos
+          .map((e) => Insumo.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
 
-      // Load all movimentacoes for all insumos
-      final allMovs = <MovimentacaoEstoque>[];
+      final movimentacoes = <MovimentacaoEstoque>[];
       for (final insumo in insumos) {
-        if (insumo.id != null) {
-          try {
-            final movList = await _service.listarMovimentacoes(insumo.id!);
-            allMovs.addAll(
-              movList.map((item) => MovimentacaoEstoque.fromJson(
-                  Map<String, dynamic>.from(item as Map))),
-            );
-          } catch (_) {
-            // Continue even if one insumo fails
-          }
+        if (insumo.id == null) continue;
+        try {
+          final lista = await _service.listarMovimentacoes(insumo.id!);
+          movimentacoes.addAll(
+            lista.map(
+              (e) => MovimentacaoEstoque.fromJson(
+                Map<String, dynamic>.from(e as Map),
+              ),
+            ),
+          );
+        } catch (_) {
+          // Segue com os demais insumos.
         }
       }
 
       if (!mounted) return;
       setState(() {
         _insumos = insumos;
-        _allMovimentacoes = allMovs;
+        _movimentacoes = movimentacoes;
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao carregar estoque: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erro ao carregar estoque: $e')));
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() => _carregando = false);
     }
   }
 
-  List<MovimentacaoEstoque> get _filteredMovimentacoes {
-    var list = List<MovimentacaoEstoque>.from(_allMovimentacoes);
+  List<MovimentacaoEstoque> get _movimentacoesVisiveis =>
+      _filtro.aplicar(_movimentacoes);
 
-    switch (_selectedFilter) {
-      case 'ENTRADAS':
-        list = list.where((m) => m.isEntrada).toList();
-        break;
-      case 'SAIDAS':
-        list = list.where((m) => m.isSaida).toList();
-        break;
-      case 'AJUSTES':
-        list = list.where((m) => m.isAjuste).toList();
-        break;
-    }
-
-    if (_filterInsumoId != null) {
-      list = list.where((m) => m.insumoId == _filterInsumoId).toList();
-    }
-
-    if (_filterDateFrom != null || _filterDateTo != null) {
-      list = list.where((m) {
-        if (m.dataHora == null) return false;
-        final dt = DateTime.tryParse(m.dataHora!);
-        if (dt == null) return false;
-        if (_filterDateFrom != null && dt.isBefore(_filterDateFrom!)) return false;
-        if (_filterDateTo != null && dt.isAfter(_filterDateTo!)) return false;
-        return true;
-      }).toList();
-    }
-
-    // Sort by date, most recent first
-    list.sort((a, b) {
-      final dateA = a.dataHora ?? '';
-      final dateB = b.dataHora ?? '';
-      return dateB.compareTo(dateA);
-    });
-
-    return list;
+  List<Insumo> get _insumosVisiveis {
+    final termo = _busca.trim().toLowerCase();
+    if (termo.isEmpty) return _insumos;
+    return _insumos.where((i) => i.nome.toLowerCase().contains(termo)).toList();
   }
 
-  List<Insumo> get _insumosAbaixoMinimo =>
-      _insumos.where((i) => i.abaixoDoMinimo == true).toList();
+  int get _totalAbaixoDoMinimo =>
+      _insumos.where((i) => i.abaixoDoMinimo == true).length;
 
-  List<Insumo> get _insumosEmEstoque =>
-      _insumos.where((i) => i.abaixoDoMinimo != true).toList();
+  // ---------------------------------------------------------------------
+  // Ações
+  // ---------------------------------------------------------------------
 
-  List<Insumo> get _filteredInsumos {
-    if (_search.trim().isEmpty) return _insumos;
-    final query = _search.toLowerCase().trim();
-    return _insumos.where((i) => i.nome.toLowerCase().contains(query)).toList();
-  }
-
-  int get _totalMovimentacoes => _allMovimentacoes.length;
-
-  String get _screenSubtitle {
-    if (_loading) return 'Carregando...';
-    if (_insumos.isEmpty) return 'Comece por aqui';
-    if (_tabIndex == 1) {
-      final abaixo = _insumosAbaixoMinimo.length;
-      if (abaixo > 0) return '${_insumos.length} insumos · $abaixo abaixo do mínimo';
-      return '${_insumos.length} insumos';
-    }
-    return '$_totalMovimentacoes movimentações · ${_insumos.length} insumos';
-  }
-
-  Future<void> _openCreate() async {
-    final created = await Navigator.push<bool>(
+  Future<void> _abrirCadastro() async {
+    final criou = await Navigator.push<bool>(
       context,
       MaterialPageRoute(builder: (_) => const MovimentacaoFormPage()),
     );
-    if (created == true) {
-      await _loadData();
-    }
+    if (criou == true) await _carregar();
   }
 
-  String _formatDateHeader(String? dataHora) {
-    if (dataHora == null) return '';
-    try {
-      final dt = DateTime.parse(dataHora);
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-      final date = DateTime(dt.year, dt.month, dt.day);
-      final diff = today.difference(date).inDays;
-
-      if (diff == 0) return 'HOJE';
-      if (diff == 1) return 'ONTEM';
-
-      final months = [
-        '', 'JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN',
-        'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'
-      ];
-      if (dt.year == now.year) {
-        return '${dt.day} ${months[dt.month]}';
-      }
-      return '${dt.day} ${months[dt.month]} ${dt.year}';
-    } catch (_) {
-      return '';
-    }
-  }
-
-  String _formatTime(String? dataHora) {
-    if (dataHora == null) return '';
-    try {
-      final dt = DateTime.parse(dataHora);
-      return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
-      return '';
-    }
-  }
-
-  String _dateKeyFor(String? dataHora) {
-    if (dataHora == null) return '';
-    try {
-      final dt = DateTime.parse(dataHora);
-      return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
-    } catch (_) {
-      return '';
-    }
-  }
-
-  Future<void> _openFiltersSheet() async {
-    String tempFilter = _selectedFilter;
-    int? tempInsumoId = _filterInsumoId;
-    DateTime? tempFrom = _filterDateFrom;
-    DateTime? tempTo = _filterDateTo;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return StatefulBuilder(builder: (ctx, setSheet) {
-          String fmtDate(DateTime? d) {
-            if (d == null) return 'Selecionar';
-            return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
-          }
-
-          Future<void> pickDate(bool isFrom) async {
-            final initial = isFrom ? (tempFrom ?? DateTime.now()) : (tempTo ?? DateTime.now());
-            final picked = await abrirSeletorData(
-              ctx,
-              dataInicial: initial,
-              dataMinima: DateTime(2020),
-              dataMaxima: DateTime(2100),
-              textoAjuda: isFrom ? 'Data inicial' : 'Data final',
-            );
-            if (picked != null) {
-              setSheet(() {
-                if (isFrom) {
-                  tempFrom = DateTime(picked.year, picked.month, picked.day);
-                } else {
-                  tempTo = DateTime(picked.year, picked.month, picked.day, 23, 59, 59);
-                }
-              });
-            }
-          }
-
-          Widget tipoChip(String value, String label) {
-            final selected = tempFilter == value;
-            return InkWell(
-              onTap: () => setSheet(() => tempFilter = value),
-              borderRadius: BorderRadius.circular(999),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: selected ? PaletaApp.primary : PaletaApp.surfaceAlt,
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: selected ? PaletaApp.primary : PaletaApp.border),
-                ),
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    color: selected ? Colors.white : PaletaApp.text,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            );
-          }
-
-          return FractionallySizedBox(
-            heightFactor: 0.82,
-            child: Container(
-              decoration: const BoxDecoration(
-                color: PaletaApp.surface,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-              ),
-              child: SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: PaletaApp.borderSoft,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      Row(
-                        children: [
-                          const Expanded(
-                            child: Text(
-                              'Filtros',
-                              style: TextStyle(
-                                color: PaletaApp.text,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () => Navigator.pop(ctx),
-                            icon: const Icon(Icons.close_rounded),
-                            color: PaletaApp.text,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Expanded(
-                        child: ListView(
-                          children: [
-                            const Text(
-                              'TIPO',
-                              style: TextStyle(
-                                color: PaletaApp.textMuted,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                tipoChip('TUDO', 'Tudo'),
-                                tipoChip('ENTRADAS', 'Entradas'),
-                                tipoChip('SAIDAS', 'Saídas'),
-                                tipoChip('AJUSTES', 'Ajustes'),
-                              ],
-                            ),
-                            const SizedBox(height: 22),
-                            const Text(
-                              'INSUMO',
-                              style: TextStyle(
-                                color: PaletaApp.textMuted,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            DropdownButtonFormField<int?>(
-                              initialValue: tempInsumoId,
-                              isExpanded: true,
-                              decoration: InputDecoration(
-                                filled: true,
-                                fillColor: PaletaApp.surfaceAlt,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: const BorderSide(color: PaletaApp.border),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: const BorderSide(color: PaletaApp.border),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: const BorderSide(color: PaletaApp.primary),
-                                ),
-                              ),
-                              items: [
-                                const DropdownMenuItem<int?>(
-                                  value: null,
-                                  child: Text('Todos os insumos'),
-                                ),
-                                ..._insumos.where((i) => i.id != null).map(
-                                      (i) => DropdownMenuItem<int?>(
-                                        value: i.id,
-                                        child: Text(i.nome, overflow: TextOverflow.ellipsis),
-                                      ),
-                                    ),
-                              ],
-                              onChanged: (value) => setSheet(() => tempInsumoId = value),
-                            ),
-                            const SizedBox(height: 22),
-                            const Text(
-                              'PERÍODO',
-                              style: TextStyle(
-                                color: PaletaApp.textMuted,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _DateBox(
-                                    label: 'De',
-                                    value: fmtDate(tempFrom),
-                                    onTap: () => pickDate(true),
-                                    onClear: tempFrom == null ? null : () => setSheet(() => tempFrom = null),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: _DateBox(
-                                    label: 'Até',
-                                    value: fmtDate(tempTo),
-                                    onTap: () => pickDate(false),
-                                    onClear: tempTo == null ? null : () => setSheet(() => tempTo = null),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () {
-                                setSheet(() {
-                                  tempFilter = 'TUDO';
-                                  tempInsumoId = null;
-                                  tempFrom = null;
-                                  tempTo = null;
-                                });
-                              },
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: PaletaApp.text,
-                                backgroundColor: PaletaApp.surfaceAlt,
-                                side: const BorderSide(color: PaletaApp.border),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                              ),
-                              child: const Text('Limpar'),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                setState(() {
-                                  _selectedFilter = tempFilter;
-                                  _filterInsumoId = tempInsumoId;
-                                  _filterDateFrom = tempFrom;
-                                  _filterDateTo = tempTo;
-                                });
-                                Navigator.pop(ctx);
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: PaletaApp.primary,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                              ),
-                              child: const Text('Aplicar'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        });
-      },
+  Future<void> _abrirFiltros() async {
+    final escolhido = await abrirFolhaFiltrosEstoque(
+      context,
+      filtroAtual: _filtro,
+      insumos: _insumos,
     );
+    if (escolhido != null) setState(() => _filtro = escolhido);
   }
 
-  // ──── Tab bar ────
+  void _limparFiltros() => setState(() => _filtro = const FiltroEstoque());
 
-  Widget _buildTabBar() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: PaletaApp.borderSoft, width: 1.5),
-        ),
-      ),
-      child: TabBar(
-        controller: _tabController,
-        labelColor: PaletaApp.primary,
-        unselectedLabelColor: PaletaApp.textMuted,
-        labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-        unselectedLabelStyle:
-            const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-        indicatorColor: PaletaApp.primary,
-        indicatorWeight: 2.5,
-        tabs: [
-          const Tab(text: 'Histórico'),
-          Tab(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Saldos'),
-                if (_insumosAbaixoMinimo.isNotEmpty) ...[
-                  const SizedBox(width: 6),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: PaletaApp.primary,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      '${_insumosAbaixoMinimo.length}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // ---------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------
 
-  // ──── Histórico tab ────
-
-  Widget _buildHistoricoTab() {
-    if (_loading) {
-      return const Center(
-        child: CircularProgressIndicator(color: PaletaApp.primary),
-      );
-    }
-
-    if (_allMovimentacoes.isEmpty) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 96),
-        children: [
-          EstoqueEmptyState(
-            title: 'Sem movimentações ainda',
-            subtitle:
-                'Registre uma entrada por compra para começar a controlar o estoque do seu restaurante.',
-            buttonLabel: 'Registrar movimentação',
-            onPressed: _openCreate,
-            tipText:
-                'Antes da primeira movimentação, cadastre seus insumos e unidades de medida em Cadastros > Estoque.',
-          ),
-        ],
-      );
-    }
-
-    final movs = _filteredMovimentacoes;
-
-    if (movs.isEmpty) {
-      String message;
-      if (_filterInsumoId != null) {
-        final insumo = _insumos.firstWhere(
-          (i) => i.id == _filterInsumoId,
-          orElse: () => Insumo(nome: ''),
-        );
-        final nome = insumo.nome.isEmpty ? 'Este produto' : insumo.nome;
-        message = '$nome não tem movimentação de estoque.';
-      } else if (_filterDateFrom != null || _filterDateTo != null) {
-        message = 'Nenhuma movimentação encontrada no período selecionado.';
-      } else {
-        message = 'Nenhuma movimentação encontrada com os filtros aplicados.';
-      }
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 40, 16, 96),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: PaletaApp.surfaceAlt,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: PaletaApp.border),
-            ),
-            child: Column(
-              children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: PaletaApp.inputFill,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: const Icon(
-                    Icons.inbox_outlined,
-                    color: PaletaApp.primary,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  message,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: PaletaApp.text,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                TextButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _selectedFilter = 'TUDO';
-                      _filterInsumoId = null;
-                      _filterDateFrom = null;
-                      _filterDateTo = null;
-                    });
-                  },
-                  icon: const Icon(Icons.refresh_rounded, size: 16),
-                  label: const Text('Limpar filtros'),
-                  style: TextButton.styleFrom(foregroundColor: PaletaApp.primary),
-                ),
-              ],
-            ),
-          ),
-        ],
-      );
-    }
-
-    // Group by date
-    final grouped = <String, List<MovimentacaoEstoque>>{};
-    for (final mov in movs) {
-      final key = _dateKeyFor(mov.dataHora);
-      grouped.putIfAbsent(key, () => []);
-      grouped[key]!.add(mov);
-    }
-
-    final dateKeys = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
-
-    return ListView.builder(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-      itemCount: dateKeys.length,
-      itemBuilder: (context, index) {
-        final dateKey = dateKeys[index];
-        final dayMovs = grouped[dateKey]!;
-        final header =
-            _formatDateHeader(dayMovs.first.dataHora);
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (index > 0) const SizedBox(height: 6),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Text(
-                header,
-                style: const TextStyle(
-                  color: PaletaApp.textMuted,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ),
-            ...dayMovs.map((mov) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: MovimentacaoCard(
-                  insumoNome: mov.insumoNome ?? 'Insumo #${mov.insumoId}',
-                  tipo: mov.tipo ?? '',
-                  quantidade: mov.quantidade,
-                  unidadeSimbolo: mov.unidadeSimbolo ?? mov.unidadePadraoSimbolo,
-                  detalhes: mov.justificativa,
-                  hora: _formatTime(mov.dataHora),
-                  responsavel: mov.responsavel,
-                ),
-              );
-            }),
-          ],
-        );
-      },
-    );
-  }
-
-  // ──── Saldos tab ────
-
-  Widget _buildSaldosTab() {
-    if (_loading) {
-      return const Center(
-        child: CircularProgressIndicator(color: PaletaApp.primary),
-      );
-    }
-
-    final abaixo = _search.isEmpty
-        ? _insumosAbaixoMinimo
-        : _filteredInsumos.where((i) => i.abaixoDoMinimo == true).toList();
-    final emEstoque = _search.isEmpty
-        ? _insumosEmEstoque
-        : _filteredInsumos.where((i) => i.abaixoDoMinimo != true).toList();
-
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-      children: [
-        // Alert banner
-        if (abaixo.isNotEmpty && _search.isEmpty) ...[
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: PaletaApp.warningBg,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: PaletaApp.warningBorder),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.warning_amber_rounded,
-                    color: PaletaApp.primary, size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    '${abaixo.length} ${abaixo.length == 1 ? 'insumo abaixo' : 'insumos abaixo'} do estoque mínimo.\nToque para registrar entrada por compra.',
-                    style: const TextStyle(
-                      color: PaletaApp.text,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      height: 1.35,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-        ],
-
-        // Abaixo do mínimo section
-        if (abaixo.isNotEmpty) ...[
-          const Padding(
-            padding: EdgeInsets.only(bottom: 10),
-            child: Text(
-              'ABAIXO DO MÍNIMO',
-              style: TextStyle(
-                color: PaletaApp.textMuted,
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
-          ...abaixo.map((insumo) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: InsumoSaldoCard(
-                  nome: insumo.nome,
-                  estoqueMinimo: insumo.estoqueMinimo,
-                  estoqueAtual: insumo.estoqueAtual,
-                  unidadeSimbolo: insumo.unidadePadraoSimbolo,
-                  percentAbaixo: insumo.percentAbaixo,
-                  onTap: () => _openCreate(),
-                ),
-              )),
-          const SizedBox(height: 8),
-        ],
-
-        // Em estoque section
-        if (emEstoque.isNotEmpty) ...[
-          const Padding(
-            padding: EdgeInsets.only(bottom: 10),
-            child: Text(
-              'EM ESTOQUE',
-              style: TextStyle(
-                color: PaletaApp.textMuted,
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
-          ...emEstoque.map((insumo) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: InsumoSaldoCard(
-                  nome: insumo.nome,
-                  estoqueMinimo: insumo.estoqueMinimo,
-                  estoqueAtual: insumo.estoqueAtual,
-                  unidadeSimbolo: insumo.unidadePadraoSimbolo,
-                  percentAbaixo: insumo.percentAbaixo,
-                ),
-              )),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildSearchField() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: PaletaApp.surfaceAlt,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: PaletaApp.border),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x08A86D37),
-              blurRadius: 12,
-              offset: Offset(0, 4),
-            ),
-          ],
-        ),
-        child: TextField(
-          controller: _searchController,
-          onChanged: (value) => setState(() => _search = value),
-          style: const TextStyle(
-            color: PaletaApp.text,
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-          decoration: InputDecoration(
-            prefixIcon: const Icon(
-              Icons.search_rounded,
-              color: PaletaApp.textMuted,
-            ),
-            hintText: 'Buscar insumo...',
-            hintStyle: const TextStyle(color: PaletaApp.textMuted),
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
-            suffixIcon: _search.isEmpty
-                ? null
-                : IconButton(
-                    onPressed: () {
-                      _searchController.clear();
-                      setState(() => _search = '');
-                    },
-                    icon: const Icon(Icons.close_rounded, size: 18),
-                  ),
-          ),
-        ),
-      ),
-    );
-  }
-
- @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: PaletaApp.background,
+      backgroundColor: AppTema.fundo,
       floatingActionButton: FloatingActionButton(
-        onPressed: _openCreate,
-        backgroundColor: PaletaApp.primary,
+        onPressed: _abrirCadastro,
+        backgroundColor: AppTema.primaria,
         foregroundColor: Colors.white,
         shape: const CircleBorder(),
         child: const Icon(Icons.add_rounded),
@@ -865,47 +164,47 @@ class _EstoquePageState extends State<EstoquePage>
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 16), 
-            _buildTabBar(),
             const SizedBox(height: 16),
-
-            if (_tabIndex == 0) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TipoFilterChips(
-                        selectedFilter: _selectedFilter,
-                        onFilterChanged: (filter) =>
-                            setState(() => _selectedFilter = filter),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    AppBotaoIcone(icone: Icons.filter_alt_outlined,
-                      mostrarSelo: _hasAdvancedFilters,
-                      aoTocar: _openFiltersSheet,
-                    ),
-                  ],
-                ),
-              ),
+            AbasEstoque(
+              controlador: _abas,
+              abaixoDoMinimo: _totalAbaixoDoMinimo,
+            ),
+            const SizedBox(height: 16),
+            if (_abaAtual == 0) ...[
+              _controlesDoHistorico(),
               const SizedBox(height: 6),
             ],
-            
-            if (_tabIndex == 1) ...[
-              _buildSearchField(),
+            if (_abaAtual == 1) ...[
+              AppCampoBusca(
+                controle: _controleBusca,
+                dica: 'Buscar insumo...',
+                margemHorizontal: 16,
+                aoMudar: (valor) => setState(() => _busca = valor),
+              ),
               const SizedBox(height: 10),
             ],
-
             Expanded(
               child: RefreshIndicator(
-                color: PaletaApp.primary,
-                onRefresh: _loadData,
+                color: AppTema.primaria,
+                onRefresh: _carregar,
                 child: TabBarView(
-                  controller: _tabController,
+                  controller: _abas,
                   children: [
-                    _buildHistoricoTab(),
-                    _buildSaldosTab(),
+                    AbaHistorico(
+                      todas: _movimentacoes,
+                      visiveis: _movimentacoesVisiveis,
+                      insumos: _insumos,
+                      filtro: _filtro,
+                      carregando: _carregando,
+                      aoRegistrar: _abrirCadastro,
+                      aoLimparFiltros: _limparFiltros,
+                    ),
+                    AbaSaldos(
+                      insumos: _insumosVisiveis,
+                      buscaAtiva: _busca.trim().isNotEmpty,
+                      carregando: _carregando,
+                      aoRegistrarEntrada: _abrirCadastro,
+                    ),
                   ],
                 ),
               ),
@@ -915,69 +214,27 @@ class _EstoquePageState extends State<EstoquePage>
       ),
     );
   }
-}
 
-class _DateBox extends StatelessWidget {
-  final String label;
-  final String value;
-  final VoidCallback onTap;
-  final VoidCallback? onClear;
-
-  const _DateBox({required this.label, required this.value, required this.onTap, this.onClear});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: PaletaApp.surfaceAlt,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: PaletaApp.border),
+  /// Chips de categoria + botão de filtros avançados, acima do histórico.
+  Widget _controlesDoHistorico() => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    child: Row(
+      children: [
+        Expanded(
+          child: TipoFilterChips(
+            selectedFilter: _filtro.tipo,
+            onFilterChanged: (tipo) =>
+                setState(() => _filtro = _filtro.copiarCom(tipo: tipo)),
+          ),
         ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      color: PaletaApp.textMuted,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.4,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    value,
-                    style: const TextStyle(
-                      color: PaletaApp.text,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (onClear != null)
-              InkWell(
-                onTap: onClear,
-                borderRadius: BorderRadius.circular(20),
-                child: const Padding(
-                  padding: EdgeInsets.all(4),
-                  child: Icon(Icons.close_rounded, size: 16, color: PaletaApp.textMuted),
-                ),
-              )
-            else
-              const Icon(Icons.calendar_today_rounded, size: 16, color: PaletaApp.textMuted),
-          ],
+        const SizedBox(width: 12),
+        AppBotaoIcone(
+          icone: Icons.filter_alt_outlined,
+          mostrarSelo: _filtro.temFiltroAvancado,
+          aoTocar: _abrirFiltros,
+          dicaAcessibilidade: 'Filtros',
         ),
-      ),
-    );
-  }
+      ],
+    ),
+  );
 }

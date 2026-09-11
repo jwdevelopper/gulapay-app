@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
 
 class AppBotaoComponente extends StatelessWidget {
   final String textoBotao;
@@ -37,20 +38,14 @@ class AppBotaoComponente extends StatelessWidget {
         onPressed: funcaoExecutada,
         label: Text(
           textoBotao,
-          style: TextStyle(
-            fontSize: tamanhoFonte,
-            fontWeight: tipoFonte,
-          ),
-          ),
-        icon: Icon(
-          icone?.icon,
-          size: tamanhoIcone,
+          style: TextStyle(fontSize: tamanhoFonte, fontWeight: tipoFonte),
         ),
+        icon: Icon(icone?.icon, size: tamanhoIcone),
         style: ElevatedButton.styleFrom(
           iconAlignment: alinharIconeADireita == true
               ? IconAlignment.end
               : IconAlignment.start,
-          backgroundColor: corFundoBotao ?? Colors.blueAccent,
+          backgroundColor: corFundoBotao ?? AppTema.primaria,
           foregroundColor: foregroundColor ?? Colors.white,
         ),
       ),

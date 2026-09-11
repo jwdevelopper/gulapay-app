@@ -31,7 +31,9 @@ class Produto {
     }
 
     return Produto(
-      id: json['id'] is int ? json['id'] as int : (json['id'] != null ? int.tryParse(json['id'].toString()) : null),
+      id: json['id'] is int
+          ? json['id'] as int
+          : (json['id'] != null ? int.tryParse(json['id'].toString()) : null),
       nome: json['nome'] ?? '',
       descricao: json['descricao'],
       preco: precoLocal,
@@ -39,8 +41,14 @@ class Produto {
       setorProducao: json['setorProducao'],
       categoriaId: json['categoriaId'] is int
           ? json['categoriaId'] as int
-          : (json['categoriaId'] != null ? int.tryParse(json['categoriaId'].toString()) : null),
-      ativo: json['ativo'] is bool ? json['ativo'] as bool : (json['ativo'] != null ? (json['ativo'].toString() == 'true') : null),
+          : (json['categoriaId'] != null
+                ? int.tryParse(json['categoriaId'].toString())
+                : null),
+      ativo: json['ativo'] is bool
+          ? json['ativo'] as bool
+          : (json['ativo'] != null
+                ? (json['ativo'].toString() == 'true')
+                : null),
     );
   }
 

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:my_app_teste/core/theme/gula_theme.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/modules/mesa/controller/floor_plan_controller.dart';
-import 'package:my_app_teste/modules/mesa/model/restaurant_models.dart';
+import 'package:my_app_teste/modules/mesa/dto/restaurant_models.dart';
 import 'package:my_app_teste/modules/mesa/page/mesa_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -201,7 +201,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      MaterialApp(theme: GulaTheme.light(), home: const MesaPage()),
+      MaterialApp(theme: AppTema.claro(), home: const MesaPage()),
     );
     await tester.pumpAndSettle();
 
@@ -218,7 +218,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      MaterialApp(theme: GulaTheme.light(), home: const MesaPage()),
+      MaterialApp(theme: AppTema.claro(), home: const MesaPage()),
     );
     await tester.pumpAndSettle();
 

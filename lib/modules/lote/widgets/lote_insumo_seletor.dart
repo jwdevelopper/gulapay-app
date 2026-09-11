@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/widgets/app_carregando.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/core/widgets/app_campo_busca.dart';
@@ -95,7 +96,7 @@ class _LoteInsumoSeletorState extends State<LoteInsumoSeletor> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppTema.bordaCampo,
+                color: AppTema.borda,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -108,7 +109,7 @@ class _LoteInsumoSeletorState extends State<LoteInsumoSeletor> {
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
-                    color: AppTema.textoEscuro,
+                    color: AppTema.texto,
                   ),
                 ),
               ),
@@ -131,12 +132,7 @@ class _LoteInsumoSeletorState extends State<LoteInsumoSeletor> {
 
   Widget _conteudo() {
     if (_carregando) {
-      return const Padding(
-        padding: EdgeInsets.all(40),
-        child: Center(
-          child: CircularProgressIndicator(color: AppTema.primaria),
-        ),
-      );
+      return const Padding(padding: EdgeInsets.all(40), child: AppCarregando());
     }
 
     if (_erro != null) {
@@ -172,26 +168,31 @@ class _LoteInsumoSeletorState extends State<LoteInsumoSeletor> {
       padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
       itemCount: filtrados.length,
       separatorBuilder: (_, __) =>
-          const Divider(height: 1, color: AppTema.bordaCampo),
+          const Divider(height: 1, color: AppTema.borda),
       itemBuilder: (context, index) {
         final insumo = filtrados[index];
         final unidade = insumo.unidadePadraoSimbolo ?? insumo.unidadePadrao;
         return ListTile(
           leading: const CircleAvatar(
-            backgroundColor: AppTema.fundoDica,
-            child: Icon(Icons.inventory_2_outlined,
-                color: AppTema.primariaEscura, size: 20),
+            backgroundColor: AppTema.avisoFundo,
+            child: Icon(
+              Icons.inventory_2_outlined,
+              color: AppTema.primariaEscura,
+              size: 20,
+            ),
           ),
           title: Text(
             insumo.nome ?? '—',
             style: const TextStyle(
               fontWeight: FontWeight.w600,
-              color: AppTema.textoEscuro,
+              color: AppTema.texto,
             ),
           ),
           subtitle: unidade != null && unidade.isNotEmpty
-              ? Text('Unidade base: $unidade',
-                  style: const TextStyle(color: AppTema.textoSecundario))
+              ? Text(
+                  'Unidade base: $unidade',
+                  style: const TextStyle(color: AppTema.textoSecundario),
+                )
               : null,
           onTap: () => Navigator.pop(context, insumo),
         );

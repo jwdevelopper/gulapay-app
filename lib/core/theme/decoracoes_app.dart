@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
 
 /// Decorações compartilhadas entre os campos de formulário.
 ///
@@ -15,12 +15,12 @@ class DecoracoesApp {
   /// Moldura padrão de um campo editável. [erro] troca a borda para o
   /// vermelho de validação.
   static BoxDecoration campo({bool erro = false}) => BoxDecoration(
-    color: PaletaApp.surfaceAlt,
+    color: AppTema.superficieAlt,
     borderRadius: BorderRadius.circular(raioCampo),
-    border: Border.all(color: erro ? PaletaApp.error : PaletaApp.border),
+    border: Border.all(color: erro ? AppTema.erro : AppTema.borda),
     boxShadow: const [
       BoxShadow(
-        color: PaletaApp.sombraCampo,
+        color: AppTema.sombraCampo,
         blurRadius: 12,
         offset: Offset(0, 4),
       ),
@@ -30,8 +30,8 @@ class DecoracoesApp {
   /// Variante sem sombra, para campos embutidos em cartões que já têm
   /// elevação própria.
   static BoxDecoration campoPlano({bool erro = false}) => BoxDecoration(
-    color: PaletaApp.surfaceAlt,
+    color: AppTema.superficieAlt,
     borderRadius: BorderRadius.circular(raioCampo),
-    border: Border.all(color: erro ? PaletaApp.error : PaletaApp.border),
+    border: Border.all(color: erro ? AppTema.erro : AppTema.borda),
   );
 }

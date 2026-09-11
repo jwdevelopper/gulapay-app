@@ -1,26 +1,36 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
+import 'package:my_app_teste/core/widgets/app_chip_filtro.dart';
 
-
+/// Uma opção da barra de tipos do histórico de estoque.
 class TipoFilterChip {
   final String label;
   final String value;
   final IconData? icon;
 
-  const TipoFilterChip({
-    required this.label,
-    required this.value,
-    this.icon,
-  });
+  const TipoFilterChip({required this.label, required this.value, this.icon});
 }
 
+/// As quatro visões do histórico: tudo, entradas, saídas e ajustes.
 const List<TipoFilterChip> tipoFilterChips = [
   TipoFilterChip(label: 'Tudo', value: 'TUDO'),
-  TipoFilterChip(label: 'Entradas', value: 'ENTRADAS', icon: Icons.arrow_downward_rounded),
-  TipoFilterChip(label: 'Saídas', value: 'SAIDAS', icon: Icons.arrow_upward_rounded),
+  TipoFilterChip(
+    label: 'Entradas',
+    value: 'ENTRADAS',
+    icon: Icons.arrow_downward_rounded,
+  ),
+  TipoFilterChip(
+    label: 'Saídas',
+    value: 'SAIDAS',
+    icon: Icons.arrow_upward_rounded,
+  ),
   TipoFilterChip(label: 'Ajustes', value: 'AJUSTES', icon: Icons.tune_rounded),
 ];
 
+/// Barra de tipos do histórico de movimentações.
+///
+/// Diferente dos filtros de comanda, aqui sempre há um selecionado — tocar
+/// no ativo não desmarca, porque "nenhum tipo" não é uma visão válida
+/// (o equivalente é o chip "Tudo").
 class TipoFilterChips extends StatelessWidget {
   final String selectedFilter;
   final ValueChanged<String> onFilterChanged;
@@ -32,66 +42,16 @@ class TipoFilterChips extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: tipoFilterChips.map((chip) {
-            final selected = chip.value == selectedFilter;
-            return Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: GestureDetector(
-                onTap: () => onFilterChanged(chip.value),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? PaletaApp.primary
-                        : PaletaApp.surfaceAlt,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(
-                      color: selected
-                          ? PaletaApp.primary
-                          : PaletaApp.border,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (chip.icon != null) ...[
-                        Icon(
-                          chip.icon,
-                          size: 14,
-                          color: selected
-                              ? Colors.white
-                              : PaletaApp.textMuted,
-                        ),
-                        const SizedBox(width: 6),
-                      ],
-                      Text(
-                        chip.label,
-                        style: TextStyle(
-                          color: selected
-                              ? Colors.white
-                              : PaletaApp.text,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
+  Widget build(BuildContext context) => AppFileiraChips(
+    recuoLateral: 0,
+    chips: [
+      for (final chip in tipoFilterChips)
+        AppChipFiltro(
+          rotulo: chip.label,
+          icone: chip.icon,
+          selecionado: chip.value == selectedFilter,
+          aoTocar: () => onFilterChanged(chip.value),
         ),
-      ),
-    );
-  }
+    ],
+  );
 }

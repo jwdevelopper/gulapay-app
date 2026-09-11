@@ -1,13 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/core/widgets/app_linha_resumo.dart';
-import 'package:my_app_teste/core/widgets/app_botao_icone.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
+import 'package:my_app_teste/core/widgets/app_cabecalho_wizard.dart';
+import 'package:my_app_teste/core/widgets/app_rodape_wizard.dart';
 import 'package:my_app_teste/modules/categoria/dto/categoria.dart';
 import 'package:my_app_teste/modules/categoria/service/categoria_service.dart';
 import 'package:my_app_teste/modules/produto/dto/produto.dart';
+import 'package:my_app_teste/modules/produto/dto/validacao_produto.dart';
 import 'package:my_app_teste/modules/produto/service/produto_service.dart';
+import 'package:my_app_teste/modules/produto/widgets/form/etapa_identidade.dart';
+import 'package:my_app_teste/modules/produto/widgets/form/etapa_preco.dart';
+import 'package:my_app_teste/modules/produto/widgets/form/etapa_producao.dart';
+import 'package:my_app_teste/modules/produto/widgets/form/seletor_categoria.dart';
 
+/// Cadastro e edição de produto, em 3 etapas.
+///
+/// Esta classe cuida apenas de estado, navegação entre etapas e envio. A
+/// aparência de cada etapa vive em `widgets/form/` e as regras de campo
+/// obrigatório em [ValidadorProduto].
 class ProdutoFormPage extends StatefulWidget {
+  /// Produto em edição. Quando `null`, o formulário é de criação.
   final Produto? produto;
 
   const ProdutoFormPage({super.key, this.produto});
@@ -16,82 +27,25 @@ class ProdutoFormPage extends StatefulWidget {
   State<ProdutoFormPage> createState() => _ProdutoFormPageState();
 }
 
-class _ChoiceOption {
-  final String label;
-  final String description;
-  final String value;
-  final IconData icon;
-
-  const _ChoiceOption({
-    required this.label,
-    required this.description,
-    required this.value,
-    required this.icon,
-  });
-}
-
-const List<_ChoiceOption> _tipoOptions = [
-  _ChoiceOption(
-    label: 'Unitário',
-    description: 'Produto vendido por unidade',
-    value: 'UNITARIO',
-    icon: Icons.inventory_2_rounded,
-  ),
-  _ChoiceOption(
-    label: 'Composto',
-    description: 'Produto composto por insumos',
-    value: 'COMPOSTO',
-    icon: Icons.layers_rounded,
-  ),
-  _ChoiceOption(
-    label: 'Combo',
-    description: 'Conjunto de itens',
-    value: 'COMBO',
-    icon: Icons.local_offer_rounded,
-  ),
-];
-
-const List<_ChoiceOption> _setorOptions = [
-  _ChoiceOption(
-    label: 'Cozinha',
-    description: 'Pratos quentes, pré-preparo',
-    value: 'COZINHA',
-    icon: Icons.dining_rounded,
-  ),
-  _ChoiceOption(
-    label: 'Bar',
-    description: 'Bebidas, drinks, vinhos',
-    value: 'BAR',
-    icon: Icons.wine_bar_rounded,
-  ),
-  _ChoiceOption(
-    label: 'Balcão',
-    description: 'Atendimento no balcão',
-    value: 'BALCAO',
-    icon: Icons.storefront_rounded,
-  ),
-];
-
 class _ProdutoFormPageState extends State<ProdutoFormPage> {
-  final ProdutoService _service = ProdutoService();
+  static const _totalEtapas = 3;
+
+  final _service = ProdutoService();
+  final _categoriaService = CategoriaService();
+
   final _nome = TextEditingController();
   final _descricao = TextEditingController();
   final _preco = TextEditingController();
 
   List<Categoria> _categorias = [];
-  int? _selectedCategoriaId;
-  String? _selectedTipo;
-  String? _selectedSetor;
+  int? _categoriaId;
+  String? _tipo;
+  String? _setor;
   bool _ativo = true;
-  bool _saving = false;
-  int _step = 0;
 
-  bool _nomeError = false;
-  bool _precoError = false;
-  bool _categoriaError = false;
-  bool _tipoError = false;
-  bool _setorError = false;
-  String? _validationMessage;
+  int _etapa = 0;
+  bool _salvando = false;
+  ResultadoValidacaoProduto _validacao = const ResultadoValidacaoProduto.ok();
 
   @override
   void initState() {
@@ -100,13 +54,13 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
     if (produto != null) {
       _nome.text = produto.nome;
       _descricao.text = produto.descricao ?? '';
-      _preco.text = _formatInputPrice(produto.preco);
-      _selectedTipo = produto.tipoProduto;
-      _selectedSetor = produto.setorProducao;
-      _selectedCategoriaId = produto.categoriaId;
+      _preco.text = _precoParaTexto(produto.preco);
+      _tipo = produto.tipoProduto;
+      _setor = produto.setorProducao;
+      _categoriaId = produto.categoriaId;
       _ativo = produto.ativo ?? true;
     }
-    _loadCategorias();
+    _carregarCategorias();
   }
 
   @override
@@ -117,162 +71,84 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
     super.dispose();
   }
 
-  bool get _isEdit => widget.produto?.id != null;
+  // ---------------------------------------------------------------------
+  // Dados
+  // ---------------------------------------------------------------------
 
-  String get _stepLabel {
-    switch (_step) {
-      case 0:
-        return 'Identidade';
-      case 1:
-        return 'Preço & categoria';
-      default:
-        return 'Produção';
-    }
-  }
+  bool get _ehEdicao => widget.produto?.id != null;
 
-  Categoria? get _selectedCategoria {
-    if (_selectedCategoriaId == null) {
-      return null;
-    }
+  DadosProduto get _dados => DadosProduto(
+    nome: _nome.text,
+    descricao: _descricao.text,
+    preco: _preco.text,
+    categoriaId: _categoriaId,
+    tipo: _tipo,
+    setor: _setor,
+    ativo: _ativo,
+  );
+
+  Categoria? get _categoria {
+    if (_categoriaId == null) return null;
     for (final categoria in _categorias) {
-      if (categoria.id == _selectedCategoriaId) {
-        return categoria;
-      }
+      if (categoria.id == _categoriaId) return categoria;
     }
     return null;
   }
 
-  String get _selectedCategoriaLabel =>
-      _selectedCategoria?.nome ?? 'Selecione a categoria';
+  static String _precoParaTexto(double? preco) =>
+      preco == null ? '' : preco.toStringAsFixed(2).replaceAll('.', ',');
 
-  Future<void> _loadCategorias() async {
+  Future<void> _carregarCategorias() async {
     try {
-      final lista = await CategoriaService().listar(apenasAtivos: false);
+      final lista = await _categoriaService.listar(apenasAtivos: false);
       if (!mounted) return;
-      setState(() {
-        _categorias = lista;
-      });
+      setState(() => _categorias = lista);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao carregar categorias: $e')),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao carregar categorias: $e')),
+      );
     }
   }
 
-  String _formatInputPrice(double? price) {
-    if (price == null) return '';
-    return price.toStringAsFixed(2).replaceAll('.', ',');
+  // ---------------------------------------------------------------------
+  // Validação e navegação
+  // ---------------------------------------------------------------------
+
+  /// Limpa a marcação de um campo assim que o usuário o corrige.
+  void _limparErro(CampoProduto campo) {
+    if (!_validacao.erroEm(campo)) return;
+    setState(() => _validacao = _validacao.sem(campo));
   }
 
-  double _parsePrice() {
-    return double.tryParse(
-          _preco.text.replaceAll('.', '').replaceAll(',', '.'),
-        ) ??
-        0;
-  }
+  Future<void> _avancar() async {
+    final resultado = ValidadorProduto.validarEtapa(_etapa, _dados);
+    setState(() => _validacao = resultado);
+    if (!resultado.valido) return;
 
-  String _formatCurrency(double? value) {
-    final formatted = (value ?? 0).toStringAsFixed(2).replaceAll('.', ',');
-    return 'R\$ $formatted';
-  }
-
-  void _clearValidationState() {
-    _nomeError = false;
-    _precoError = false;
-    _categoriaError = false;
-    _tipoError = false;
-    _setorError = false;
-    _validationMessage = null;
-  }
-
-  String _pluralMessage(int count) {
-    return count == 1
-        ? '1 campo obrigatório precisa ser preenchido antes de continuar.'
-        : '$count campos obrigatórios precisam ser preenchidos antes de continuar.';
-  }
-
-  bool _validateStep() {
-    setState(_clearValidationState);
-
-    if (_step == 0) {
-      if (_nome.text.trim().isEmpty) {
-        setState(() {
-          _nomeError = true;
-          _validationMessage = _pluralMessage(1);
-        });
-        return false;
-      }
-      return true;
-    }
-
-    if (_step == 1) {
-      var errorCount = 0;
-      if (_parsePrice() <= 0) {
-        _precoError = true;
-        errorCount++;
-      }
-      if (_selectedCategoriaId == null) {
-        _categoriaError = true;
-        errorCount++;
-      }
-      if (errorCount > 0) {
-        setState(() {
-          _validationMessage = _pluralMessage(errorCount);
-        });
-        return false;
-      }
-      return true;
-    }
-
-    var errorCount = 0;
-    if (_selectedTipo == null) {
-      _tipoError = true;
-      errorCount++;
-    }
-    if (_selectedSetor == null) {
-      _setorError = true;
-      errorCount++;
-    }
-    if (errorCount > 0) {
-      setState(() {
-        _validationMessage = _pluralMessage(errorCount);
-      });
-      return false;
-    }
-    return true;
-  }
-
-  Future<void> _next() async {
-    if (!_validateStep()) return;
-    if (_step < 2) {
-      setState(() => _step++);
+    if (_etapa < _totalEtapas - 1) {
+      setState(() => _etapa++);
       return;
     }
-    await _submit();
+    await _enviar();
   }
 
-  void _prev() {
-    if (_step > 0) {
-      setState(() => _step--);
+  void _voltar() {
+    if (_etapa == 0) {
+      Navigator.pop(context);
+      return;
     }
+    setState(() {
+      _etapa--;
+      _validacao = const ResultadoValidacaoProduto.ok();
+    });
   }
 
-  Future<void> _submit() async {
-    setState(() => _saving = true);
-    final payload = {
-      'nome': _nome.text.trim(),
-      'descricao': _descricao.text.trim(),
-      'preco': _parsePrice(),
-      'tipoProduto': _selectedTipo ?? '',
-      'setorProducao': _selectedSetor ?? '',
-      'categoriaId': _selectedCategoriaId ?? 0,
-    };
-
+  Future<void> _enviar() async {
+    setState(() => _salvando = true);
     try {
-      if (_isEdit) {
-        payload['ativo'] = _ativo;
+      final payload = _dados.paraPayload(paraEdicao: _ehEdicao);
+      if (_ehEdicao) {
         await _service.editarProduto(widget.produto!.id!, payload);
       } else {
         await _service.criarProduto(payload);
@@ -280,7 +156,7 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_isEdit ? 'Produto atualizado' : 'Produto criado'),
+          content: Text(_ehEdicao ? 'Produto atualizado' : 'Produto criado'),
         ),
       );
       Navigator.pop(context, true);
@@ -291,1011 +167,115 @@ class _ProdutoFormPageState extends State<ProdutoFormPage> {
         ).showSnackBar(SnackBar(content: Text('Erro: $e')));
       }
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) setState(() => _salvando = false);
     }
   }
 
-  void _openCategoriaSelector() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) {
-        return FractionallySizedBox(
-          heightFactor: 0.72,
-          child: Container(
-            decoration: const BoxDecoration(
-              color: PaletaApp.surface,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-            ),
-            child: SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: PaletaApp.borderSoft,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            'Escolher categoria',
-                            style: TextStyle(
-                              color: PaletaApp.text,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.pop(sheetContext),
-                          icon: const Icon(Icons.close_rounded),
-                          color: PaletaApp.text,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Expanded(
-                      child: _categorias.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  Icon(
-                                    Icons.inbox_outlined,
-                                    size: 42,
-                                    color: PaletaApp.textMuted,
-                                  ),
-                                  SizedBox(height: 12),
-                                  Text(
-                                    'Sem categorias',
-                                    style: TextStyle(
-                                      color: PaletaApp.text,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : ListView.separated(
-                              itemCount: _categorias.length,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(height: 10),
-                              itemBuilder: (context, index) {
-                                final categoria = _categorias[index];
-                                final selected =
-                                    categoria.id == _selectedCategoriaId;
-                                return InkWell(
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedCategoriaId = categoria.id;
-                                      _categoriaError = false;
-                                      _validationMessage = null;
-                                    });
-                                    Navigator.pop(sheetContext);
-                                  },
-                                  borderRadius: BorderRadius.circular(18),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(14),
-                                    decoration: BoxDecoration(
-                                      color: selected
-                                          ? PaletaApp.warningBg
-                                          : PaletaApp.surfaceAlt,
-                                      borderRadius: BorderRadius.circular(18),
-                                      border: Border.all(
-                                        color: selected
-                                            ? PaletaApp.primary
-                                            : PaletaApp.border,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          width: 40,
-                                          height: 40,
-                                          decoration: BoxDecoration(
-                                            color: selected
-                                                ? PaletaApp.primary
-                                                : PaletaApp.inputFill,
-                                            borderRadius: BorderRadius.circular(
-                                              14,
-                                            ),
-                                          ),
-                                          child: Icon(
-                                            _iconForCategory(categoria.nome),
-                                            color: selected
-                                                ? Colors.white
-                                                : PaletaApp.primary,
-                                            size: 20,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 14),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                categoria.nome,
-                                                style: const TextStyle(
-                                                  color: PaletaApp.text,
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                              ),
-                                              if ((categoria.descricao ?? '')
-                                                  .trim()
-                                                  .isNotEmpty) ...[
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  categoria.descricao!.trim(),
-                                                  style: const TextStyle(
-                                                    color:
-                                                        PaletaApp.textMuted,
-                                                    fontSize: 12,
-                                                  ),
-                                                ),
-                                              ],
-                                            ],
-                                          ),
-                                        ),
-                                        if (selected)
-                                          const Icon(
-                                            Icons.check_rounded,
-                                            color: PaletaApp.primary,
-                                          )
-                                        else
-                                          const SizedBox(width: 18),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
+  void _abrirSelecaoCategoria() {
+    abrirSelecaoCategoria(
+      context,
+      categorias: _categorias,
+      categoriaSelecionadaId: _categoriaId,
+      aoSelecionar: (categoria) {
+        setState(() => _categoriaId = categoria.id);
+        _limparErro(CampoProduto.categoria);
       },
     );
   }
 
-  IconData _iconForCategory(String name) {
-    final lower = name.toLowerCase();
-    if (lower.contains('beb')) return Icons.local_bar_rounded;
-    if (lower.contains('sob')) return Icons.cake_rounded;
-    if (lower.contains('entr')) return Icons.ramen_dining_rounded;
-    if (lower.contains('por')) return Icons.fastfood_rounded;
-    return Icons.restaurant_rounded;
-  }
+  // ---------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------
 
-  String _friendlyType(String? value) {
-    switch (value) {
-      case 'UNITARIO':
-        return 'Unitário';
-      case 'COMPOSTO':
-        return 'Composto';
-      case 'COMBO':
-        return 'Combo';
-      default:
-        return '-';
-    }
-  }
-
-  String _friendlySetor(String? value) {
-    switch (value) {
-      case 'COZINHA':
-        return 'Cozinha';
-      case 'BAR':
-        return 'Bar';
-      case 'BALCAO':
-        return 'Balcão';
-      case 'CAIXA':
-        return 'Caixa';
-      default:
-        return '-';
-    }
-  }
-
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AppBotaoIcone(icone: Icons.arrow_back_rounded,
-            aoTocar: () {
-              if (_step == 0) {
-                Navigator.pop(context);
-              } else {
-                _prev();
-              }
-            },
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _isEdit ? 'Editar produto' : 'Novo produto',
-                  style: const TextStyle(
-                    color: PaletaApp.text,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    height: 1.05,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Etapa ${_step + 1} de 3 • $_stepLabel',
-                  style: const TextStyle(
-                    color: PaletaApp.textMuted,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgress() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: List.generate(3, (index) {
-          final active = index <= _step;
-          return Expanded(
-            child: Container(
-              height: 4,
-              margin: EdgeInsets.only(right: index == 2 ? 0 : 8),
-              decoration: BoxDecoration(
-                color: active ? PaletaApp.primary : PaletaApp.borderSoft,
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-
-  Widget _buildInputLabel(String label, {String? counter}) {
-    return Row(
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: PaletaApp.text,
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const Spacer(),
-        if (counter != null)
-          Text(
-            counter,
-            style: const TextStyle(
-              color: PaletaApp.textMuted,
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String hint,
-    required ValueChanged<String> onChanged,
-    int maxLines = 1,
-    TextInputType keyboardType = TextInputType.text,
-    bool error = false,
-    bool price = false,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: PaletaApp.surfaceAlt,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: error ? PaletaApp.error : PaletaApp.border,
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: PaletaApp.sombraCampo,
-            blurRadius: 12,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: TextField(
-        controller: controller,
-        onChanged: onChanged,
-        maxLines: maxLines,
-        keyboardType: keyboardType,
-        style: TextStyle(
-          color: PaletaApp.text,
-          fontSize: price ? 28 : 15,
-          fontWeight: price ? FontWeight.w700 : FontWeight.w500,
-        ),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: const TextStyle(color: PaletaApp.textMuted),
-          prefixText: price ? 'R\$ ' : null,
-          prefixStyle: const TextStyle(
-            color: PaletaApp.textMuted,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-          ),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: price ? 20 : 16,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorBanner() {
-    if (_validationMessage == null) return const SizedBox.shrink();
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: PaletaApp.warningBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: PaletaApp.error),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 1),
-            child: Icon(
-              Icons.warning_amber_rounded,
-              color: PaletaApp.error,
-              size: 18,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              _validationMessage!,
-              style: const TextStyle(
-                color: PaletaApp.text,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                height: 1.35,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoCard(String text) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: PaletaApp.warningBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: PaletaApp.warningBorder),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 1),
-            child: Icon(
-              Icons.lightbulb_outline_rounded,
-              color: PaletaApp.primary,
-              size: 18,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                color: PaletaApp.text,
-                fontSize: 12,
-                height: 1.35,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildIdentityStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildInputLabel(
-          'Nome do produto *',
-          counter: '${_nome.text.length}/120',
-        ),
-        const SizedBox(height: 8),
-        _buildTextField(
-          controller: _nome,
-          hint: 'Ex.: Picanha na chapa',
-          onChanged: (_) {
-            if (_nomeError || _validationMessage != null) {
-              setState(() {
-                _nomeError = false;
-                _validationMessage = null;
-              });
-            } else {
-              setState(() {});
-            }
-          },
-          error: _nomeError,
-        ),
-        if (_nomeError) ...[
-          const SizedBox(height: 6),
-          const Text(
-            'Informe o nome do produto.',
-            style: TextStyle(
-              color: PaletaApp.error,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-        const SizedBox(height: 16),
-        _buildInputLabel(
-          'Descrição opcional',
-          counter: '${_descricao.text.length}/500',
-        ),
-        const SizedBox(height: 8),
-        _buildTextField(
-          controller: _descricao,
-          hint: 'Detalhes, ingredientes, acompanhamentos...',
-          onChanged: (_) => setState(() {}),
-          maxLines: 5,
-        ),
-        const SizedBox(height: 16),
-        _buildInfoCard(
-          'Use um nome curto e claro. A descrição aparece no cardápio digital pro cliente.',
-        ),
-        const SizedBox(height: 16),
-        _buildErrorBanner(),
-      ],
-    );
-  }
-
-  Widget _buildCategorySelector() {
-    final hasSelection = _selectedCategoriaId != null;
-    return InkWell(
-      onTap: _openCategoriaSelector,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: PaletaApp.surfaceAlt,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: _categoriaError ? PaletaApp.error : PaletaApp.border,
-          ),
-          boxShadow: const [
-            BoxShadow(
-              color: PaletaApp.sombraCampo,
-              blurRadius: 12,
-              offset: Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: hasSelection
-                    ? PaletaApp.primary
-                    : PaletaApp.inputFill,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(
-                _iconForCategory(_selectedCategoriaLabel),
-                color: hasSelection ? Colors.white : PaletaApp.primary,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Categoria *',
-                    style: TextStyle(
-                      color: PaletaApp.text,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _selectedCategoriaLabel,
-                    style: TextStyle(
-                      color: hasSelection
-                          ? PaletaApp.text
-                          : PaletaApp.textMuted,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: PaletaApp.textMuted,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPriceStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Preço de venda *',
-          style: TextStyle(
-            color: PaletaApp.text,
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 8),
-        _buildTextField(
-          controller: _preco,
-          hint: '89,00',
-          onChanged: (_) {
-            if (_precoError || _validationMessage != null) {
-              setState(() {
-                _precoError = false;
-                _validationMessage = null;
-              });
-            } else {
-              setState(() {});
-            }
-          },
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          price: true,
-          error: _precoError,
-        ),
-        if (_precoError) ...[
-          const SizedBox(height: 6),
-          const Text(
-            'Informe um preço válido.',
-            style: TextStyle(
-              color: PaletaApp.error,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-        const SizedBox(height: 16),
-        _buildCategorySelector(),
-        if (_categoriaError) ...[
-          const SizedBox(height: 6),
-          const Text(
-            'Selecione uma categoria.',
-            style: TextStyle(
-              color: PaletaApp.error,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-        const SizedBox(height: 16),
-        _buildInfoCard(
-          'Margem típica de pratos principais: 60–70%. Ajuste o preço de acordo com seu posicionamento.',
-        ),
-        const SizedBox(height: 16),
-        _buildErrorBanner(),
-      ],
-    );
-  }
-
-  Widget _buildTypeOption(_ChoiceOption option) {
-    final selected = _selectedTipo == option.value;
-    return InkWell(
-      onTap: () {
-        setState(() {
-          _selectedTipo = option.value;
-          _tipoError = false;
-          _validationMessage = null;
-        });
-      },
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: selected ? PaletaApp.warningBg : PaletaApp.surfaceAlt,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: selected ? PaletaApp.primary : PaletaApp.border,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? PaletaApp.primary
-                        : PaletaApp.inputFill,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    option.icon,
-                    color: selected ? Colors.white : PaletaApp.primary,
-                    size: 18,
-                  ),
-                ),
-                const Spacer(),
-                if (selected)
-                  const Icon(
-                    Icons.check_circle_rounded,
-                    color: PaletaApp.primary,
-                    size: 18,
-                  ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Text(
-              option.label,
-              style: const TextStyle(
-                color: PaletaApp.text,
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              option.description,
-              style: const TextStyle(
-                color: PaletaApp.textMuted,
-                fontSize: 11,
-                height: 1.2,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTypeGrid() {
-    return GridView.count(
-      crossAxisCount: 2,
-      crossAxisSpacing: 10,
-      mainAxisSpacing: 10,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 1.25,
-      children: _tipoOptions.map(_buildTypeOption).toList(),
-    );
-  }
-
-  Widget _buildSectorOption(_ChoiceOption option) {
-    final selected = _selectedSetor == option.value;
-    return InkWell(
-      onTap: () {
-        setState(() {
-          _selectedSetor = option.value;
-          _setorError = false;
-          _validationMessage = null;
-        });
-      },
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: selected ? PaletaApp.warningBg : PaletaApp.surfaceAlt,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: selected ? PaletaApp.primary : PaletaApp.border,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: selected ? PaletaApp.primary : PaletaApp.inputFill,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(
-                option.icon,
-                color: selected ? Colors.white : PaletaApp.primary,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    option.label,
-                    style: const TextStyle(
-                      color: PaletaApp.text,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    option.description,
-                    style: const TextStyle(
-                      color: PaletaApp.textMuted,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (selected)
-              const Icon(
-                Icons.check_circle_rounded,
-                color: PaletaApp.primary,
-                size: 18,
-              )
-            else
-              const Icon(
-                Icons.radio_button_unchecked_rounded,
-                color: PaletaApp.border,
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSummary() {
-    final categoriaName = _selectedCategoria?.nome ?? '-';
-    final priceValue = _parsePrice();
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: PaletaApp.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: PaletaApp.borderSoft),
-        boxShadow: const [
-          BoxShadow(
-            color: PaletaApp.shadow,
-            blurRadius: 12,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'RESUMO',
-            style: TextStyle(
-              color: PaletaApp.textMuted,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.4,
-            ),
-          ),
-          const SizedBox(height: 12),
-          AppLinhaResumo(rotulo: 'Nome',
-            valor: _nome.text.trim().isEmpty ? '-' : _nome.text.trim(),
-          ),
-          const Divider(height: 18, color: PaletaApp.borderSoft),
-          AppLinhaResumo(rotulo: 'Preço',
-            valor: _formatCurrency(priceValue > 0 ? priceValue : null),
-          ),
-          const Divider(height: 18, color: PaletaApp.borderSoft),
-          AppLinhaResumo(rotulo: 'Categoria', valor: categoriaName),
-          const Divider(height: 18, color: PaletaApp.borderSoft),
-          AppLinhaResumo(rotulo: 'Tipo', valor: _friendlyType(_selectedTipo)),
-          const Divider(height: 18, color: PaletaApp.borderSoft),
-          AppLinhaResumo(rotulo: 'Setor', valor: _friendlySetor(_selectedSetor)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProductionStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Tipo do produto *',
-          style: TextStyle(
-            color: PaletaApp.text,
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 8),
-        _buildTypeGrid(),
-        if (_tipoError) ...[
-          const SizedBox(height: 6),
-          const Text(
-            'Selecione um tipo de produto.',
-            style: TextStyle(
-              color: PaletaApp.error,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-        const SizedBox(height: 18),
-        const Text(
-          'Setor de produção *',
-          style: TextStyle(
-            color: PaletaApp.text,
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Column(children: _setorOptions.map(_buildSectorOption).toList()),
-        if (_setorError) ...[
-          const SizedBox(height: 6),
-          const Text(
-            'Selecione o setor de produção.',
-            style: TextStyle(
-              color: PaletaApp.error,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-        const SizedBox(height: 16),
-        _buildSummary(),
-        const SizedBox(height: 16),
-        _buildErrorBanner(),
-      ],
-    );
-  }
-
-  Widget _buildStepBody() {
-    switch (_step) {
+  String get _rotuloEtapa {
+    switch (_etapa) {
       case 0:
-        return _buildIdentityStep();
+        return 'Identidade';
       case 1:
-        return _buildPriceStep();
+        return 'Preço & categoria';
       default:
-        return _buildProductionStep();
+        return 'Produção';
     }
   }
 
-  Widget _buildBottomButtons() {
-    final leftLabel = _step == 0 ? 'Cancelar' : 'Voltar';
-    final rightLabel = _step == 2
-        ? (_isEdit ? 'Salvar produto' : 'Cadastrar produto')
-        : 'Continuar';
-
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-        child: Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: _step == 0 ? () => Navigator.pop(context) : _prev,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: PaletaApp.text,
-                  backgroundColor: PaletaApp.surfaceAlt,
-                  side: const BorderSide(color: PaletaApp.border),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: Text(leftLabel),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: _saving ? null : _next,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: PaletaApp.primary,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: PaletaApp.primarySoft.withOpacity(
-                    0.55,
-                  ),
-                  disabledForegroundColor: Colors.white.withOpacity(0.8),
-                  elevation: 4,
-                  shadowColor: PaletaApp.primaryPressed.withOpacity(0.35),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: _saving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(rightLabel),
-                          const SizedBox(width: 8),
-                          const Icon(Icons.chevron_right_rounded, size: 18),
-                        ],
-                      ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  Widget _corpoDaEtapa() {
+    switch (_etapa) {
+      case 0:
+        return EtapaIdentidade(
+          controladorNome: _nome,
+          controladorDescricao: _descricao,
+          validacao: _validacao,
+          // O contador de caracteres depende do texto, então redesenha a
+          // cada tecla — daí o setState mesmo sem erro a limpar.
+          aoAlterarNome: (_) {
+            setState(() {});
+            _limparErro(CampoProduto.nome);
+          },
+          aoAlterarDescricao: (_) => setState(() {}),
+        );
+      case 1:
+        return EtapaPreco(
+          controladorPreco: _preco,
+          categoria: _categoria,
+          validacao: _validacao,
+          aoAlterarPreco: (_) => _limparErro(CampoProduto.preco),
+          aoAbrirCategoria: _abrirSelecaoCategoria,
+        );
+      default:
+        return EtapaProducao(
+          dados: _dados,
+          nomeCategoria: _categoria?.nome ?? '-',
+          validacao: _validacao,
+          aoSelecionarTipo: (valor) {
+            setState(() => _tipo = valor);
+            _limparErro(CampoProduto.tipo);
+          },
+          aoSelecionarSetor: (valor) {
+            setState(() => _setor = valor);
+            _limparErro(CampoProduto.setor);
+          },
+        );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final ultimaEtapa = _etapa == _totalEtapas - 1;
     return Scaffold(
-      backgroundColor: PaletaApp.background,
+      backgroundColor: AppTema.fundo,
       body: SafeArea(
         child: Column(
           children: [
-            _buildHeader(),
-            _buildProgress(),
+            AppCabecalhoWizard(
+              titulo: _ehEdicao ? 'Editar produto' : 'Novo produto',
+              etapa: _etapa,
+              totalEtapas: _totalEtapas,
+              rotuloEtapa: _rotuloEtapa,
+              aoVoltar: _voltar,
+            ),
             const SizedBox(height: 12),
             Expanded(
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                child: _buildStepBody(),
+                child: _corpoDaEtapa(),
               ),
             ),
-            _buildBottomButtons(),
+            AppRodapeWizard(
+              rotuloEsquerda: _etapa == 0 ? 'Cancelar' : 'Voltar',
+              rotuloDireita: ultimaEtapa
+                  ? (_ehEdicao ? 'Salvar alterações' : 'Cadastrar produto')
+                  : 'Continuar',
+              iconeDireita: ultimaEtapa
+                  ? Icons.check_rounded
+                  : Icons.chevron_right_rounded,
+              carregando: _salvando,
+              aoVoltar: _voltar,
+              aoAvancar: _avancar,
+            ),
           ],
         ),
       ),
     );
   }
 }
-

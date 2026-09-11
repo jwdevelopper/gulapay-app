@@ -1,16 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/core/api_error.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
+import 'package:my_app_teste/core/widgets/app_campo_busca.dart';
+import 'package:my_app_teste/core/widgets/app_carregando.dart';
+import 'package:my_app_teste/core/widgets/app_dialogo_confirmacao.dart';
+import 'package:my_app_teste/core/widgets/app_estado_vazio.dart';
 import 'package:my_app_teste/modules/categoria/dto/categoria.dart';
 import 'package:my_app_teste/modules/categoria/service/categoria_service.dart';
+import 'package:my_app_teste/modules/produto/dto/filtro_produtos.dart';
 import 'package:my_app_teste/modules/produto/dto/produto.dart';
-import 'package:my_app_teste/modules/produto/models/produto_list_filter.dart';
-import 'package:my_app_teste/modules/produto/models/produto_sort_option.dart';
+import 'package:my_app_teste/modules/produto/dto/rotulos_produto.dart';
+import 'package:my_app_teste/modules/produto/page/produto_form_page.dart';
 import 'package:my_app_teste/modules/produto/service/produto_service.dart';
 import 'package:my_app_teste/modules/produto/widgets/produtos_widgets.dart';
-import 'produto_form_page.dart';
 
+/// Vitrine de produtos, com busca, chips de categoria, filtro avançado e
+/// ordenação.
+///
+/// Cuida apenas de estado, carga e navegação: o recorte e a ordenação vivem
+/// em [FiltroProdutos], e as traduções, ícones e cores em [RotulosProduto].
+///
+/// Só a categoria é filtrada pelo backend (`GET /produtos?categoriaId=X`);
+/// o resto é peneirado em memória.
 class ProdutosPage extends StatefulWidget {
   const ProdutosPage({super.key});
 
@@ -19,559 +30,325 @@ class ProdutosPage extends StatefulWidget {
 }
 
 class _ProdutosPageState extends State<ProdutosPage> {
-  final ProdutoService _service = ProdutoService();
-  final TextEditingController _searchController = TextEditingController();
+  final _service = ProdutoService();
+  final _busca = TextEditingController();
 
   List<Produto> _produtos = [];
   List<Categoria> _categorias = [];
-  ProdutoListFilter _filters = const ProdutoListFilter();
-  bool _loading = true;
-  String _search = '';
-  String _sort = 'featured';
+  FiltroProdutos _filtro = const FiltroProdutos();
+  bool _carregando = true;
+  String? _erro;
 
   @override
   void initState() {
     super.initState();
-    _loadCategories();
-    _load();
+    _carregarCategorias();
+    _carregar();
   }
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _busca.dispose();
     super.dispose();
   }
 
-  Categoria? get _selectedCategoria {
-    if (_filters.categoriaId == null) return null;
-    for (final categoria in _categorias) {
-      if (categoria.id == _filters.categoriaId) return categoria;
-    }
-    return null;
-  }
+  // ---------------------------------------------------------------------
+  // Dados
+  // ---------------------------------------------------------------------
 
-  List<Produto> get _filtered {
-    var list = List<Produto>.from(_produtos);
-
-    if (_filters.categoriaId != null) {
-      list = list
-          .where((produto) => produto.categoriaId == _filters.categoriaId)
-          .toList();
-    }
-
-    if (_search.trim().isNotEmpty) {
-      final query = _search.toLowerCase().trim();
-      list = list.where((produto) {
-        final nome = produto.nome.toLowerCase();
-        final descricao = (produto.descricao ?? '').toLowerCase();
-        final categoriaNome = _categoriaNome(produto.categoriaId).toLowerCase();
-        return nome.contains(query) ||
-            descricao.contains(query) ||
-            categoriaNome.contains(query);
-      }).toList();
-    }
-
-    if (_filters.precoMin != null) {
-      list = list.where((p) => (p.preco ?? 0) >= _filters.precoMin!).toList();
-    }
-    if (_filters.precoMax != null) {
-      list = list.where((p) => (p.preco ?? 0) <= _filters.precoMax!).toList();
-    }
-    if (_filters.descricao.trim().isNotEmpty) {
-      final descricao = _filters.descricao.toLowerCase().trim();
-      list = list
-          .where((p) => (p.descricao ?? '').toLowerCase().contains(descricao))
-          .toList();
-    }
-    if (_filters.tipoProduto != null && _filters.tipoProduto!.isNotEmpty) {
-      final tipo = _filters.tipoProduto!.toUpperCase();
-      list = list
-          .where((p) => (p.tipoProduto ?? '').toUpperCase().contains(tipo))
-          .toList();
-    }
-    if (_filters.setorProducao != null && _filters.setorProducao!.isNotEmpty) {
-      final setor = _filters.setorProducao!.toUpperCase();
-      list = list
-          .where((p) => (p.setorProducao ?? '').toUpperCase().contains(setor))
-          .toList();
-    }
-
-    switch (_sort) {
-      case 'price_asc':
-        list.sort((a, b) => (a.preco ?? 0).compareTo(b.preco ?? 0));
-        break;
-      case 'price_desc':
-        list.sort((a, b) => (b.preco ?? 0).compareTo(a.preco ?? 0));
-        break;
-      case 'name_asc':
-        list.sort(
-          (a, b) => a.nome.toLowerCase().compareTo(b.nome.toLowerCase()),
-        );
-        break;
-      case 'name_desc':
-        list.sort(
-          (a, b) => b.nome.toLowerCase().compareTo(a.nome.toLowerCase()),
-        );
-        break;
-      case 'featured':
-      default:
-        break;
-    }
-
-    return list;
-  }
-
-  String get _screenTitle => _selectedCategoria?.nome.isNotEmpty == true
-      ? _selectedCategoria!.nome
-      : 'Produtos';
-
-  String get _screenSubtitle {
-    if (_loading) return 'Carregando produtos...';
-    if (_selectedCategoria != null) {
-      return '${_filtered.length} itens • filtro ativo';
-    }
-    if (_produtos.isEmpty) return 'Comece a cadastrar';
-    return '${_produtos.length} itens • ${_categorias.length} categorias';
-  }
-
-  String get _sortLabel => produtoSortOptions
-      .firstWhere(
-        (option) => option.value == _sort,
-        orElse: () => produtoSortOptions.first,
-      )
-      .label;
-
-  bool get _hasActiveFilter =>
-      _filters.hasActiveFilter || _search.trim().isNotEmpty;
-
-  Future<void> _loadCategories() async {
+  Future<void> _carregarCategorias() async {
     try {
       final lista = await CategoriaService().listar(apenasAtivos: true);
-      if (!mounted) return;
-      setState(() {
-        _categorias = lista;
-      });
+      if (mounted) setState(() => _categorias = lista);
     } catch (_) {
-      // A tela continua funcional mesmo sem categorias.
+      // A vitrine continua utilizável sem os chips de categoria.
     }
   }
 
-  Future<void> _load({int? categoriaId}) async {
-    if (mounted) {
-      setState(() => _loading = true);
+  Future<void> _carregar({bool mostrarCarregando = true}) async {
+    if (mostrarCarregando) {
+      setState(() {
+        _carregando = true;
+        _erro = null;
+      });
     }
     try {
       final lista = await _service.listar(
         apenasAtivos: true,
-        categoriaId: categoriaId ?? _filters.categoriaId,
+        categoriaId: _filtro.categoriaId,
       );
-      if (!mounted) return;
-      setState(() {
-        _produtos = lista
-            .map((item) => Produto.fromJson(Map<String, dynamic>.from(item)))
-            .toList();
-      });
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao carregar produtos: $e')));
-    } finally {
       if (mounted) {
-        setState(() => _loading = false);
+        setState(() {
+          _produtos = lista
+              .map((item) => Produto.fromJson(Map<String, dynamic>.from(item)))
+              .toList();
+          _erro = null;
+        });
       }
+    } on ApiError catch (e) {
+      if (mounted) setState(() => _erro = e.message);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _erro = 'Não foi possível carregar os produtos.');
+      }
+    } finally {
+      if (mounted) setState(() => _carregando = false);
     }
   }
 
-  Future<void> _reload() async {
-    await _loadCategories();
-    await _load();
+  Future<void> _recarregarTudo() async {
+    await _carregarCategorias();
+    await _carregar(mostrarCarregando: false);
   }
 
-  Future<void> _openCreate() async {
-    final created = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(builder: (_) => const ProdutoFormPage()),
+  /// Nome da categoria de um produto. A busca livre também procura por ele,
+  /// e o `Produto` só guarda o id.
+  String _nomeCategoria(int? categoriaId) => _categorias
+      .firstWhere(
+        (c) => c.id == categoriaId,
+        orElse: () => Categoria(id: 0, nome: ''),
+      )
+      .nome;
+
+  List<Produto> get _filtrados =>
+      _filtro.aplicar(_produtos, nomeCategoria: _nomeCategoria);
+
+  // ---------------------------------------------------------------------
+  // Filtros
+  // ---------------------------------------------------------------------
+
+  /// Aplica um filtro novo. [recarregar] é necessário quando a categoria
+  /// muda — ela é o único critério que o backend resolve.
+  void _aplicarFiltro(FiltroProdutos novo, {bool recarregar = false}) {
+    setState(() => _filtro = novo);
+    if (recarregar) _carregar();
+  }
+
+  void _limparTudo() {
+    _busca.clear();
+    _aplicarFiltro(const FiltroProdutos(), recarregar: true);
+  }
+
+  void _selecionarCategoria(Categoria categoria) {
+    final jaSelecionada = _filtro.categoriaId == categoria.id;
+    _aplicarFiltro(
+      jaSelecionada
+          ? _filtro.copiarCom(limparCategoria: true)
+          : _filtro.copiarCom(categoriaId: categoria.id),
+      recarregar: true,
     );
-    if (created == true) {
-      await _load();
+  }
+
+  Future<void> _abrirOrdenacao() async {
+    final escolhida = await ProdutoSortSheet.mostrar(
+      context,
+      selecionada: _filtro.ordenacao,
+    );
+    if (escolhida != null && escolhida != _filtro.ordenacao) {
+      _aplicarFiltro(_filtro.copiarCom(ordenacao: escolhida));
     }
   }
 
-  Future<void> _openEdit(Produto produto) async {
-    final changed = await Navigator.push<bool>(
+  Future<void> _abrirFiltroAvancado() async {
+    final novo = await ProdutoFilterSheet.show(
+      context,
+      categorias: _categorias,
+      filtroInicial: _filtro,
+      nomeCategoria: _nomeCategoria,
+    );
+    if (novo == null) return;
+    _aplicarFiltro(novo, recarregar: novo.categoriaId != _filtro.categoriaId);
+  }
+
+  // ---------------------------------------------------------------------
+  // Ações
+  // ---------------------------------------------------------------------
+
+  Future<void> _abrirFormulario({Produto? produto}) async {
+    final salvou = await Navigator.push<bool>(
       context,
       MaterialPageRoute(builder: (_) => ProdutoFormPage(produto: produto)),
     );
-    if (changed == true) {
-      await _load();
-    }
+    if (salvou == true) await _carregar();
   }
 
-  /// Padrão da [UsuarioListaPagina]: AlertDialog estilizado com FaIcon de
-  /// aviso, botões "Cancelar" e "Excluir" (vermelho).
-  Future<bool> _confirmarExclusao(Produto produto) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: const Row(
-          children: [
-            FaIcon(
-              FontAwesomeIcons.triangleExclamation,
-              color: PaletaApp.primary,
-              size: 20,
-            ),
-            SizedBox(width: 10),
-            Text(
-              'Excluir produto',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: PaletaApp.text,
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          'Deseja realmente excluir "${produto.nome}"? Esta ação não pode ser desfeita.',
-          style: const TextStyle(color: PaletaApp.text),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            style: TextButton.styleFrom(
-              foregroundColor: PaletaApp.textMuted,
-            ),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text('Excluir'),
-          ),
-        ],
-      ),
+  /// Confirma e exclui. Devolve `true` quando o card pode sair da lista — o
+  /// `Dismissible` usa esse retorno para concluir a animação.
+  Future<bool> _confirmarEExcluir(Produto produto) async {
+    final confirmou = await AppDialogoConfirmacao.exclusao(
+      context,
+      titulo: 'Excluir produto',
+      mensagem: 'Deseja realmente excluir "${produto.nome}"?',
     );
-    return ok ?? false;
-  }
+    if (confirmou != true || produto.id == null) return false;
 
-  /// Executa o delete na API e remove o item do estado local. Devolve [true]
-  /// quando o card pode sair da lista (o [Dismissible] usa esse retorno para
-  /// concluir a animação).
-  Future<bool> _excluir(Produto produto) async {
-    if (produto.id == null) return false;
     try {
       await _service.excluirProduto(produto.id!);
       if (!mounted) return false;
-      setState(() => _produtos.removeWhere((x) => x.id == produto.id));
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Produto "${produto.nome}" excluído.'),
-          backgroundColor: const Color(0xFF2E8B57),
-        ),
-      );
+      setState(() => _produtos.removeWhere((p) => p.id == produto.id));
+      _avisar('Produto "${produto.nome}" excluído.', sucesso: true);
       return true;
     } on ApiError catch (e) {
-      if (!mounted) return false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao excluir: ${e.message}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _avisar('Erro ao excluir: ${e.message}');
       return false;
     } catch (e) {
-      if (!mounted) return false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao excluir: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _avisar('Erro ao excluir: $e');
       return false;
     }
   }
 
-  /// Função única usada pelo swipe (Dismissible) e pelo PopupMenu do card:
-  /// mostra a confirmação e, se aprovada, executa a exclusão. Devolve [true]
-  /// se o card pode ser removido visualmente (após sucesso da API).
-  Future<bool> _confirmarEExcluir(Produto produto) async {
-    final confirmou = await _confirmarExclusao(produto);
-    if (!confirmou) return false;
-    return await _excluir(produto);
-  }
-
-  Future<void> _openSortSheet() async {
-    final selected = await ProdutoSortSheet.show(context, selectedSort: _sort);
-    if (selected == null || selected == _sort) return;
-    setState(() => _sort = selected);
-  }
-
-  Future<void> _openFilterSheet() async {
-    final selectedFilters = await ProdutoFilterSheet.show(
-      context,
-      categorias: _categorias,
-      initialFilter: _filters,
-      iconForCategoryName: _iconForCategoryName,
-      categoryNameBuilder: _categoriaNome,
-    );
-    if (selectedFilters == null) return;
-
-    setState(() {
-      _filters = selectedFilters;
-    });
-  }
-
-  String _categoriaNome(int? categoriaId) {
-    return _categorias
-        .firstWhere(
-          (categoria) => categoria.id == categoriaId,
-          orElse: () => Categoria(id: 0, nome: ''),
-        )
-        .nome;
-  }
-
-  String _priceText(double? value) {
-    final price = value ?? 0;
-    return 'R\$ ${price.toStringAsFixed(2).replaceAll('.', ',')}';
-  }
-
-  IconData _iconForCategoryName(String name) {
-    final lower = name.toLowerCase();
-    if (lower.contains('beb')) return Icons.local_bar_rounded;
-    if (lower.contains('sob')) return Icons.cake_rounded;
-    if (lower.contains('entr')) return Icons.ramen_dining_rounded;
-    if (lower.contains('por')) return Icons.lunch_dining_rounded;
-    if (lower.contains('prato') || lower.contains('principal')) {
-      return Icons.dinner_dining_rounded;
-    }
-    return Icons.restaurant_rounded;
-  }
-
-  IconData _iconForProduct(Produto produto) {
-    final tipo = (produto.tipoProduto ?? '').toUpperCase();
-    final categoria = _categoriaNome(produto.categoriaId).toLowerCase();
-    if (tipo.contains('BEBIDA') || categoria.contains('beb')) {
-      return Icons.local_bar_rounded;
-    }
-    if (tipo.contains('SOBREMESA') || categoria.contains('sob')) {
-      return Icons.cake_rounded;
-    }
-    if (tipo.contains('PORCAO') || categoria.contains('por')) {
-      return Icons.lunch_dining_rounded;
-    }
-    if (tipo.contains('PRATO') ||
-        categoria.contains('prato') ||
-        categoria.contains('principal')) {
-      return Icons.dinner_dining_rounded;
-    }
-    return Icons.restaurant_rounded;
-  }
-
-  Color _accentForProduct(Produto produto) {
-    final seed = _categoriaNome(produto.categoriaId).isNotEmpty
-        ? _categoriaNome(produto.categoriaId)
-        : produto.nome;
-    const palette = <Color>[
-      Color(0xFFF8C39C),
-      Color(0xFFF6C48A),
-      Color(0xFFE7C7F3),
-      Color(0xFFF3D0A3),
-      Color(0xFFDCE7C1),
-    ];
-    return palette[seed.hashCode.abs() % palette.length];
-  }
-
-  Color _sectorColor(String? sector) {
-    final normalized = (sector ?? '').toUpperCase();
-    if (normalized.contains('BAR')) return const Color(0xFFB182D1);
-    if (normalized.contains('CAIXA')) return const Color(0xFF8FB37A);
-    return const Color(0xFFDA8F56);
-  }
-
-  String _friendlySector(String? value) {
-    switch (value) {
-      case 'COZINHA':
-        return 'Cozinha';
-      case 'BAR':
-        return 'Bar';
-      case 'CAIXA':
-        return 'Caixa';
-      default:
-        return value?.isNotEmpty == true ? value! : '-';
-    }
-  }
-
-  void _clearCategoryFilter() {
-    if (_filters.categoriaId == null) return;
-    setState(() {
-      _filters = _filters.clearCategory();
-    });
-    _load();
-  }
-
-  void _clearSearchAndFilter() {
-    setState(() {
-      _filters = const ProdutoListFilter();
-      _search = '';
-      _searchController.clear();
-    });
-    _load();
-  }
-
-  Widget _buildCategoryChips() {
-    return ProdutoCategoryChips(
-      categorias: _categorias,
-      selectedCategoriaId: _filters.categoriaId,
-      iconForCategoryName: _iconForCategoryName,
-      onClearCategory: _clearCategoryFilter,
-      onSelectCategory: (categoria) {
-        if (_filters.categoriaId == categoria.id) {
-          _clearCategoryFilter();
-          return;
-        }
-        setState(() {
-          _filters = _filters.copyWith(categoriaId: categoria.id);
-        });
-        _load(categoriaId: categoria.id);
-      },
+  void _avisar(String mensagem, {bool sucesso = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensagem),
+        backgroundColor: sucesso ? AppTema.sucesso : AppTema.erro,
+      ),
     );
   }
 
-  Widget _buildProductCard(Produto produto) {
-    final categoriaNome = _categoriaNome(produto.categoriaId);
-    final descricao = (produto.descricao ?? '').trim();
-    final subtitleParts = <String>[];
-    if (categoriaNome.isNotEmpty) subtitleParts.add(categoriaNome);
-    if (descricao.isNotEmpty) subtitleParts.add(descricao);
+  // ---------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------
 
-    return ProdutoCard(
-      produto: produto,
-      subtitle: subtitleParts.join(' • '),
-      categoriaNome: categoriaNome,
-      icon: _iconForProduct(produto),
-      accentColor: _accentForProduct(produto),
-      sectorLabel: _friendlySector(produto.setorProducao).toUpperCase(),
-      sectorColor: _sectorColor(produto.setorProducao),
-      priceText: _priceText(produto.preco),
-      onTap: () => _openEdit(produto),
-      onEdit: () => _openEdit(produto),
-      onConfirmDelete: () => _confirmarEExcluir(produto),
-    );
-  }
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: AppTema.fundo,
+    floatingActionButton: FloatingActionButton(
+      onPressed: _abrirFormulario,
+      backgroundColor: AppTema.primaria,
+      foregroundColor: Colors.white,
+      shape: const CircleBorder(),
+      child: const Icon(Icons.add_rounded),
+    ),
+    floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+    body: SafeArea(
+      child: Column(
+        children: [
+          const SizedBox(height: 16),
+          AppCampoBusca(
+            controle: _busca,
+            dica: 'Buscar produto…',
+            margemHorizontal: 16,
+            aoMudar: (valor) => _aplicarFiltro(_filtro.copiarCom(busca: valor)),
+          ),
+          const SizedBox(height: 10),
+          ProdutoCategoryChips(
+            categorias: _categorias,
+            selectedCategoriaId: _filtro.categoriaId,
+            iconForCategoryName: RotulosProduto.iconeDaCategoria,
+            onClearCategory: () => _aplicarFiltro(
+              _filtro.copiarCom(limparCategoria: true),
+              recarregar: true,
+            ),
+            onSelectCategory: _selecionarCategoria,
+          ),
+          ProdutoResultsHeader(
+            resultCount: _filtrados.length,
+            sortLabel: _filtro.ordenacao.rotulo,
+            onSortTap: _abrirOrdenacao,
+            onFilterTap: _abrirFiltroAvancado,
+            onClearFiltersTap: _limparTudo,
+            hasActiveFilter: _filtro.temFiltroAvancado,
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              color: AppTema.primaria,
+              onRefresh: _recarregarTudo,
+              child: _lista(),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 
-  Widget _buildList() {
-    if (_loading) {
+  Widget _lista() {
+    if (_carregando) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 28, 16, 96),
-        children: const [
-          SizedBox(height: 120),
-          Center(
-            child: CircularProgressIndicator(color: PaletaApp.primary),
-          ),
-        ],
+        children: const [SizedBox(height: 120), AppCarregando()],
       );
     }
-
+    if (_erro != null) {
+      return _rolavel(
+        AppEstadoVazio(
+          icone: Icons.cloud_off_rounded,
+          titulo: 'Não foi possível carregar',
+          mensagem: _erro!,
+          rotuloBotao: 'Tentar novamente',
+          iconeBotao: Icons.refresh_rounded,
+          aoTocarBotao: _carregar,
+        ),
+      );
+    }
     if (_produtos.isEmpty) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 96),
-        children: [
-          const SizedBox(height: 24),
-          EmptyStateCard(
-            title: 'Sem produtos por aqui',
-            subtitle:
-                'Cadastre seu primeiro produto pra comecar a montar o cardapio.',
-            icon: Icons.dinner_dining_rounded,
-            buttonLabel: 'Cadastrar produto',
-            onPressed: _openCreate,
-          ),
-        ],
+      return _rolavel(
+        AppEstadoVazio(
+          icone: Icons.dinner_dining_rounded,
+          titulo: 'Sem produtos por aqui',
+          mensagem:
+              'Cadastre seu primeiro produto para começar a montar o '
+              'cardápio.',
+          rotuloBotao: 'Cadastrar produto',
+          aoTocarBotao: _abrirFormulario,
+        ),
       );
     }
 
-    if (_filtered.isEmpty) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 96),
-        children: [
-          const SizedBox(height: 24),
-          EmptyStateCard(
-            title: 'Nenhum produto encontrado',
-            subtitle:
-                'Tente um termo diferente ou limpe os filtros para ver todos os itens.',
-            icon: Icons.search_off_rounded,
-            buttonLabel: 'Limpar filtros',
-            onPressed: _clearSearchAndFilter,
-            secondary: true,
-          ),
-        ],
+    final filtrados = _filtrados;
+    if (filtrados.isEmpty) {
+      return _rolavel(
+        AppEstadoVazio(
+          icone: Icons.search_off_rounded,
+          titulo: 'Nenhum produto encontrado',
+          mensagem:
+              'Tente um termo diferente ou limpe os filtros para ver todos '
+              'os itens.',
+          rotuloBotao: 'Limpar filtros',
+          iconeBotao: Icons.filter_alt_off_rounded,
+          secundario: true,
+          aoTocarBotao: _limparTudo,
+        ),
       );
     }
 
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
-      itemCount: _filtered.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, index) => _buildProductCard(_filtered[index]),
+      itemCount: filtrados.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      itemBuilder: (_, i) => _cartao(filtrados[i]),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: PaletaApp.background,
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openCreate,
-        backgroundColor: PaletaApp.primary,
-        foregroundColor: Colors.white,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.add_rounded),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 16),
-            
-            ProdutoSearchField(
-              controller: _searchController,
-              search: _search,
-              onChanged: (value) => setState(() => _search = value),
-              onClear: () {
-                _searchController.clear();
-                setState(() => _search = '');
-              },
-            ),
-            const SizedBox(height: 10),
-            _buildCategoryChips(),
-            ProdutoResultsHeader(
-              resultCount: _filtered.isEmpty && _produtos.isNotEmpty
-                  ? 0
-                  : _filtered.length,
-              sortLabel: _sortLabel,
-              onSortTap: _openSortSheet,
-            ),
-            Expanded(
-              child: RefreshIndicator(
-                color: PaletaApp.primary,
-                onRefresh: _reload,
-                child: _buildList(),
-              ),
-            ),
-          ],
-        ),
-      ),
+  Widget _cartao(Produto produto) {
+    final nomeCategoria = _nomeCategoria(produto.categoriaId);
+    final descricao = (produto.descricao ?? '').trim();
+    return ProdutoCard(
+      produto: produto,
+      subtitle: [
+        if (nomeCategoria.isNotEmpty) nomeCategoria,
+        if (descricao.isNotEmpty) descricao,
+      ].join(' • '),
+      categoriaNome: nomeCategoria,
+      icon: RotulosProduto.iconeDoProduto(produto, nomeCategoria),
+      accentColor: RotulosProduto.corDestaque(produto, nomeCategoria),
+      sectorLabel: RotulosProduto.setor(produto.setorProducao).toUpperCase(),
+      sectorColor: RotulosProduto.corSetor(produto.setorProducao),
+      priceText: RotulosProduto.preco(produto.preco),
+      onTap: () => _abrirFormulario(produto: produto),
+      onEdit: () => _abrirFormulario(produto: produto),
+      onConfirmDelete: () => _confirmarEExcluir(produto),
     );
   }
+
+  /// Mantém o conteúdo rolável mesmo quando cabe na tela — sem isso o
+  /// "puxar para atualizar" não funciona nos estados de erro e de vazio.
+  Widget _rolavel(Widget filho) => ListView(
+    physics: const AlwaysScrollableScrollPhysics(),
+    padding: const EdgeInsets.fromLTRB(16, 38, 16, 96),
+    children: [filho],
+  );
 }

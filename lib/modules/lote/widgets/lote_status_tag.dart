@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/modules/lote/models/lote_status_validade.dart';
+import 'package:my_app_teste/modules/lote/dto/lote_status_validade.dart';
 
 /// Tag colorida que mostra a situação de validade do lote. Segue o mesmo
 /// formato visual do [AppTag], mas com cores derivadas do [LoteStatusValidade].

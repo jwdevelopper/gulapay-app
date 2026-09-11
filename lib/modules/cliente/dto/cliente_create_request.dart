@@ -6,17 +6,12 @@ class ClienteCreateRequest {
   String? email;
   ClienteEndereco? endereco;
 
-  ClienteCreateRequest({
-    this.nome,
-    this.telefone,
-    this.email,
-    this.endereco,
-  });
+  ClienteCreateRequest({this.nome, this.telefone, this.email, this.endereco});
 
   Map<String, dynamic> toJson() => {
-        'nome': nome,
-        'telefone': telefone,
-        'email': email,
-        'endereco': endereco?.toJson(),
-      };
+    'nome': nome,
+    'telefone': telefone,
+    'email': email,
+    'endereco': endereco?.toJson(),
+  };
 }

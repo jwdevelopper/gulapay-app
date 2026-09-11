@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_app_teste/core/api_client.dart';
@@ -11,7 +10,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  DioAdapter _createAdapter() {
+  DioAdapter createAdapter() {
     final dio = ApiClient.dio;
     final adapter = DioAdapter(dio: dio);
     dio.httpClientAdapter = adapter;
@@ -20,7 +19,7 @@ void main() {
 
   group('ProdutoService', () {
     test('criarProduto returns created data', () async {
-      final adapter = _createAdapter();
+      final adapter = createAdapter();
       final service = ProdutoService();
 
       adapter.onPost(
@@ -35,7 +34,7 @@ void main() {
     });
 
     test('buscarPorId returns data', () async {
-      final adapter = _createAdapter();
+      final adapter = createAdapter();
       final service = ProdutoService();
 
       adapter.onGet(
@@ -49,7 +48,7 @@ void main() {
     });
 
     test('listar returns list response', () async {
-      final adapter = _createAdapter();
+      final adapter = createAdapter();
       final service = ProdutoService();
 
       adapter.onGet(
@@ -67,7 +66,7 @@ void main() {
     });
 
     test('listar returns data list when wrapped', () async {
-      final adapter = _createAdapter();
+      final adapter = createAdapter();
       final service = ProdutoService();
 
       adapter.onGet(
@@ -86,7 +85,7 @@ void main() {
     });
 
     test('listar returns empty list for unexpected response', () async {
-      final adapter = _createAdapter();
+      final adapter = createAdapter();
       final service = ProdutoService();
 
       adapter.onGet(
@@ -100,7 +99,7 @@ void main() {
     });
 
     test('editarProduto returns updated data', () async {
-      final adapter = _createAdapter();
+      final adapter = createAdapter();
       final service = ProdutoService();
 
       adapter.onPut(
@@ -115,19 +114,16 @@ void main() {
     });
 
     test('excluirProduto completes without error', () async {
-      final adapter = _createAdapter();
+      final adapter = createAdapter();
       final service = ProdutoService();
 
-      adapter.onDelete(
-        '/produtos/3',
-        (server) => server.reply(204, null),
-      );
+      adapter.onDelete('/produtos/3', (server) => server.reply(204, null));
 
       await service.excluirProduto(3);
     });
 
     test('throws ApiError on bad request', () async {
-      final adapter = _createAdapter();
+      final adapter = createAdapter();
       final service = ProdutoService();
 
       adapter.onPost(

@@ -9,7 +9,7 @@ class AppTag extends StatelessWidget {
   const AppTag(
     this.texto, {
     super.key,
-    this.fundo = AppTema.fundoDica,
+    this.fundo = AppTema.avisoFundo,
     this.cor = AppTema.textoSecundario,
   });
 

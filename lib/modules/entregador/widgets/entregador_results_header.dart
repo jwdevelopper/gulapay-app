@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
-
+import 'package:my_app_teste/core/theme/app_tema.dart';
 
 class EntregadorResultsHeader extends StatelessWidget {
   final int resultCount;
@@ -26,7 +25,7 @@ class EntregadorResultsHeader extends StatelessWidget {
             child: Text(
               '$resultCount $itemLabel',
               style: const TextStyle(
-                color: PaletaApp.text,
+                color: AppTema.texto,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -43,13 +42,13 @@ class EntregadorResultsHeader extends StatelessWidget {
                   const Icon(
                     Icons.sort_by_alpha_rounded,
                     size: 16,
-                    color: PaletaApp.textMuted,
+                    color: AppTema.textoSecundario,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     ascending ? 'Nome A-Z' : 'Nome Z-A',
                     style: const TextStyle(
-                      color: PaletaApp.text,
+                      color: AppTema.texto,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),

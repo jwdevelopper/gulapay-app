@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
 
 /// Botão quadrado de ícone usado nos cabeçalhos de tela e formulário.
 ///
@@ -29,7 +29,7 @@ class AppBotaoIcone extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final botao = Material(
-      color: PaletaApp.surface,
+      color: AppTema.superficie,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: aoTocar,
@@ -38,14 +38,14 @@ class AppBotaoIcone extends StatelessWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: PaletaApp.surface,
+            color: AppTema.superficie,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: PaletaApp.border),
+            border: Border.all(color: AppTema.borda),
           ),
           child: mostrarSelo
               ? Stack(
                   children: [
-                    Center(child: Icon(icone, color: PaletaApp.text, size: 22)),
+                    Center(child: Icon(icone, color: AppTema.texto, size: 22)),
                     Positioned(
                       top: 10,
                       right: 10,
@@ -54,14 +54,14 @@ class AppBotaoIcone extends StatelessWidget {
                         width: 8,
                         height: 8,
                         decoration: const BoxDecoration(
-                          color: PaletaApp.primary,
+                          color: AppTema.primaria,
                           shape: BoxShape.circle,
                         ),
                       ),
                     ),
                   ],
                 )
-              : Icon(icone, color: PaletaApp.text, size: 22),
+              : Icon(icone, color: AppTema.texto, size: 22),
         ),
       ),
     );

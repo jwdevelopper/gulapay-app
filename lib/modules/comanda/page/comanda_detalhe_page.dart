@@ -1,29 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/core/theme/decoracoes_app.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
-import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:url_launcher/url_launcher_string.dart';
+import 'package:my_app_teste/modules/comanda/widgets/cartao_item_comanda.dart';
+import 'package:my_app_teste/modules/comanda/widgets/resumo_comanda.dart';
+import 'package:my_app_teste/modules/comanda/widgets/folha_eventos_item.dart';
+import 'package:my_app_teste/modules/comanda/widgets/folha_item_comanda.dart';
+import 'package:my_app_teste/modules/comanda/dto/rotulos_comanda.dart';
+import 'package:my_app_teste/core/widgets/app_carregando.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/auth_session.dart';
-import 'package:my_app_teste/core/widgets/app_tag.dart';
-import 'package:my_app_teste/modules/produto/dto/produto.dart';
-import 'package:my_app_teste/modules/produto/service/produto_service.dart';
 import '../dto/comanda_response.dart';
-import '../dto/evento_item_comanda_response.dart';
 import '../dto/item_comanda_create_request.dart';
 import '../dto/item_comanda_update_request.dart';
 import '../service/comanda_service.dart';
 import '../service/item_comanda_service.dart';
 import 'comanda_edit_page.dart';
-import '../widgets/comanda_search_selector.dart';
-
-const _motivosCancelamento = <String, String>{
-  'LANCAMENTO_INCORRETO': 'Lançamento incorreto',
-  'CLIENTE_DESISTIU': 'Cliente desistiu',
-  'CORTESIA': 'Cortesia',
-  'ERRO_PRODUCAO': 'Erro de produção',
-};
 
 class ComandaDetalhePage extends StatefulWidget {
   const ComandaDetalhePage({super.key, required this.id});
@@ -62,75 +52,45 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
       setState(() {
         _comanda = result[0] as ComandaResponse;
         _perfil = result[1] as String?;
-        _usuarioId = _parseInt(claims['usuarioId'] ?? claims['id'] ?? claims['userId']);
+        _usuarioId = _parseInt(
+          claims['usuarioId'] ?? claims['id'] ?? claims['userId'],
+        );
         _loading = false;
         _erro = null;
       });
     } on ApiError catch (e) {
-      if (mounted) setState(() { _erro = e.message; _loading = false; });
+      if (mounted) {
+        setState(() {
+          _erro = e.message;
+          _loading = false;
+        });
+      }
     } catch (_) {
-      if (mounted) setState(() { _erro = 'Não foi possível carregar a comanda.'; _loading = false; });
+      if (mounted) {
+        setState(() {
+          _erro = 'Não foi possível carregar a comanda.';
+          _loading = false;
+        });
+      }
     }
   }
 
-  int? _parseInt(dynamic value) => value == null ? null : int.tryParse(value.toString());
+  int? _parseInt(dynamic value) =>
+      value == null ? null : int.tryParse(value.toString());
 
   bool get _admin => _perfil == 'ADMINISTRADOR';
   bool get _caixa => _admin || _perfil == 'CAIXA';
   bool get _garcom => _perfil == 'GARCOM';
   bool get _comandaAberta =>
-      _comanda?.status == 'ABERTA' || _comanda?.status == 'AGUARDANDO_PAGAMENTO';
+      _comanda?.status == 'ABERTA' ||
+      _comanda?.status == 'AGUARDANDO_PAGAMENTO';
   bool get _garcomDono =>
-      _garcom && _usuarioId != null && _comanda?.garcomId != null && _usuarioId == _comanda!.garcomId;
+      _garcom &&
+      _usuarioId != null &&
+      _comanda?.garcomId != null &&
+      _usuarioId == _comanda!.garcomId;
   bool get _podeMutarItens => _caixa || _garcomDono;
   bool get _podeEditarComanda => _caixa || _garcomDono;
-
-  String _money(double value) => 'R\$ ${value.toStringAsFixed(2).replaceAll('.', ',')}';
-
-  String _friendlyOrigin(String origin) => switch (origin) {
-        'MESA' => 'Mesa',
-        'BALCAO' => 'Balcão',
-        'DELIVERY' => 'Delivery',
-        _ => origin,
-      };
-
-  Color _statusColor(String status) => switch (status) {
-        'FECHADA' => PaletaApp.success,
-        'CANCELADA' => PaletaApp.error,
-        'AGUARDANDO_PAGAMENTO' => Colors.orange,
-        _ => PaletaApp.primary,
-      };
-
-  IconData _originIcon(String origin) => switch (origin) {
-        'MESA' => Icons.table_restaurant_rounded,
-        'DELIVERY' => Icons.delivery_dining_rounded,
-        _ => Icons.storefront_rounded,
-      };
-
-  String _itemStatusLabel(String status) => switch (status) {
-        'EM_PREPARO' => 'Em preparo',
-        'ENTREGUE' => 'Entregue',
-        'CANCELADO' => 'Cancelado',
-        'TRANSFERIDO' => 'Transferido',
-        _ => status.replaceAll('_', ' '),
-      };
-
-  Color _itemStatusColor(String status) => switch (status) {
-        'EM_PREPARO' => PaletaApp.primary,
-        'ENTREGUE' => PaletaApp.success,
-        'CANCELADO' => PaletaApp.error,
-        'TRANSFERIDO' => Colors.blueGrey,
-        _ => PaletaApp.textMuted,
-      };
-
-  String _acaoLabel(String acao) => switch (acao) {
-        'CRIADO' => 'Criado',
-        'EDITADO' => 'Editado',
-        'TRANSFERIDO' => 'Transferido',
-        'CANCELADO' => 'Cancelado',
-        'ENTREGUE' => 'Entregue',
-        _ => acao,
-      };
 
   Future<void> _action(String action) async {
     setState(() => _actionLoading = true);
@@ -143,7 +103,9 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
       if (mounted) setState(() => _comanda = updated);
     } on ApiError catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     } finally {
       if (mounted) setState(() => _actionLoading = false);
@@ -169,12 +131,16 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
       await _load();
     } on ApiError catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não foi possível concluir a operação.')),
+          const SnackBar(
+            content: Text('Não foi possível concluir a operação.'),
+          ),
         );
       }
     } finally {
@@ -182,10 +148,16 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
     }
   }
 
-  bool _podeEditar(ItemComandaResponse item) => item.emPreparo && _podeMutarItens && _comandaAberta;
-  bool _podeEntregar(ItemComandaResponse item) => item.emPreparo && _podeMutarItens && _comandaAberta;
+  bool _podeEditar(ItemComandaResponse item) =>
+      item.emPreparo && _podeMutarItens && _comandaAberta;
+  bool _podeEntregar(ItemComandaResponse item) =>
+      item.emPreparo && _podeMutarItens && _comandaAberta;
   bool _podeTransferir(ItemComandaResponse item) {
-    if (!_comandaAberta || _comanda?.tipoOrigem != 'MESA' || _comanda?.mesaId == null) return false;
+    if (!_comandaAberta ||
+        _comanda?.tipoOrigem != 'MESA' ||
+        _comanda?.mesaId == null) {
+      return false;
+    }
     if (item.emPreparo) return _podeMutarItens;
     if (item.entregue) return _caixa;
     return false;
@@ -202,111 +174,172 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(
-        backgroundColor: PaletaApp.background,
-        body: Center(child: CircularProgressIndicator(color: PaletaApp.primary)),
+        backgroundColor: AppTema.fundo,
+        body: AppCarregando(),
       );
     }
 
     if (_erro != null) {
       return Scaffold(
-        backgroundColor: PaletaApp.background,
+        backgroundColor: AppTema.fundo,
         body: SafeArea(
-          child: Column(children: [
-            _pageHeader('Comanda'),
-            Expanded(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    const Icon(Icons.receipt_long_outlined, size: 48, color: PaletaApp.primary),
-                    const SizedBox(height: 14),
-                    Text(_erro!, textAlign: TextAlign.center, style: const TextStyle(color: PaletaApp.text, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 8),
-                    TextButton(onPressed: _load, style: TextButton.styleFrom(foregroundColor: PaletaApp.primary), child: const Text('Tentar novamente')),
-                  ]),
+          child: Column(
+            children: [
+              _pageHeader('Comanda'),
+              Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.receipt_long_outlined,
+                          size: 48,
+                          color: AppTema.primaria,
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          _erro!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: AppTema.texto,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: _load,
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppTema.primaria,
+                          ),
+                          child: const Text('Tentar novamente'),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ]),
+            ],
+          ),
         ),
       );
     }
 
     final comanda = _comanda!;
     return Scaffold(
-      backgroundColor: PaletaApp.background,
+      backgroundColor: AppTema.fundo,
       body: SafeArea(
-        child: Column(children: [
+        child: Column(
+          children: [
             _pageHeader(
               comanda.codigo.isEmpty
                   ? 'Comanda #${comanda.id}'
                   : comanda.codigo,
               mostrarEditar: _podeEditarComanda,
             ),
-          Expanded(
-            child: RefreshIndicator(
-              color: PaletaApp.primary,
-              onRefresh: _load,
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
-                children: [
-                  _summaryCard(comanda),
-                  const SizedBox(height: 22),
-                  Row(children: [
-                    const Expanded(child: Text('ITENS DA COMANDA', style: TextStyle(color: PaletaApp.textMuted, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.5))),
-                    if (_comandaAberta && _podeMutarItens)
-                      TextButton.icon(
-                        onPressed: _actionLoading ? null : _abrirAdicionarItem,
-                        icon: const Icon(Icons.add_rounded, size: 18),
-                        label: const Text('Adicionar'),
-                        style: TextButton.styleFrom(foregroundColor: PaletaApp.primary),
-                      ),
-                  ]),
-                  const SizedBox(height: 10),
-                  if (comanda.itens.isEmpty) _emptyItems() else ...comanda.itens.map(_itemCard),
-                ],
+            Expanded(
+              child: RefreshIndicator(
+                color: AppTema.primaria,
+                onRefresh: _load,
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+                  children: [
+                    ResumoComanda(comanda: comanda),
+                    const SizedBox(height: 22),
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'ITENS DA COMANDA',
+                            style: TextStyle(
+                              color: AppTema.textoSecundario,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                        if (_comandaAberta && _podeMutarItens)
+                          TextButton.icon(
+                            onPressed: _actionLoading
+                                ? null
+                                : _abrirAdicionarItem,
+                            icon: const Icon(Icons.add_rounded, size: 18),
+                            label: const Text('Adicionar'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppTema.primaria,
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    if (comanda.itens.isEmpty)
+                      _emptyItems()
+                    else
+                      ...comanda.itens.map(_construirCartaoItem),
+                  ],
+                ),
               ),
             ),
-          ),
-          _actions(comanda),
-        ]),
+            _actions(comanda),
+          ],
+        ),
       ),
     );
   }
 
   Widget _pageHeader(String title, {bool mostrarEditar = false}) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Material(
-            color: PaletaApp.surface,
+    padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Material(
+          color: AppTema.superficie,
+          borderRadius: BorderRadius.circular(16),
+          child: InkWell(
+            onTap: () => Navigator.pop(context),
             borderRadius: BorderRadius.circular(16),
-            child: InkWell(
-              onTap: () => Navigator.pop(context),
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: PaletaApp.border),
-                ),
-                child: const Icon(Icons.arrow_back_rounded, color: PaletaApp.text),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppTema.borda),
               ),
+              child: const Icon(Icons.arrow_back_rounded, color: AppTema.texto),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: PaletaApp.text, fontSize: 20, fontWeight: FontWeight.w700, height: 1.05)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppTema.texto,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  height: 1.05,
+                ),
+              ),
               const SizedBox(height: 2),
-              const Text('Detalhes da venda', style: TextStyle(color: PaletaApp.textMuted, fontSize: 12)),
-            ]),
+              const Text(
+                'Detalhes da venda',
+                style: TextStyle(color: AppTema.textoSecundario, fontSize: 12),
+              ),
+            ],
           ),
+        ),
         if (mostrarEditar) ...[
           const SizedBox(width: 8),
           Material(
-            color: PaletaApp.surface,
+            color: AppTema.superficie,
             borderRadius: BorderRadius.circular(16),
             child: InkWell(
               onTap: _editarComanda,
@@ -316,314 +349,52 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
                 height: 44,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: PaletaApp.border),
+                  border: Border.all(color: AppTema.borda),
                 ),
-                child: const Icon(
-                  Icons.edit_outlined,
-                  color: PaletaApp.text,
-                ),
+                child: const Icon(Icons.edit_outlined, color: AppTema.texto),
               ),
             ),
           ),
         ],
-        ]),
-      );
-
-  Widget _summaryCard(ComandaResponse c) => Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: PaletaApp.surface,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: PaletaApp.border),
-          boxShadow: const [BoxShadow(color: PaletaApp.sombraCampo, blurRadius: 12, offset: Offset(0, 4))],
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Container(width: 44, height: 44, decoration: BoxDecoration(color: PaletaApp.inputFill, borderRadius: BorderRadius.circular(14)), child: Icon(_originIcon(c.tipoOrigem), color: PaletaApp.primary)),
-            const SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(_friendlyOrigin(c.tipoOrigem), style: const TextStyle(color: PaletaApp.text, fontSize: 15, fontWeight: FontWeight.w700)),
-              Text(c.clienteNome ?? 'Cliente não informado', style: const TextStyle(color: PaletaApp.textMuted, fontSize: 12)),
-            ])),
-            _statusChip(c.status),
-          ]),
-          if (c.mesaNumero != null || c.garcomNome != null) ...[
-            const SizedBox(height: 14),
-            Wrap(spacing: 8, runSpacing: 8, children: [
-              if (c.mesaNumero != null) _infoPill(Icons.table_restaurant_outlined, 'Mesa ${c.mesaNumero}'),
-              if (c.garcomNome != null) _infoPill(Icons.person_outline_rounded, c.garcomNome!),
-            ]),
-          ],
-          if (c.linkWhatsApp?.isNotEmpty == true) ...[
-            const SizedBox(height: 12),
-            TextButton.icon(
-            onPressed: () async {
-              // Prioritize clienteTelefone; fallback to linkWhatsApp if absent
-              final telefoneRaw = c.clienteTelefone?.trim();
-              final linkRaw = c.linkWhatsApp?.trim();
-              String? link;
-              if (telefoneRaw != null && telefoneRaw.isNotEmpty) {
-                final digits = telefoneRaw.replaceAll(RegExp(r'\D'), '');
-                final cleaned = digits.isEmpty
-                    ? null
-                    : (digits.length <= 11 ? '55$digits' : digits);
-                if (cleaned != null) link = 'https://wa.me/$cleaned';
-              }
-              if (link == null && linkRaw != null && linkRaw.isNotEmpty) {
-                // If linkRaw is a phone, normalize; otherwise use as-is
-                if (!linkRaw.startsWith('http') &&
-                    !linkRaw.contains('wa.me') &&
-                    !linkRaw.startsWith('whatsapp:')) {
-                  final digits = linkRaw.replaceAll(RegExp(r'\D'), '');
-                  final cleaned = digits.isEmpty
-                      ? null
-                      : (digits.length <= 11 ? '55$digits' : digits);
-                  if (cleaned != null) link = 'https://wa.me/$cleaned';
-                } else {
-                  link = linkRaw;
-                }
-              }
-
-              if (link == null) {
-                if (mounted)
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Telefone do cliente não disponível.'),
-                    ),
-                  );
-                return;
-              }
-
-              try {
-                final uri = Uri.parse(link);
-                debugPrint('Tentando abrir WhatsApp: $uri');
-                if (await canLaunchUrl(uri)) {
-                  final launched = await launchUrl(
-                    uri,
-                    mode: LaunchMode.externalApplication,
-                  );
-                  if (launched != true) {
-                    debugPrint('launchUrl returned false for $uri');
-                    if (mounted)
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Não foi possível abrir o WhatsApp.'),
-                        ),
-                      );
-                  }
-                  return;
-                } else {
-                  debugPrint('canLaunchUrl returned false for $uri');
-                }
-
-                // Try opening fallback web URL
-                final webUri = uri;
-                if (await canLaunchUrl(webUri)) {
-                  final launchedWeb = await launchUrl(
-                    webUri,
-                    mode: LaunchMode.externalApplication,
-                  );
-                  if (launchedWeb != true) {
-                    debugPrint('launchUrl (web) returned false for $webUri');
-                    if (mounted)
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Não foi possível abrir o WhatsApp.'),
-                        ),
-                      );
-                  }
-                  return;
-                } else {
-                  debugPrint('canLaunchUrl (web) returned false for $webUri');
-                }
-
-                if (mounted)
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Não foi possível abrir o WhatsApp. Verifique se o app está instalado.',
-                      ),
-                    ),
-                  );
-              } catch (e, st) {
-                debugPrint('Erro ao abrir WhatsApp para link="$link": $e\n$st');
-                if (mounted)
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Erro ao abrir o WhatsApp. Veja o log para detalhes.',
-                      ),
-                    ),
-                  );
-              }
-              },
-            style: TextButton.styleFrom(
-              foregroundColor: PaletaApp.primary,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
-              icon: const Icon(Icons.chat_outlined, size: 18),
-            label: const Text('Abrir no WhatsApp'),
-            ),
-          ],
-          const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Divider(height: 1, color: PaletaApp.borderSoft)),
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            const Text('Total líquido', style: TextStyle(color: PaletaApp.text, fontSize: 14, fontWeight: FontWeight.w700)),
-            Text(_money(c.totalLiquido), style: const TextStyle(color: PaletaApp.primary, fontSize: 22, fontWeight: FontWeight.w800)),
-          ]),
-        ]),
-      );
-
-  Widget _statusChip(String status) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(color: _statusColor(status).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999), border: Border.all(color: _statusColor(status).withValues(alpha: 0.35))),
-        child: Text(status.replaceAll('_', ' '), style: TextStyle(color: _statusColor(status), fontSize: 11, fontWeight: FontWeight.w800)),
-      );
-
-  Widget _infoPill(IconData icon, String label) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        decoration: BoxDecoration(color: PaletaApp.inputFill, borderRadius: BorderRadius.circular(999)),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 15, color: PaletaApp.textMuted),
-          const SizedBox(width: 6),
-          Text(label, style: const TextStyle(color: PaletaApp.text, fontSize: 12, fontWeight: FontWeight.w600)),
-        ]),
-      );
+      ],
+    ),
+  );
 
   Widget _emptyItems() => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
-        decoration: BoxDecoration(color: PaletaApp.surface, borderRadius: BorderRadius.circular(18), border: Border.all(color: PaletaApp.border)),
-        child: const Column(children: [
-          Icon(Icons.receipt_long_outlined, size: 36, color: PaletaApp.primary),
-          SizedBox(height: 10),
-          Text('Nenhum item lançado nesta comanda.', textAlign: TextAlign.center, style: TextStyle(color: PaletaApp.text, fontWeight: FontWeight.w600)),
-        ]),
-      );
-
-  Widget _itemCard(ItemComandaResponse item) {
-    final color = _itemStatusColor(item.status);
-    final menuItems = <PopupMenuEntry<String>>[
-      if (_podeEditar(item)) _menuItem('editar', Icons.edit_rounded, 'Editar'),
-      if (_podeTransferir(item)) _menuItem('transferir', Icons.swap_horiz_rounded, 'Transferir'),
-      if (item.id != null) _menuItem('eventos', Icons.history_rounded, 'Histórico'),
-      if (_podeCancelar(item)) ...[
-        const PopupMenuDivider(height: 8),
-        _menuItem('cancelar', Icons.cancel_outlined, 'Cancelar item', danger: true),
-      ],
-    ];
-    final podeEntregar = _podeEntregar(item);
-    final temMenu = menuItems.isNotEmpty;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
-        decoration: BoxDecoration(
-          color: PaletaApp.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: PaletaApp.border),
+    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+    decoration: BoxDecoration(
+      color: AppTema.superficie,
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: AppTema.borda),
+    ),
+    child: const Column(
+      children: [
+        Icon(Icons.receipt_long_outlined, size: 36, color: AppTema.primaria),
+        SizedBox(height: 10),
+        Text(
+          'Nenhum item lançado nesta comanda.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: AppTema.texto, fontWeight: FontWeight.w600),
         ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(color: PaletaApp.inputFill, borderRadius: BorderRadius.circular(13)),
-              child: const Icon(Icons.restaurant_rounded, color: PaletaApp.primary, size: 21),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(item.produtoNome, style: const TextStyle(color: PaletaApp.text, fontSize: 14, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 3),
-                Text('${item.quantidade} × ${_money(item.precoUnitario)}', style: const TextStyle(color: PaletaApp.textMuted, fontSize: 12)),
-                if (item.valorDesconto > 0 || item.valorAcrescimo > 0) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    [
-                      if (item.valorDesconto > 0) 'Desc. ${_money(item.valorDesconto)}',
-                      if (item.valorAcrescimo > 0) 'Acrés. ${_money(item.valorAcrescimo)}',
-                    ].join(' · '),
-                    style: const TextStyle(color: PaletaApp.textMuted, fontSize: 11),
-                  ),
-                ],
-                if (item.observacao?.trim().isNotEmpty == true) ...[
-                  const SizedBox(height: 4),
-                  Text(item.observacao!, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: PaletaApp.textMuted, fontSize: 12)),
-                ],
-              ]),
-            ),
-            const SizedBox(width: 8),
-            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Text(_money(item.subtotal), style: const TextStyle(color: PaletaApp.text, fontSize: 14, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 6),
-              AppTag(_itemStatusLabel(item.status), fundo: color.withValues(alpha: 0.12), cor: color),
-            ]),
-            if (temMenu)
-              PopupMenuButton<String>(
-                tooltip: 'Ações do item',
-                enabled: !_actionLoading,
-                padding: EdgeInsets.zero,
-                offset: const Offset(0, 8),
-                color: PaletaApp.surface,
-                surfaceTintColor: Colors.transparent,
-                elevation: 10,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: const BorderSide(color: PaletaApp.border),
-                ),
-                constraints: const BoxConstraints(minWidth: 180),
-                icon: const Icon(Icons.more_horiz_rounded, color: PaletaApp.textMuted, size: 22),
-                onSelected: (value) {
-                  switch (value) {
-                    case 'editar':
-                      _abrirEditarItem(item);
-                    case 'transferir':
-                      _abrirTransferirItem(item);
-                    case 'eventos':
-                      _abrirEventos(item);
-                    case 'cancelar':
-                      _abrirCancelarItem(item);
-                  }
-                },
-                itemBuilder: (_) => menuItems,
-              ),
-          ]),
-          if (podeEntregar) ...[
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: _actionLoading ? null : () => _entregarItem(item),
-                  icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
-                  label: const Text('Marcar como entregue'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: PaletaApp.primary,
-                    side: const BorderSide(color: PaletaApp.primary),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ]),
-      ),
-    );
-  }
+      ],
+    ),
+  );
 
-  PopupMenuItem<String> _menuItem(String value, IconData icon, String label, {bool danger = false}) {
-    final color = danger ? PaletaApp.error : PaletaApp.text;
-    return PopupMenuItem<String>(
-      value: value,
-      child: Row(children: [
-        Icon(icon, size: 18, color: color),
-        const SizedBox(width: 12),
-        Text(label, style: TextStyle(color: color, fontWeight: danger ? FontWeight.w600 : FontWeight.w500)),
-      ]),
-    );
-  }
+  /// Monta o cartão de um item já com as permissões resolvidas para o
+  /// perfil logado e as ações ligadas aos handlers da página.
+  Widget _construirCartaoItem(ItemComandaResponse item) => CartaoItemComanda(
+    item: item,
+    podeEditar: _podeEditar(item),
+    podeEntregar: _podeEntregar(item),
+    podeTransferir: _podeTransferir(item),
+    podeCancelar: _podeCancelar(item),
+    acaoEmAndamento: _actionLoading,
+    aoEditar: () => _abrirEditarItem(item),
+    aoEntregar: () => _entregarItem(item),
+    aoTransferir: () => _abrirTransferirItem(item),
+    aoCancelar: () => _abrirCancelarItem(item),
+    aoVerEventos: () => _abrirEventos(item),
+  );
 
   Widget _actions(ComandaResponse c) {
     final active = c.status == 'ABERTA' || c.status == 'AGUARDANDO_PAGAMENTO';
@@ -635,17 +406,75 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
       top: false,
       child: Container(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-        decoration: const BoxDecoration(color: PaletaApp.surface, border: Border(top: BorderSide(color: PaletaApp.borderSoft))),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          if (_caixa && active)
-            Row(children: [
-              Expanded(child: OutlinedButton.icon(onPressed: _actionLoading ? null : () => _action('cancelar'), icon: const Icon(Icons.cancel_outlined, size: 18), label: const Text('Cancelar'), style: OutlinedButton.styleFrom(foregroundColor: PaletaApp.error, side: const BorderSide(color: PaletaApp.error), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), padding: const EdgeInsets.symmetric(vertical: 15)))),
-              const SizedBox(width: 12),
-              Expanded(child: ElevatedButton.icon(onPressed: _actionLoading ? null : () => _action('fechar'), icon: const Icon(Icons.check_circle_outline_rounded, size: 18), label: const Text('Fechar'), style: ElevatedButton.styleFrom(backgroundColor: PaletaApp.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), padding: const EdgeInsets.symmetric(vertical: 15)))),
-            ]),
-          if (_admin && c.status == 'FECHADA')
-            SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: _actionLoading ? null : () => _action('reabrir'), icon: const Icon(Icons.lock_open_rounded, size: 18), label: const Text('Reabrir comanda'), style: OutlinedButton.styleFrom(foregroundColor: PaletaApp.text, side: const BorderSide(color: PaletaApp.border), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), padding: const EdgeInsets.symmetric(vertical: 15)))),
-        ]),
+        decoration: const BoxDecoration(
+          color: AppTema.superficie,
+          border: Border(top: BorderSide(color: AppTema.bordaSuave)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_caixa && active)
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _actionLoading
+                          ? null
+                          : () => _action('cancelar'),
+                      icon: const Icon(Icons.cancel_outlined, size: 18),
+                      label: const Text('Cancelar'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTema.erro,
+                        side: const BorderSide(color: AppTema.erro),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _actionLoading
+                          ? null
+                          : () => _action('fechar'),
+                      icon: const Icon(
+                        Icons.check_circle_outline_rounded,
+                        size: 18,
+                      ),
+                      label: const Text('Fechar'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTema.primaria,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            if (_admin && c.status == 'FECHADA')
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _actionLoading ? null : () => _action('reabrir'),
+                  icon: const Icon(Icons.lock_open_rounded, size: 18),
+                  label: const Text('Reabrir comanda'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTema.texto,
+                    side: const BorderSide(color: AppTema.borda),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -654,12 +483,14 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
     final comandaId = _comanda?.id;
     if (comandaId == null) return;
 
-    final result = await showModalBottomSheet<_ItemFormResult>(
+    final result = await showModalBottomSheet<ResultadoFormItem>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: PaletaApp.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => const _ItemFormSheet(titulo: 'Adicionar item'),
+      backgroundColor: AppTema.superficie,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => const FolhaItemComanda(titulo: 'Adicionar item'),
     );
     if (result == null || !mounted) return;
 
@@ -679,12 +510,14 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
 
   Future<void> _abrirEditarItem(ItemComandaResponse item) async {
     if (item.id == null) return;
-    final result = await showModalBottomSheet<_ItemFormResult>(
+    final result = await showModalBottomSheet<ResultadoFormItem>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: PaletaApp.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => _ItemFormSheet(
+      backgroundColor: AppTema.superficie,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => FolhaItemComanda(
         titulo: 'Editar item',
         produtoFixoNome: item.produtoNome,
         quantidadeInicial: item.quantidade,
@@ -716,30 +549,49 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
 
   Future<void> _abrirCancelarItem(ItemComandaResponse item) async {
     if (item.id == null) return;
-    String? motivo = _motivosCancelamento.keys.first;
+    String? motivo = motivosCancelamentoItem.keys.first;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setLocal) => AlertDialog(
-          backgroundColor: PaletaApp.surface,
-          title: const Text('Cancelar item', style: TextStyle(color: PaletaApp.text, fontWeight: FontWeight.w700)),
-          content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(item.produtoNome, style: const TextStyle(color: PaletaApp.textMuted)),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: motivo,
-              decoration: const InputDecoration(labelText: 'Motivo *', border: OutlineInputBorder()),
-              items: _motivosCancelamento.entries
-                  .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
-                  .toList(),
-              onChanged: (value) => setLocal(() => motivo = value),
-            ),
-          ]),
+          backgroundColor: AppTema.superficie,
+          title: const Text(
+            'Cancelar item',
+            style: TextStyle(color: AppTema.texto, fontWeight: FontWeight.w700),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item.produtoNome,
+                style: const TextStyle(color: AppTema.textoSecundario),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: motivo,
+                decoration: const InputDecoration(
+                  labelText: 'Motivo *',
+                  border: OutlineInputBorder(),
+                ),
+                items: motivosCancelamentoItem.entries
+                    .map(
+                      (e) =>
+                          DropdownMenuItem(value: e.key, child: Text(e.value)),
+                    )
+                    .toList(),
+                onChanged: (value) => setLocal(() => motivo = value),
+              ),
+            ],
+          ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Voltar')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Voltar'),
+            ),
             TextButton(
               onPressed: motivo == null ? null : () => Navigator.pop(ctx, true),
-              style: TextButton.styleFrom(foregroundColor: PaletaApp.error),
+              style: TextButton.styleFrom(foregroundColor: AppTema.erro),
               child: const Text('Cancelar item'),
             ),
           ],
@@ -755,17 +607,28 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
     setState(() => _actionLoading = true);
     List<ComandaResponse> destinos = const [];
     try {
-      final lista = await _service.listar(mesaId: _comanda!.mesaId, status: 'ABERTA');
-      destinos = lista.where((c) => c.id != null && c.id != _comanda!.id).toList();
+      final lista = await _service.listar(
+        mesaId: _comanda!.mesaId,
+        status: 'ABERTA',
+      );
+      destinos = lista
+          .where((c) => c.id != null && c.id != _comanda!.id)
+          .toList();
     } on ApiError catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
         setState(() => _actionLoading = false);
       }
       return;
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Não foi possível listar comandas da mesa.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Não foi possível listar comandas da mesa.'),
+          ),
+        );
         setState(() => _actionLoading = false);
       }
       return;
@@ -775,7 +638,9 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
 
     if (destinos.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não há outra comanda aberta nesta mesa.')),
+        const SnackBar(
+          content: Text('Não há outra comanda aberta nesta mesa.'),
+        ),
       );
       return;
     }
@@ -785,22 +650,40 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setLocal) => AlertDialog(
-          backgroundColor: PaletaApp.surface,
-          title: const Text('Transferir item', style: TextStyle(color: PaletaApp.text, fontWeight: FontWeight.w700)),
+          backgroundColor: AppTema.superficie,
+          title: const Text(
+            'Transferir item',
+            style: TextStyle(color: AppTema.texto, fontWeight: FontWeight.w700),
+          ),
           content: DropdownButtonFormField<int>(
             initialValue: destinoId,
-            decoration: const InputDecoration(labelText: 'Comanda destino', border: OutlineInputBorder()),
+            decoration: const InputDecoration(
+              labelText: 'Comanda destino',
+              border: OutlineInputBorder(),
+            ),
             items: destinos
-                .map((c) => DropdownMenuItem(
-                      value: c.id,
-                      child: Text(c.codigo.isEmpty ? 'Comanda #${c.id}' : c.codigo),
-                    ))
+                .map(
+                  (c) => DropdownMenuItem(
+                    value: c.id,
+                    child: Text(
+                      c.codigo.isEmpty ? 'Comanda #${c.id}' : c.codigo,
+                    ),
+                  ),
+                )
                 .toList(),
             onChanged: (value) => setLocal(() => destinoId = value),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Voltar')),
-            TextButton(onPressed: destinoId == null ? null : () => Navigator.pop(ctx, true), child: const Text('Transferir')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Voltar'),
+            ),
+            TextButton(
+              onPressed: destinoId == null
+                  ? null
+                  : () => Navigator.pop(ctx, true),
+              child: const Text('Transferir'),
+            ),
           ],
         ),
       ),
@@ -814,486 +697,12 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: PaletaApp.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => _EventosSheet(itemId: item.id!, itemNome: item.produtoNome, acaoLabel: _acaoLabel),
-    );
-  }
-}
-
-class _ItemFormResult {
-  const _ItemFormResult({
-    required this.produtoId,
-    required this.quantidade,
-    this.valorDesconto,
-    this.valorAcrescimo,
-    this.observacao,
-  });
-
-  final int produtoId;
-  final double quantidade;
-  final double? valorDesconto;
-  final double? valorAcrescimo;
-  final String? observacao;
-}
-
-class _ItemFormSheet extends StatefulWidget {
-  const _ItemFormSheet({
-    required this.titulo,
-    this.produtoFixoNome,
-    this.quantidadeInicial = 1,
-    this.descontoInicial = 0,
-    this.acrescimoInicial = 0,
-    this.observacaoInicial,
-    this.edicao = false,
-  });
-
-  final String titulo;
-  final String? produtoFixoNome;
-  final double quantidadeInicial;
-  final double descontoInicial;
-  final double acrescimoInicial;
-  final String? observacaoInicial;
-  final bool edicao;
-
-  @override
-  State<_ItemFormSheet> createState() => _ItemFormSheetState();
-}
-
-class _ItemFormSheetState extends State<_ItemFormSheet> {
-  final _produtoService = ProdutoService();
-  final _qtdCtrl = TextEditingController();
-  final _descCtrl = TextEditingController();
-  final _acresCtrl = TextEditingController();
-  final _obsCtrl = TextEditingController();
-  List<Produto> _produtos = const [];
-  Produto? _produto;
-  bool _loading = true;
-  bool _mostrarAjustes = false;
-  String? _erro;
-
-  @override
-  void initState() {
-    super.initState();
-    _qtdCtrl.text = _fmtQtd(widget.quantidadeInicial);
-    _descCtrl.text = widget.descontoInicial == 0 ? '' : _fmtMoney(widget.descontoInicial);
-    _acresCtrl.text = widget.acrescimoInicial == 0 ? '' : _fmtMoney(widget.acrescimoInicial);
-    _obsCtrl.text = widget.observacaoInicial ?? '';
-    _mostrarAjustes = widget.descontoInicial > 0 || widget.acrescimoInicial > 0;
-    if (widget.edicao) {
-      _loading = false;
-    } else {
-      _carregarProdutos();
-    }
-  }
-
-  String _fmtMoney(double value) => value.toStringAsFixed(2).replaceAll('.', ',');
-
-  String _fmtQtd(double value) {
-    if (value == value.roundToDouble()) return value.toInt().toString();
-    return value.toString().replaceAll('.', ',');
-  }
-
-  double? _parseDecimal(String raw) {
-    final cleaned = raw.trim().replaceAll(RegExp(r'[^\d,.]'), '');
-    if (cleaned.isEmpty) return null;
-    if (cleaned.contains(',') && cleaned.contains('.')) {
-      return double.tryParse(cleaned.replaceAll('.', '').replaceAll(',', '.'));
-    }
-    return double.tryParse(cleaned.replaceAll(',', '.'));
-  }
-
-  double _qtdAtual() => _parseDecimal(_qtdCtrl.text) ?? 0;
-
-  void _ajustarQtd(double delta) {
-    final atual = _qtdAtual();
-    final base = atual <= 0 ? 1.0 : atual;
-    final nova = (base + delta).clamp(0.001, 9999.0);
-    setState(() => _qtdCtrl.text = _fmtQtd(nova));
-  }
-
-  InputDecoration _decoration(String label, {String? hint, String? prefix, String? helper}) => InputDecoration(
-        labelText: label,
-        hintText: hint,
-        helperText: helper,
-        prefixText: prefix,
-        labelStyle: const TextStyle(color: PaletaApp.textMuted, fontSize: 13, fontWeight: FontWeight.w600),
-        hintStyle: const TextStyle(color: PaletaApp.textMuted),
-        helperStyle: const TextStyle(color: PaletaApp.textMuted, fontSize: 11),
-        filled: true,
-        fillColor: PaletaApp.surfaceAlt,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: PaletaApp.border)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: PaletaApp.border)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: PaletaApp.primary, width: 1.5)),
-      );
-
-  Widget _fieldLabel(String title, {String? subtitle}) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: const TextStyle(color: PaletaApp.text, fontSize: 13, fontWeight: FontWeight.w700)),
-          if (subtitle != null) ...[
-            const SizedBox(height: 2),
-            Text(subtitle, style: const TextStyle(color: PaletaApp.textMuted, fontSize: 12)),
-          ],
-        ]),
-      );
-
-  Widget _quantidadeStepper() => Container(
-        padding: const EdgeInsets.all(14),
-        decoration: DecoracoesApp.campo(),
-        child: Row(children: [
-          _stepBtn(Icons.remove_rounded, () => _ajustarQtd(-1)),
-          Expanded(
-            child: TextField(
-              controller: _qtdCtrl,
-              textAlign: TextAlign.center,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9,]'))],
-              style: const TextStyle(color: PaletaApp.text, fontSize: 22, fontWeight: FontWeight.w800),
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 8),
-                hintText: '1',
-                hintStyle: TextStyle(color: PaletaApp.textMuted, fontSize: 22, fontWeight: FontWeight.w800),
-              ),
-            ),
-          ),
-          _stepBtn(Icons.add_rounded, () => _ajustarQtd(1)),
-        ]),
-      );
-
-  Widget _stepBtn(IconData icon, VoidCallback onTap) => Material(
-        color: PaletaApp.inputFill,
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: PaletaApp.borderSoft),
-            ),
-            child: Icon(icon, color: PaletaApp.primary, size: 22),
-          ),
-        ),
-      );
-
-  Widget _produtoCard() => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: PaletaApp.inputFill,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: PaletaApp.border),
-        ),
-        child: Row(children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(color: PaletaApp.surface, borderRadius: BorderRadius.circular(13)),
-            child: const Icon(Icons.restaurant_rounded, color: PaletaApp.primary, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              widget.produtoFixoNome ?? 'Item',
-              style: const TextStyle(color: PaletaApp.text, fontSize: 15, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ]),
-      );
-
-  @override
-  void dispose() {
-    _qtdCtrl.dispose();
-    _descCtrl.dispose();
-    _acresCtrl.dispose();
-    _obsCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _carregarProdutos() async {
-    try {
-      final lista = await _produtoService.listar(apenasAtivos: true);
-      if (!mounted) return;
-      setState(() {
-        _produtos = lista.whereType<Map>().map((e) => Produto.fromJson(Map<String, dynamic>.from(e))).toList();
-        _loading = false;
-      });
-    } on ApiError catch (e) {
-      if (mounted) setState(() { _erro = e.message; _loading = false; });
-    } catch (_) {
-      if (mounted) setState(() { _erro = 'Não foi possível carregar produtos.'; _loading = false; });
-    }
-  }
-
-  Future<void> _abrirProduto() async {
-    final produto = await abrirSeletorComBusca<Produto>(
-      context: context,
-      titulo: 'Escolher produto',
-      itens: _produtos.where((item) => item.id != null).toList(),
-      tituloItem: (item) => item.nome,
-      subtituloItem: (item) => item.preco == null
-          ? ''
-          : 'R\$ ${item.preco!.toStringAsFixed(2).replaceAll('.', ',')}',
-      icone: Icons.restaurant_rounded,
-      selecionado: _produto,
-    );
-    if (produto != null && mounted) setState(() => _produto = produto);
-  }
-
-  void _salvar() {
-    final qtd = _parseDecimal(_qtdCtrl.text);
-    if (!widget.edicao && (_produto?.id == null)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Selecione um produto.')));
-      return;
-    }
-    if (qtd == null || qtd <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Informe uma quantidade válida.')));
-      return;
-    }
-    Navigator.pop(
-      context,
-      _ItemFormResult(
-        produtoId: _produto?.id ?? 0,
-        quantidade: qtd,
-        valorDesconto: _parseDecimal(_descCtrl.text),
-        valorAcrescimo: _parseDecimal(_acresCtrl.text),
-        observacao: _obsCtrl.text.trim().isEmpty ? null : _obsCtrl.text.trim(),
+      backgroundColor: AppTema.superficie,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bottom = MediaQuery.of(context).viewInsets.bottom;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(20, 8, 20, 16 + bottom),
-      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Center(
-          child: Container(
-            width: 40,
-            height: 4,
-            margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(color: PaletaApp.border, borderRadius: BorderRadius.circular(999)),
-          ),
-        ),
-        Text(widget.titulo, style: const TextStyle(color: PaletaApp.text, fontSize: 20, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 4),
-        Text(
-          widget.edicao ? 'Altere os dados do item' : 'Escolha o produto e a quantidade',
-          style: const TextStyle(color: PaletaApp.textMuted, fontSize: 13),
-        ),
-        const SizedBox(height: 20),
-        if (_loading)
-          const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator(color: PaletaApp.primary)))
-        else if (_erro != null)
-          Text(_erro!, textAlign: TextAlign.center, style: const TextStyle(color: PaletaApp.error))
-        else ...[
-          if (widget.edicao)
-            _produtoCard()
-          else ...[
-            _fieldLabel('Produto', subtitle: 'Obrigatório'),
-              CampoSeletorComanda(
-                rotulo: 'Produto *',
-                valor: _produto?.nome ?? '',
-                detalhe: _produto?.preco == null
-                    ? null
-                    : 'R\$ ${_produto!.preco!.toStringAsFixed(2).replaceAll('.', ',')}',
-                icone: Icons.restaurant_rounded,
-                aoTocar: _abrirProduto,
-            ),
-          ],
-          const SizedBox(height: 20),
-          _fieldLabel('Quantidade', subtitle: 'Toque nos botões ou digite o valor'),
-          _quantidadeStepper(),
-          const SizedBox(height: 20),
-          _fieldLabel('Observação', subtitle: 'Opcional'),
-          TextField(
-            controller: _obsCtrl,
-            maxLines: 2,
-            style: const TextStyle(color: PaletaApp.text, fontSize: 15),
-            decoration: _decoration('Ex.: sem gelo, ponto da carne…'),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            decoration: BoxDecoration(
-              color: PaletaApp.surfaceAlt,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: PaletaApp.border),
-            ),
-            child: Theme(
-              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-              child: ExpansionTile(
-                initiallyExpanded: _mostrarAjustes,
-                tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-                iconColor: PaletaApp.primary,
-                collapsedIconColor: PaletaApp.textMuted,
-                title: const Text(
-                  'Ajuste de valor',
-                  style: TextStyle(color: PaletaApp.text, fontSize: 14, fontWeight: FontWeight.w700),
-                ),
-                subtitle: const Text(
-                  'Desconto abate · acréscimo soma',
-                  style: TextStyle(color: PaletaApp.textMuted, fontSize: 12),
-                ),
-                children: [
-                  Row(children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _descCtrl,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9,]'))],
-                        style: const TextStyle(color: PaletaApp.text, fontSize: 15),
-                        decoration: _decoration('Desconto', prefix: 'R\$ ', hint: '0,00', helper: 'Valor a menos'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: _acresCtrl,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9,]'))],
-                        style: const TextStyle(color: PaletaApp.text, fontSize: 15),
-                        decoration: _decoration('Acréscimo', prefix: 'R\$ ', hint: '0,00', helper: 'Valor a mais'),
-                      ),
-                    ),
-                  ]),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _salvar,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: PaletaApp.primary,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-            child: Text(widget.edicao ? 'Salvar alterações' : 'Adicionar à comanda', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-          ),
-        ],
-      ]),
-    );
-  }
-}
-
-class _EventosSheet extends StatefulWidget {
-  const _EventosSheet({required this.itemId, required this.itemNome, required this.acaoLabel});
-
-  final int itemId;
-  final String itemNome;
-  final String Function(String) acaoLabel;
-
-  @override
-  State<_EventosSheet> createState() => _EventosSheetState();
-}
-
-class _EventosSheetState extends State<_EventosSheet> {
-  final _service = ItemComandaService();
-  bool _loading = true;
-  String? _erro;
-  List<EventoItemComandaResponse> _eventos = const [];
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final lista = await _service.listarEventos(widget.itemId);
-      if (!mounted) return;
-      setState(() {
-        _eventos = lista;
-        _loading = false;
-      });
-    } on ApiError catch (e) {
-      if (mounted) setState(() { _erro = e.message; _loading = false; });
-    } catch (_) {
-      if (mounted) setState(() { _erro = 'Não foi possível carregar os eventos.'; _loading = false; });
-    }
-  }
-
-  String _formatDate(DateTime? dt) {
-    if (dt == null) return '—';
-    final local = dt.toLocal();
-    String two(int n) => n.toString().padLeft(2, '0');
-    return '${two(local.day)}/${two(local.month)}/${local.year} ${two(local.hour)}:${two(local.minute)}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.65,
-      minChildSize: 0.4,
-      maxChildSize: 0.92,
-      builder: (ctx, controller) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Eventos — ${widget.itemNome}', style: const TextStyle(color: PaletaApp.text, fontSize: 18, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 4),
-          const Text('Linha do tempo de auditoria', style: TextStyle(color: PaletaApp.textMuted, fontSize: 12)),
-          const SizedBox(height: 16),
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator(color: PaletaApp.primary))
-                : _erro != null
-                    ? Center(child: Text(_erro!, textAlign: TextAlign.center, style: const TextStyle(color: PaletaApp.error)))
-                    : _eventos.isEmpty
-                        ? const Center(child: Text('Nenhum evento registrado.', style: TextStyle(color: PaletaApp.textMuted)))
-                        : ListView.separated(
-                            controller: controller,
-                            itemCount: _eventos.length,
-                            separatorBuilder: (_, __) => const SizedBox(height: 10),
-                            itemBuilder: (_, i) {
-                              final e = _eventos[i];
-                              return Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: PaletaApp.inputFill,
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(color: PaletaApp.border),
-                                ),
-                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                  Row(children: [
-                                    AppTag(widget.acaoLabel(e.acao), fundo: PaletaApp.primary.withValues(alpha: 0.12), cor: PaletaApp.primary),
-                                    const Spacer(),
-                                    Text(_formatDate(e.dataHora), style: const TextStyle(color: PaletaApp.textMuted, fontSize: 11)),
-                                  ]),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    e.usuarioNome ?? e.usuarioLogin ?? 'Usuário',
-                                    style: const TextStyle(color: PaletaApp.text, fontWeight: FontWeight.w600, fontSize: 13),
-                                  ),
-                                  if (e.motivo?.isNotEmpty == true) ...[
-                                    const SizedBox(height: 4),
-                                    Text('Motivo: ${_motivosCancelamento[e.motivo!] ?? e.motivo}', style: const TextStyle(color: PaletaApp.textMuted, fontSize: 12)),
-                                  ],
-                                  if (e.valorAntes?.isNotEmpty == true) ...[
-                                    const SizedBox(height: 6),
-                                    Text('Antes: ${e.valorAntes}', style: const TextStyle(color: PaletaApp.textMuted, fontSize: 11)),
-                                  ],
-                                  if (e.valorDepois?.isNotEmpty == true) ...[
-                                    const SizedBox(height: 2),
-                                    Text('Depois: ${e.valorDepois}', style: const TextStyle(color: PaletaApp.textMuted, fontSize: 11)),
-                                  ],
-                                ]),
-                              );
-                            },
-                          ),
-          ),
-        ]),
-      ),
+      builder: (ctx) =>
+          FolhaEventosItem(itemId: item.id!, itemNome: item.produtoNome),
     );
   }
 }

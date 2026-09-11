@@ -1,40 +1,37 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/modules/categoria/dto/categoria.dart';
-import 'package:my_app_teste/modules/produto/models/produto_list_filter.dart';
-
+import 'package:my_app_teste/core/utils/numero_br.dart';
+import 'package:my_app_teste/modules/produto/dto/filtro_produtos.dart';
+import 'package:my_app_teste/modules/produto/dto/rotulos_produto.dart';
 
 class ProdutoFilterSheet extends StatefulWidget {
   final List<Categoria> categorias;
-  final ProdutoListFilter initialFilter;
-  final IconData Function(String name) iconForCategoryName;
-  final String Function(int? categoriaId) categoryNameBuilder;
+  final FiltroProdutos filtroInicial;
+  final String Function(int? categoriaId) nomeCategoria;
 
   const ProdutoFilterSheet({
     super.key,
     required this.categorias,
-    required this.initialFilter,
-    required this.iconForCategoryName,
-    required this.categoryNameBuilder,
+    required this.filtroInicial,
+    required this.nomeCategoria,
   });
 
-  static Future<ProdutoListFilter?> show(
+  static Future<FiltroProdutos?> show(
     BuildContext context, {
     required List<Categoria> categorias,
-    required ProdutoListFilter initialFilter,
-    required IconData Function(String name) iconForCategoryName,
-    required String Function(int? categoriaId) categoryNameBuilder,
+    required FiltroProdutos filtroInicial,
+    required String Function(int? categoriaId) nomeCategoria,
   }) {
-    return showModalBottomSheet<ProdutoListFilter>(
+    return showModalBottomSheet<FiltroProdutos>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) {
         return ProdutoFilterSheet(
           categorias: categorias,
-          initialFilter: initialFilter,
-          iconForCategoryName: iconForCategoryName,
-          categoryNameBuilder: categoryNameBuilder,
+          filtroInicial: filtroInicial,
+          nomeCategoria: nomeCategoria,
         );
       },
     );
@@ -57,17 +54,17 @@ class _ProdutoFilterSheetState extends State<ProdutoFilterSheet> {
   void initState() {
     super.initState();
     _minController = TextEditingController(
-      text: widget.initialFilter.precoMin?.toString() ?? '',
+      text: widget.filtroInicial.precoMin?.toString() ?? '',
     );
     _maxController = TextEditingController(
-      text: widget.initialFilter.precoMax?.toString() ?? '',
+      text: widget.filtroInicial.precoMax?.toString() ?? '',
     );
     _descricaoController = TextEditingController(
-      text: widget.initialFilter.descricao,
+      text: widget.filtroInicial.descricao,
     );
-    _selectedCategoria = widget.initialFilter.categoriaId?.toString();
-    _selectedSector = widget.initialFilter.setorProducao;
-    _selectedTipo = widget.initialFilter.tipoProduto;
+    _selectedCategoria = widget.filtroInicial.categoriaId?.toString();
+    _selectedSector = widget.filtroInicial.setorProducao;
+    _selectedTipo = widget.filtroInicial.tipoProduto;
   }
 
   @override
@@ -87,7 +84,7 @@ class _ProdutoFilterSheetState extends State<ProdutoFilterSheet> {
         return _ProdutoCategoryPickerSheet(
           categorias: widget.categorias,
           selectedCategoria: _selectedCategoria,
-          iconForCategoryName: widget.iconForCategoryName,
+          iconForCategoryName: RotulosProduto.iconeDaCategoria,
         );
       },
     );
@@ -100,12 +97,14 @@ class _ProdutoFilterSheetState extends State<ProdutoFilterSheet> {
   void _apply() {
     Navigator.pop(
       context,
-      ProdutoListFilter(
+      // Só os critérios avançados: a busca e a ordenação escolhidas fora
+      // desta folha precisam sobreviver ao aplicar.
+      widget.filtroInicial.comAvancados(
         categoriaId: _selectedCategoria != null
             ? int.tryParse(_selectedCategoria!)
             : null,
-        precoMin: double.tryParse(_minController.text.replaceAll(',', '.')),
-        precoMax: double.tryParse(_maxController.text.replaceAll(',', '.')),
+        precoMin: parseNumeroBr(_minController.text),
+        precoMax: parseNumeroBr(_maxController.text),
         descricao: _descricaoController.text.trim(),
         tipoProduto: _selectedTipo,
         setorProducao: _selectedSector,
@@ -116,14 +115,14 @@ class _ProdutoFilterSheetState extends State<ProdutoFilterSheet> {
   @override
   Widget build(BuildContext context) {
     final categoriaSelecionada = _selectedCategoria != null
-        ? widget.categoryNameBuilder(int.tryParse(_selectedCategoria!))
+        ? widget.nomeCategoria(int.tryParse(_selectedCategoria!))
         : 'Todas';
 
     return FractionallySizedBox(
       heightFactor: 0.78,
       child: Container(
         decoration: const BoxDecoration(
-          color: PaletaApp.surface,
+          color: AppTema.superficie,
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: SafeArea(
@@ -138,7 +137,7 @@ class _ProdutoFilterSheetState extends State<ProdutoFilterSheet> {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: PaletaApp.borderSoft,
+                      color: AppTema.bordaSuave,
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -150,7 +149,7 @@ class _ProdutoFilterSheetState extends State<ProdutoFilterSheet> {
                       child: Text(
                         'Filtrar produtos',
                         style: TextStyle(
-                          color: PaletaApp.text,
+                          color: AppTema.texto,
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                         ),
@@ -159,7 +158,7 @@ class _ProdutoFilterSheetState extends State<ProdutoFilterSheet> {
                     IconButton(
                       onPressed: () => Navigator.pop(context),
                       icon: const Icon(Icons.close_rounded),
-                      color: PaletaApp.text,
+                      color: AppTema.texto,
                     ),
                   ],
                 ),
@@ -180,9 +179,9 @@ class _ProdutoFilterSheetState extends State<ProdutoFilterSheet> {
                         child: Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: PaletaApp.surfaceAlt,
+                            color: AppTema.superficieAlt,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: PaletaApp.border),
+                            border: Border.all(color: AppTema.borda),
                           ),
                           child: Row(
                             children: [
@@ -191,17 +190,17 @@ class _ProdutoFilterSheetState extends State<ProdutoFilterSheet> {
                                 height: 42,
                                 decoration: BoxDecoration(
                                   color: _selectedCategoria != null
-                                      ? PaletaApp.primary
-                                      : PaletaApp.inputFill,
+                                      ? AppTema.primaria
+                                      : AppTema.preenchimentoCampo,
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                                 child: Icon(
-                                  widget.iconForCategoryName(
+                                  RotulosProduto.iconeDaCategoria(
                                     categoriaSelecionada,
                                   ),
                                   color: _selectedCategoria != null
                                       ? Colors.white
-                                      : PaletaApp.primary,
+                                      : AppTema.primaria,
                                   size: 20,
                                 ),
                               ),
@@ -213,7 +212,7 @@ class _ProdutoFilterSheetState extends State<ProdutoFilterSheet> {
                                     const Text(
                                       'Categoria',
                                       style: TextStyle(
-                                        color: PaletaApp.text,
+                                        color: AppTema.texto,
                                         fontSize: 13,
                                         fontWeight: FontWeight.w700,
                                       ),
@@ -223,8 +222,8 @@ class _ProdutoFilterSheetState extends State<ProdutoFilterSheet> {
                                       categoriaSelecionada,
                                       style: TextStyle(
                                         color: _selectedCategoria != null
-                                            ? PaletaApp.text
-                                            : PaletaApp.textMuted,
+                                            ? AppTema.texto
+                                            : AppTema.textoSecundario,
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -234,7 +233,7 @@ class _ProdutoFilterSheetState extends State<ProdutoFilterSheet> {
                               ),
                               const Icon(
                                 Icons.chevron_right_rounded,
-                                color: PaletaApp.textMuted,
+                                color: AppTema.textoSecundario,
                               ),
                             ],
                           ),
@@ -308,13 +307,13 @@ class _ProdutoFilterSheetState extends State<ProdutoFilterSheet> {
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 color: selected
-                                    ? PaletaApp.warningBg
-                                    : PaletaApp.surfaceAlt,
+                                    ? AppTema.avisoFundo
+                                    : AppTema.superficieAlt,
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
                                   color: selected
-                                      ? PaletaApp.primary
-                                      : PaletaApp.border,
+                                      ? AppTema.primaria
+                                      : AppTema.borda,
                                 ),
                               ),
                               child: Column(
@@ -327,8 +326,8 @@ class _ProdutoFilterSheetState extends State<ProdutoFilterSheet> {
                                         height: 34,
                                         decoration: BoxDecoration(
                                           color: selected
-                                              ? PaletaApp.primary
-                                              : PaletaApp.inputFill,
+                                              ? AppTema.primaria
+                                              : AppTema.preenchimentoCampo,
                                           borderRadius: BorderRadius.circular(
                                             12,
                                           ),
@@ -337,7 +336,7 @@ class _ProdutoFilterSheetState extends State<ProdutoFilterSheet> {
                                           _iconForTipo(tipo),
                                           color: selected
                                               ? Colors.white
-                                              : PaletaApp.primary,
+                                              : AppTema.primaria,
                                           size: 18,
                                         ),
                                       ),
@@ -345,7 +344,7 @@ class _ProdutoFilterSheetState extends State<ProdutoFilterSheet> {
                                       if (selected)
                                         const Icon(
                                           Icons.check_circle_rounded,
-                                          color: PaletaApp.primary,
+                                          color: AppTema.primaria,
                                           size: 18,
                                         ),
                                     ],
@@ -354,7 +353,7 @@ class _ProdutoFilterSheetState extends State<ProdutoFilterSheet> {
                                   Text(
                                     _labelForTipo(tipo),
                                     style: const TextStyle(
-                                      color: PaletaApp.text,
+                                      color: AppTema.texto,
                                       fontSize: 15,
                                       fontWeight: FontWeight.w700,
                                     ),
@@ -388,13 +387,13 @@ class _ProdutoFilterSheetState extends State<ProdutoFilterSheet> {
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 color: selected
-                                    ? PaletaApp.warningBg
-                                    : PaletaApp.surfaceAlt,
+                                    ? AppTema.avisoFundo
+                                    : AppTema.superficieAlt,
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
                                   color: selected
-                                      ? PaletaApp.primary
-                                      : PaletaApp.border,
+                                      ? AppTema.primaria
+                                      : AppTema.borda,
                                 ),
                               ),
                               child: Row(
@@ -404,15 +403,15 @@ class _ProdutoFilterSheetState extends State<ProdutoFilterSheet> {
                                     height: 40,
                                     decoration: BoxDecoration(
                                       color: selected
-                                          ? PaletaApp.primary
-                                          : PaletaApp.inputFill,
+                                          ? AppTema.primaria
+                                          : AppTema.preenchimentoCampo,
                                       borderRadius: BorderRadius.circular(14),
                                     ),
                                     child: Icon(
                                       _iconForSetor(setor),
                                       color: selected
                                           ? Colors.white
-                                          : PaletaApp.primary,
+                                          : AppTema.primaria,
                                       size: 20,
                                     ),
                                   ),
@@ -421,7 +420,7 @@ class _ProdutoFilterSheetState extends State<ProdutoFilterSheet> {
                                     child: Text(
                                       _labelForSetor(setor),
                                       style: const TextStyle(
-                                        color: PaletaApp.text,
+                                        color: AppTema.texto,
                                         fontSize: 15,
                                         fontWeight: FontWeight.w700,
                                       ),
@@ -432,8 +431,8 @@ class _ProdutoFilterSheetState extends State<ProdutoFilterSheet> {
                                         ? Icons.check_circle_rounded
                                         : Icons.radio_button_unchecked_rounded,
                                     color: selected
-                                        ? PaletaApp.primary
-                                        : PaletaApp.border,
+                                        ? AppTema.primaria
+                                        : AppTema.borda,
                                     size: 18,
                                   ),
                                 ],
@@ -453,11 +452,9 @@ class _ProdutoFilterSheetState extends State<ProdutoFilterSheet> {
                         child: OutlinedButton(
                           onPressed: () => Navigator.pop(context),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: PaletaApp.text,
-                            backgroundColor: PaletaApp.surfaceAlt,
-                            side: const BorderSide(
-                              color: PaletaApp.border,
-                            ),
+                            foregroundColor: AppTema.texto,
+                            backgroundColor: AppTema.superficieAlt,
+                            side: const BorderSide(color: AppTema.borda),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
@@ -471,16 +468,17 @@ class _ProdutoFilterSheetState extends State<ProdutoFilterSheet> {
                         child: ElevatedButton(
                           onPressed: _apply,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: PaletaApp.primary,
+                            backgroundColor: AppTema.primaria,
                             foregroundColor: Colors.white,
-                            disabledBackgroundColor: PaletaApp.primarySoft
+                            disabledBackgroundColor: AppTema.primariaSuave
                                 .withValues(alpha: 0.55),
                             disabledForegroundColor: Colors.white.withValues(
                               alpha: 0.8,
                             ),
                             elevation: 4,
-                            shadowColor: PaletaApp.primaryPressed
-                                .withValues(alpha: 0.35),
+                            shadowColor: AppTema.primariaPressionada.withValues(
+                              alpha: 0.35,
+                            ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
@@ -515,12 +513,12 @@ class _ProdutoFilterSheetState extends State<ProdutoFilterSheet> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: PaletaApp.surfaceAlt,
+        color: AppTema.superficieAlt,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: PaletaApp.border),
+        border: Border.all(color: AppTema.borda),
         boxShadow: const [
           BoxShadow(
-            color: PaletaApp.sombraCampo,
+            color: AppTema.sombraCampo,
             blurRadius: 12,
             offset: Offset(0, 4),
           ),
@@ -530,10 +528,10 @@ class _ProdutoFilterSheetState extends State<ProdutoFilterSheet> {
         controller: controller,
         keyboardType: keyboardType,
         maxLines: maxLines,
-        style: const TextStyle(color: PaletaApp.text),
+        style: const TextStyle(color: AppTema.texto),
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: const TextStyle(color: PaletaApp.textMuted),
+          hintStyle: const TextStyle(color: AppTema.textoSecundario),
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(
             horizontal: 16,
@@ -610,7 +608,7 @@ class _ProdutoCategoryPickerSheet extends StatelessWidget {
       heightFactor: 0.72,
       child: Container(
         decoration: const BoxDecoration(
-          color: PaletaApp.surface,
+          color: AppTema.superficie,
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: SafeArea(
@@ -625,7 +623,7 @@ class _ProdutoCategoryPickerSheet extends StatelessWidget {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: PaletaApp.borderSoft,
+                      color: AppTema.bordaSuave,
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -637,7 +635,7 @@ class _ProdutoCategoryPickerSheet extends StatelessWidget {
                       child: Text(
                         'Escolher categoria',
                         style: TextStyle(
-                          color: PaletaApp.text,
+                          color: AppTema.texto,
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                         ),
@@ -646,7 +644,7 @@ class _ProdutoCategoryPickerSheet extends StatelessWidget {
                     IconButton(
                       onPressed: () => Navigator.pop(context),
                       icon: const Icon(Icons.close_rounded),
-                      color: PaletaApp.text,
+                      color: AppTema.texto,
                     ),
                   ],
                 ),
@@ -660,13 +658,13 @@ class _ProdutoCategoryPickerSheet extends StatelessWidget {
                               Icon(
                                 Icons.inbox_outlined,
                                 size: 42,
-                                color: PaletaApp.textMuted,
+                                color: AppTema.textoSecundario,
                               ),
                               SizedBox(height: 12),
                               Text(
                                 'Sem categorias',
                                 style: TextStyle(
-                                  color: PaletaApp.text,
+                                  color: AppTema.texto,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -731,12 +729,10 @@ class _ProdutoCategoryPickerSheet extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: selected
-              ? PaletaApp.warningBg
-              : PaletaApp.surfaceAlt,
+          color: selected ? AppTema.avisoFundo : AppTema.superficieAlt,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: selected ? PaletaApp.primary : PaletaApp.border,
+            color: selected ? AppTema.primaria : AppTema.borda,
           ),
         ),
         child: Row(
@@ -745,14 +741,12 @@ class _ProdutoCategoryPickerSheet extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: selected
-                    ? PaletaApp.primary
-                    : PaletaApp.inputFill,
+                color: selected ? AppTema.primaria : AppTema.preenchimentoCampo,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(
                 icon,
-                color: selected ? Colors.white : PaletaApp.primary,
+                color: selected ? Colors.white : AppTema.primaria,
               ),
             ),
             const SizedBox(width: 14),
@@ -760,14 +754,14 @@ class _ProdutoCategoryPickerSheet extends StatelessWidget {
               child: Text(
                 label,
                 style: const TextStyle(
-                  color: PaletaApp.text,
+                  color: AppTema.texto,
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                 ),
               ),
             ),
             if (selected)
-              const Icon(Icons.check_rounded, color: PaletaApp.primary)
+              const Icon(Icons.check_rounded, color: AppTema.primaria)
             else
               const SizedBox(width: 18),
           ],

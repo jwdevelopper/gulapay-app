@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
-
+import 'package:my_app_teste/core/theme/app_tema.dart';
 
 class ProdutoResultsHeader extends StatelessWidget {
   final int resultCount;
@@ -34,7 +33,7 @@ class ProdutoResultsHeader extends StatelessWidget {
             child: Text(
               '$resultCount produtos${hasActiveFilter ? ' • filtros ativos' : ''}',
               style: const TextStyle(
-                color: PaletaApp.text,
+                color: AppTema.texto,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -45,10 +44,7 @@ class ProdutoResultsHeader extends StatelessWidget {
               onTap: hasActiveFilter ? onClearFiltersTap : onFilterTap,
               borderRadius: BorderRadius.circular(999),
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -58,16 +54,16 @@ class ProdutoResultsHeader extends StatelessWidget {
                           : Icons.filter_alt_outlined,
                       size: 16,
                       color: hasActiveFilter
-                          ? PaletaApp.primaryPressed
-                          : PaletaApp.textMuted,
+                          ? AppTema.primariaPressionada
+                          : AppTema.textoSecundario,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       hasActiveFilter ? 'Limpar' : 'Filtros',
                       style: TextStyle(
                         color: hasActiveFilter
-                            ? PaletaApp.primaryPressed
-                            : PaletaApp.text,
+                            ? AppTema.primariaPressionada
+                            : AppTema.texto,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                       ),
@@ -89,13 +85,13 @@ class ProdutoResultsHeader extends StatelessWidget {
                   const Icon(
                     Icons.sort_rounded,
                     size: 16,
-                    color: PaletaApp.textMuted,
+                    color: AppTema.textoSecundario,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     sortLabel,
                     style: const TextStyle(
-                      color: PaletaApp.text,
+                      color: AppTema.texto,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),

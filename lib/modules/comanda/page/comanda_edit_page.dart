@@ -1,17 +1,37 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
 import 'package:my_app_teste/core/api_error.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
+import 'package:my_app_teste/core/widgets/app_botao_icone.dart';
+import 'package:my_app_teste/core/widgets/app_campo_formulario.dart';
+import 'package:my_app_teste/core/widgets/app_cartao_aviso.dart';
+import 'package:my_app_teste/core/widgets/app_rotulo_campo.dart';
+import 'package:my_app_teste/modules/comanda/dto/comanda_patch_request.dart';
+import 'package:my_app_teste/modules/comanda/dto/comanda_response.dart';
+import 'package:my_app_teste/modules/comanda/service/comanda_service.dart';
+import 'package:my_app_teste/modules/comanda/widgets/comanda_search_selector.dart';
+import 'package:my_app_teste/modules/usuario/dto/rotulos_usuario.dart';
 import 'package:my_app_teste/modules/usuario/dto/usuario_response.dart';
 import 'package:my_app_teste/modules/usuario/service/usuario_service.dart';
-import '../dto/comanda_patch_request.dart';
-import '../dto/comanda_response.dart';
-import '../service/comanda_service.dart';
-import '../widgets/comanda_search_selector.dart';
 
+/// Edição do que a API deixa mudar numa comanda aberta.
+///
+/// O `PATCH /comandas/{id}` aceita pouca coisa: observação e, em comandas
+/// de mesa, o garçom responsável. Cliente, mesa e canal são decididos na
+/// abertura e não mudam depois — trocá-los reescreveria a venda.
+///
+/// A troca de garçom é restrita a Administrador e Caixa: ela move a
+/// comissão da venda de uma pessoa para outra (seção 4.2), então não é
+/// decisão do próprio garçom.
 class ComandaEditPage extends StatefulWidget {
-  const ComandaEditPage({super.key, required this.comanda, required this.perfil});
+  const ComandaEditPage({
+    super.key,
+    required this.comanda,
+    required this.perfil,
+  });
 
   final ComandaResponse comanda;
+
+  /// Perfil do usuário logado, vindo do JWT.
   final String? perfil;
 
   @override
@@ -20,19 +40,29 @@ class ComandaEditPage extends StatefulWidget {
 
 class _ComandaEditPageState extends State<ComandaEditPage> {
   final _service = ComandaService();
-  late final TextEditingController _observacao;
+  final _observacao = TextEditingController();
+
   List<UsuarioResposta> _garcons = [];
   int? _garcomId;
-  bool _saving = false;
+  bool _salvando = false;
+  String? _erro;
 
-  bool get _podeEditarGarcom => widget.perfil == 'ADMINISTRADOR' || widget.perfil == 'CAIXA';
+  /// Trocar o garçom move a comissão da venda — só caixa e admin podem.
+  bool get _podeTrocarGarcom =>
+      widget.perfil == RotulosUsuario.administrador ||
+      widget.perfil == RotulosUsuario.caixa;
+
+  /// O campo de garçom só existe em comanda de mesa: nos outros canais não
+  /// há garçom responsável.
+  bool get _mostraGarcom =>
+      widget.comanda.tipoOrigem == 'MESA' && _podeTrocarGarcom;
 
   @override
   void initState() {
     super.initState();
-    _observacao = TextEditingController(text: widget.comanda.observacao ?? '');
+    _observacao.text = widget.comanda.observacao ?? '';
     _garcomId = widget.comanda.garcomId;
-    _loadGarcons();
+    _carregarGarcons();
   }
 
   @override
@@ -41,11 +71,25 @@ class _ComandaEditPageState extends State<ComandaEditPage> {
     super.dispose();
   }
 
-  Future<void> _loadGarcons() async {
+  // ---------------------------------------------------------------------
+  // Dados
+  // ---------------------------------------------------------------------
+
+  Future<void> _carregarGarcons() async {
     try {
-      final usuarios = await UsuarioServico().listar(perfil: 'GARCOM');
-      if (mounted) setState(() => _garcons = usuarios.where((usuario) => usuario.id != null && usuario.ativo != false).toList());
-    } catch (_) {}
+      final usuarios = await UsuarioServico().listar(
+        perfil: RotulosUsuario.garcom,
+      );
+      if (!mounted) return;
+      setState(
+        () => _garcons = usuarios
+            .where((u) => u.id != null && u.ativo != false)
+            .toList(),
+      );
+    } catch (_) {
+      // Sem a lista, o campo continua mostrando o garçom atual e o resto
+      // da edição segue funcionando.
+    }
   }
 
   UsuarioResposta? get _garcomSelecionado {
@@ -55,7 +99,13 @@ class _ComandaEditPageState extends State<ComandaEditPage> {
     return null;
   }
 
-  String get _garcomLabel => _garcomSelecionado?.nome ?? _garcomSelecionado?.login ?? widget.comanda.garcomNome ?? 'Selecione o garçom';
+  /// Nome do garçom escolhido. Cai no nome que veio na comanda enquanto a
+  /// lista de garçons não chegou.
+  String get _rotuloGarcom =>
+      _garcomSelecionado?.nome ??
+      _garcomSelecionado?.login ??
+      widget.comanda.garcomNome ??
+      '';
 
   Future<void> _abrirGarcom() async {
     final garcom = await abrirSeletorComBusca<UsuarioResposta>(
@@ -70,74 +120,154 @@ class _ComandaEditPageState extends State<ComandaEditPage> {
     if (garcom != null && mounted) setState(() => _garcomId = garcom.id);
   }
 
-  Future<void> _save() async {
-    setState(() => _saving = true);
+  // ---------------------------------------------------------------------
+  // Envio
+  // ---------------------------------------------------------------------
+
+  Future<void> _salvar() async {
+    setState(() {
+      _salvando = true;
+      _erro = null;
+    });
     try {
       await _service.patch(
         widget.comanda.id!,
         ComandaPatchRequest(
           observacao: _observacao.text.trim(),
-          garcomId: _podeEditarGarcom && _garcomId != widget.comanda.garcomId ? _garcomId : null,
+          // Só envia o garçom quando ele de fato mudou: o PATCH trata
+          // campo ausente como "não mexer".
+          garcomId: _mostraGarcom && _garcomId != widget.comanda.garcomId
+              ? _garcomId
+              : null,
         ),
       );
       if (mounted) Navigator.pop(context, true);
     } on ApiError catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      if (mounted) setState(() => _erro = e.message);
+    } catch (e) {
+      if (mounted) setState(() => _erro = 'Erro ao salvar: $e');
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) setState(() => _salvando = false);
     }
   }
 
+  // ---------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------
+
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: PaletaApp.background,
-        body: SafeArea(
-          child: Column(children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-              child: Row(children: [
-                _backButton(),
-                const SizedBox(width: 12),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('Editar comanda', style: TextStyle(color: PaletaApp.text, fontSize: 20, fontWeight: FontWeight.w700)),
-                  Text(widget.comanda.codigo, style: const TextStyle(color: PaletaApp.textMuted, fontSize: 12)),
-                ])),
-              ]),
-            ),
-            Expanded(
-              child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 20), children: [
-                _sectionTitle('INFORMAÇÕES EDITÁVEIS'),
+    backgroundColor: AppTema.fundo,
+    body: SafeArea(
+      child: Column(
+        children: [
+          _cabecalho(),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+              children: [
+                _tituloSecao('INFORMAÇÕES EDITÁVEIS'),
                 const SizedBox(height: 10),
-                _observationField(),
-                if (widget.comanda.tipoOrigem == 'MESA' && _podeEditarGarcom) ...[
+                const AppRotuloCampo('Observação'),
+                const SizedBox(height: 8),
+                AppCampoFormulario(
+                  controlador: _observacao,
+                  dica: 'Ex.: sem cebola, separar bebidas',
+                  maxLinhas: 4,
+                ),
+                if (_mostraGarcom) ...[
                   const SizedBox(height: 18),
-                  CampoSeletorComanda(rotulo: 'Garçom responsável', valor: _garcomId == null ? '' : _garcomLabel, icone: Icons.person_outline_rounded, aoTocar: _abrirGarcom),
+                  CampoSeletorComanda(
+                    rotulo: 'Garçom responsável',
+                    valor: _rotuloGarcom,
+                    icone: Icons.person_outline_rounded,
+                    aoTocar: _abrirGarcom,
+                  ),
                 ],
                 const SizedBox(height: 18),
-                _infoCard(),
-              ]),
+                const AppCartaoAviso.dica(
+                  'Cliente, mesa e canal são definidos na abertura da '
+                  'comanda e não mudam depois.',
+                ),
+                if (_erro != null) ...[
+                  const SizedBox(height: 14),
+                  AppCartaoAviso.erro(_erro),
+                ],
+              ],
             ),
-            SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _saving ? null : _save,
-                    icon: const Icon(Icons.save_outlined),
-                    label: _saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('Salvar alterações'),
-                    style: ElevatedButton.styleFrom(backgroundColor: PaletaApp.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), padding: const EdgeInsets.symmetric(vertical: 16)),
-                  ),
+          ),
+          _rodape(),
+        ],
+      ),
+    ),
+  );
+
+  Widget _cabecalho() => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+    child: Row(
+      children: [
+        AppBotaoIcone(
+          icone: Icons.arrow_back_rounded,
+          aoTocar: () => Navigator.pop(context, false),
+          dicaAcessibilidade: 'Voltar',
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Editar comanda',
+                style: TextStyle(
+                  color: AppTema.texto,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-            ),
-          ]),
+              Text(
+                widget.comanda.codigo,
+                style: const TextStyle(
+                  color: AppTema.textoSecundario,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
         ),
-      );
+      ],
+    ),
+  );
 
-  Widget _backButton() => Material(color: PaletaApp.surface, borderRadius: BorderRadius.circular(16), child: InkWell(onTap: () => Navigator.pop(context), borderRadius: BorderRadius.circular(16), child: Container(width: 44, height: 44, decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), border: Border.all(color: PaletaApp.border)), child: const Icon(Icons.arrow_back_rounded, color: PaletaApp.text))));
-  Widget _sectionTitle(String title) => Text(title, style: const TextStyle(color: PaletaApp.textMuted, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.5));
-  Widget _observationField() => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Observação', style: TextStyle(color: PaletaApp.text, fontSize: 13, fontWeight: FontWeight.w700)), const SizedBox(height: 8), Container(decoration: BoxDecoration(color: PaletaApp.surfaceAlt, borderRadius: BorderRadius.circular(16), border: Border.all(color: PaletaApp.border)), child: TextField(controller: _observacao, maxLines: 4, style: const TextStyle(color: PaletaApp.text, fontSize: 15), decoration: const InputDecoration(hintText: 'Ex.: sem cebola, separar bebidas', hintStyle: TextStyle(color: PaletaApp.textMuted), border: InputBorder.none, contentPadding: EdgeInsets.all(16))))]);
-  Widget _infoCard() => Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: PaletaApp.warningBg, borderRadius: BorderRadius.circular(16), border: Border.all(color: PaletaApp.warningBorder)), child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(Icons.info_outline_rounded, color: PaletaApp.primary, size: 20), SizedBox(width: 10), Expanded(child: Text('Clientes, mesa e canal são definidos na abertura. Esta tela permite alterar os campos autorizados pela API.', style: TextStyle(color: PaletaApp.text, fontSize: 12, fontWeight: FontWeight.w600, height: 1.35)))]));
+  Widget _tituloSecao(String titulo) => Text(
+    titulo,
+    style: const TextStyle(
+      color: AppTema.textoSecundario,
+      fontSize: 11,
+      fontWeight: FontWeight.w800,
+      letterSpacing: 0.5,
+    ),
+  );
+
+  Widget _rodape() => SafeArea(
+    top: false,
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+      child: SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: _salvando ? null : _salvar,
+          icon: const Icon(Icons.save_outlined),
+          label: const Text('Salvar alterações'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTema.primaria,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+          ),
+        ),
+      ),
+    ),
+  );
 }

@@ -14,10 +14,10 @@ class ItemComandaCreateRequest {
   final String? observacao;
 
   Map<String, dynamic> toJson() => {
-        'produtoId': produtoId,
-        'quantidade': quantidade,
-        if (valorDesconto != null) 'valorDesconto': valorDesconto,
-        if (valorAcrescimo != null) 'valorAcrescimo': valorAcrescimo,
-        if (observacao?.trim().isNotEmpty == true) 'observacao': observacao!.trim(),
-      };
+    'produtoId': produtoId,
+    'quantidade': quantidade,
+    if (valorDesconto != null) 'valorDesconto': valorDesconto,
+    if (valorAcrescimo != null) 'valorAcrescimo': valorAcrescimo,
+    if (observacao?.trim().isNotEmpty == true) 'observacao': observacao!.trim(),
+  };
 }

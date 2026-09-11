@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
+import 'package:my_app_teste/core/widgets/app_campo_seletor.dart';
 
 Future<T?> abrirSeletorComBusca<T>({
   required BuildContext context,
@@ -12,7 +13,10 @@ Future<T?> abrirSeletorComBusca<T>({
   int limiteInicial = 8,
 }) {
   final ordenados = List<T>.from(itens)
-    ..sort((a, b) => tituloItem(a).toLowerCase().compareTo(tituloItem(b).toLowerCase()));
+    ..sort(
+      (a, b) =>
+          tituloItem(a).toLowerCase().compareTo(tituloItem(b).toLowerCase()),
+    );
 
   return showModalBottomSheet<T>(
     context: context,
@@ -30,6 +34,11 @@ Future<T?> abrirSeletorComBusca<T>({
   );
 }
 
+/// Campo de escolha do módulo de comanda.
+///
+/// É o [AppCampoSeletor] do core; o alias permaneceu porque as etapas do
+/// formulário e as folhas de item já o chamam por este nome, e ele deixa
+/// claro que o par natural é [abrirSeletorComBusca].
 class CampoSeletorComanda extends StatelessWidget {
   const CampoSeletorComanda({
     super.key,
@@ -49,42 +58,14 @@ class CampoSeletorComanda extends StatelessWidget {
   final bool erro;
 
   @override
-  Widget build(BuildContext context) {
-    final preenchido = valor.isNotEmpty;
-    return InkWell(
-      onTap: aoTocar,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: PaletaApp.surfaceAlt,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: erro ? PaletaApp.error : PaletaApp.border),
-        ),
-        child: Row(children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: preenchido ? PaletaApp.primary : PaletaApp.inputFill,
-              borderRadius: BorderRadius.circular(13),
-            ),
-            child: Icon(icone, color: preenchido ? Colors.white : PaletaApp.primary, size: 20),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(rotulo, style: const TextStyle(color: PaletaApp.text, fontSize: 13, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 4),
-              Text(valor.isEmpty ? 'Selecione uma opção' : valor, style: TextStyle(color: preenchido ? PaletaApp.text : PaletaApp.textMuted, fontSize: 14, fontWeight: FontWeight.w600)),
-              if (detalhe != null && preenchido) Text(detalhe!, style: const TextStyle(color: PaletaApp.textMuted, fontSize: 11)),
-            ]),
-          ),
-          const Icon(Icons.chevron_right_rounded, color: PaletaApp.textMuted),
-        ]),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => AppCampoSeletor(
+    rotulo: rotulo,
+    valor: valor,
+    detalhe: detalhe,
+    icone: icone,
+    erro: erro,
+    aoTocar: aoTocar,
+  );
 }
 
 class _SeletorComBusca<T> extends StatefulWidget {
@@ -125,7 +106,8 @@ class _SeletorComBuscaState<T> extends State<_SeletorComBusca<T>> {
         ? widget.itens
         : widget.itens.where((item) {
             final titulo = widget.tituloItem(item).toLowerCase();
-            final subtitulo = (widget.subtituloItem?.call(item) ?? '').toLowerCase();
+            final subtitulo = (widget.subtituloItem?.call(item) ?? '')
+                .toLowerCase();
             return titulo.contains(termo) || subtitulo.contains(termo);
           }).toList();
     return termo.isEmpty ? todos.take(widget.limiteInicial).toList() : todos;
@@ -137,73 +119,185 @@ class _SeletorComBuscaState<T> extends State<_SeletorComBusca<T>> {
     return FractionallySizedBox(
       heightFactor: 0.72,
       child: Container(
-        decoration: const BoxDecoration(color: PaletaApp.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+        decoration: const BoxDecoration(
+          color: AppTema.superficie,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
         child: SafeArea(
           top: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: PaletaApp.borderSoft, borderRadius: BorderRadius.circular(999)))),
-              const SizedBox(height: 18),
-              Row(children: [
-                Expanded(child: Text(widget.titulo, style: const TextStyle(color: PaletaApp.text, fontSize: 18, fontWeight: FontWeight.w700))),
-                IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded), color: PaletaApp.text),
-              ]),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _busca,
-                onChanged: (_) => setState(() {}),
-                autofocus: true,
-                decoration: InputDecoration(
-                  hintText: 'Pesquisar...',
-                  prefixIcon: const Icon(Icons.search_rounded, color: PaletaApp.textMuted),
-                  filled: true,
-                  fillColor: PaletaApp.surfaceAlt,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: PaletaApp.border)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: PaletaApp.border)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: PaletaApp.primary, width: 1.5)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppTema.bordaSuave,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              if (_busca.text.trim().isEmpty && widget.itens.length > widget.limiteInicial)
-                Text('Mostrando os primeiros ${widget.limiteInicial} em ordem alfabética.', style: const TextStyle(color: PaletaApp.textMuted, fontSize: 11)),
-              if (_busca.text.trim().isEmpty && widget.itens.length > widget.limiteInicial) const SizedBox(height: 8),
-              Expanded(
-                child: resultados.isEmpty
-                    ? const Center(child: Text('Nenhum resultado encontrado.', style: TextStyle(color: PaletaApp.textMuted)))
-                    : ListView.separated(
-                        itemCount: resultados.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (_, index) {
-                          final item = resultados[index];
-                          final selecionado = item == widget.selecionado;
-                          final subtitulo = widget.subtituloItem?.call(item);
-                          return InkWell(
-                            onTap: () => Navigator.pop(context, item),
-                            borderRadius: BorderRadius.circular(18),
-                            child: Container(
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: selecionado ? PaletaApp.inputFill : PaletaApp.surfaceAlt,
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(color: selecionado ? PaletaApp.primary : PaletaApp.border),
-                              ),
-                              child: Row(children: [
-                                Container(width: 40, height: 40, decoration: BoxDecoration(color: selecionado ? PaletaApp.primary : PaletaApp.inputFill, borderRadius: BorderRadius.circular(13)), child: Icon(widget.icone, color: selecionado ? Colors.white : PaletaApp.primary, size: 20)),
-                                const SizedBox(width: 14),
-                                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                  Text(widget.tituloItem(item), style: const TextStyle(color: PaletaApp.text, fontSize: 14, fontWeight: FontWeight.w700)),
-                                  if (subtitulo?.isNotEmpty == true) Text(subtitulo!, style: const TextStyle(color: PaletaApp.textMuted, fontSize: 11)),
-                                ])),
-                                if (selecionado) const Icon(Icons.check_circle_rounded, color: PaletaApp.primary, size: 20),
-                              ]),
-                            ),
-                          );
-                        },
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        widget.titulo,
+                        style: const TextStyle(
+                          color: AppTema.texto,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-              ),
-            ]),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close_rounded),
+                      color: AppTema.texto,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _busca,
+                  onChanged: (_) => setState(() {}),
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    hintText: 'Pesquisar...',
+                    prefixIcon: const Icon(
+                      Icons.search_rounded,
+                      color: AppTema.textoSecundario,
+                    ),
+                    filled: true,
+                    fillColor: AppTema.superficieAlt,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: AppTema.borda),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: AppTema.borda),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(
+                        color: AppTema.primaria,
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (_busca.text.trim().isEmpty &&
+                    widget.itens.length > widget.limiteInicial)
+                  Text(
+                    'Mostrando os primeiros ${widget.limiteInicial} em ordem alfabética.',
+                    style: const TextStyle(
+                      color: AppTema.textoSecundario,
+                      fontSize: 11,
+                    ),
+                  ),
+                if (_busca.text.trim().isEmpty &&
+                    widget.itens.length > widget.limiteInicial)
+                  const SizedBox(height: 8),
+                Expanded(
+                  child: resultados.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'Nenhum resultado encontrado.',
+                            style: TextStyle(color: AppTema.textoSecundario),
+                          ),
+                        )
+                      : ListView.separated(
+                          itemCount: resultados.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (_, index) {
+                            final item = resultados[index];
+                            final selecionado = item == widget.selecionado;
+                            final subtitulo = widget.subtituloItem?.call(item);
+                            return InkWell(
+                              onTap: () => Navigator.pop(context, item),
+                              borderRadius: BorderRadius.circular(18),
+                              child: Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: selecionado
+                                      ? AppTema.preenchimentoCampo
+                                      : AppTema.superficieAlt,
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(
+                                    color: selecionado
+                                        ? AppTema.primaria
+                                        : AppTema.borda,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        color: selecionado
+                                            ? AppTema.primaria
+                                            : AppTema.preenchimentoCampo,
+                                        borderRadius: BorderRadius.circular(13),
+                                      ),
+                                      child: Icon(
+                                        widget.icone,
+                                        color: selecionado
+                                            ? Colors.white
+                                            : AppTema.primaria,
+                                        size: 20,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            widget.tituloItem(item),
+                                            style: const TextStyle(
+                                              color: AppTema.texto,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                          if (subtitulo?.isNotEmpty == true)
+                                            Text(
+                                              subtitulo!,
+                                              style: const TextStyle(
+                                                color: AppTema.textoSecundario,
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (selecionado)
+                                      const Icon(
+                                        Icons.check_circle_rounded,
+                                        color: AppTema.primaria,
+                                        size: 20,
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

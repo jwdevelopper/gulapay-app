@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 /// Adiciona ao card o gesto padrao de exclusao das listagens do Gulapay.
@@ -92,7 +93,7 @@ class _FundoExclusao extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final vermelho = Colors.red.shade600;
+    final vermelho = AppTema.erro;
     final vermelhoProfundo = Color.lerp(vermelho, Colors.red.shade900, 0.35)!;
 
     return ExcludeSemantics(

@@ -9,12 +9,19 @@ class CategoriaService {
 
   Future<List<Categoria>> listar({bool apenasAtivos = true}) async {
     try {
-      final response = await _dio.get(ConstantsApi.urlCategorias, queryParameters: {'apenasAtivos': apenasAtivos});
+      final response = await _dio.get(
+        ConstantsApi.urlCategorias,
+        queryParameters: {'apenasAtivos': apenasAtivos},
+      );
       if (response.data is List) {
-        return (response.data as List).map((e) => Categoria.fromJson(Map<String, dynamic>.from(e))).toList();
+        return (response.data as List)
+            .map((e) => Categoria.fromJson(Map<String, dynamic>.from(e)))
+            .toList();
       }
       if (response.data is Map && response.data['data'] is List) {
-        return (response.data['data'] as List).map((e) => Categoria.fromJson(Map<String, dynamic>.from(e))).toList();
+        return (response.data['data'] as List)
+            .map((e) => Categoria.fromJson(Map<String, dynamic>.from(e)))
+            .toList();
       }
       return [];
     } on DioException catch (e) {

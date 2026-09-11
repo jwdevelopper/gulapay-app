@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/core/theme/decoracoes_app.dart';
-import 'package:my_app_teste/core/theme/paleta_app.dart';
 
 /// Tudo relacionado a data na aplicação, em um só lugar:
 ///
@@ -18,13 +18,11 @@ import 'package:my_app_teste/core/theme/paleta_app.dart';
 // Calendário
 // ---------------------------------------------------------------------------
 
-/// Abre o calendário do app já vestido com a paleta quente.
+/// Abre o calendário do app.
 ///
-/// O `showDatePicker` do Flutter herda o `Theme` do contexto. Como o
-/// `MaterialApp` do projeto usa `ColorScheme.fromSeed(seedColor:
-/// Colors.blueAccent)`, chamá-lo direto abre um calendário **azul** num app
-/// laranja. Esta função envolve a chamada num `Theme` derivado de
-/// [PaletaApp], garantindo o mesmo visual em toda a aplicação.
+/// A aparência vem do `datePickerTheme` declarado em [AppTema.claro], que
+/// é o tema único do `MaterialApp` — esta função não repinta nada, só
+/// centraliza os limites de data padrão e os rótulos em português.
 ///
 /// Devolve `null` se o usuário cancelar.
 Future<DateTime?> abrirSeletorData(
@@ -48,10 +46,6 @@ Future<DateTime?> abrirSeletorData(
     helpText: textoAjuda,
     confirmText: textoConfirmar,
     cancelText: textoCancelar,
-    builder: (context, filho) => Theme(
-      data: _temaCalendario(Theme.of(context)),
-      child: filho ?? const SizedBox.shrink(),
-    ),
   );
 }
 
@@ -61,46 +55,6 @@ DateTime _entre(DateTime valor, DateTime minima, DateTime maxima) {
   if (valor.isBefore(minima)) return minima;
   if (valor.isAfter(maxima)) return maxima;
   return valor;
-}
-
-ThemeData _temaCalendario(ThemeData base) {
-  return base.copyWith(
-    colorScheme: const ColorScheme.light(
-      primary: PaletaApp.primary,
-      onPrimary: Colors.white,
-      surface: PaletaApp.surface,
-      onSurface: PaletaApp.text,
-      secondary: PaletaApp.primarySoft,
-      onSecondary: PaletaApp.text,
-      error: PaletaApp.error,
-    ),
-    datePickerTheme: DatePickerThemeData(
-      backgroundColor: PaletaApp.surface,
-      headerBackgroundColor: PaletaApp.primary,
-      headerForegroundColor: Colors.white,
-      surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      dayForegroundColor: const WidgetStatePropertyAll(PaletaApp.text),
-      dayBackgroundColor: WidgetStateProperty.resolveWith(
-        (estados) => estados.contains(WidgetState.selected)
-            ? PaletaApp.primary
-            : Colors.transparent,
-      ),
-      todayForegroundColor: const WidgetStatePropertyAll(
-        PaletaApp.primaryPressed,
-      ),
-      todayBorder: const BorderSide(color: PaletaApp.primaryPressed),
-      yearForegroundColor: const WidgetStatePropertyAll(PaletaApp.text),
-      weekdayStyle: const TextStyle(
-        color: PaletaApp.textMuted,
-        fontWeight: FontWeight.w600,
-      ),
-      dividerColor: PaletaApp.border,
-    ),
-    textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(foregroundColor: PaletaApp.primary),
-    ),
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -158,7 +112,7 @@ class AppCampoData extends StatelessWidget {
               child: Text(
                 preenchido ? formatarDataBr(valor!) : dica,
                 style: TextStyle(
-                  color: preenchido ? PaletaApp.text : PaletaApp.textMuted,
+                  color: preenchido ? AppTema.texto : AppTema.textoSecundario,
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
                 ),
@@ -166,7 +120,7 @@ class AppCampoData extends StatelessWidget {
             ),
             const Icon(
               Icons.calendar_today_rounded,
-              color: PaletaApp.textMuted,
+              color: AppTema.textoSecundario,
               size: 20,
             ),
           ],

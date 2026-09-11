@@ -1,16 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/auth_session.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/core/widgets/app_campo_busca.dart';
+import 'package:my_app_teste/core/widgets/app_carregando.dart';
+import 'package:my_app_teste/core/widgets/app_chip_filtro.dart';
+import 'package:my_app_teste/core/widgets/app_dialogo_confirmacao.dart';
 import 'package:my_app_teste/core/widgets/app_estado_vazio.dart';
-import 'package:my_app_teste/core/widgets/app_menu_acoes.dart';
-import 'package:my_app_teste/core/widgets/app_tag.dart';
+import 'package:my_app_teste/modules/usuario/dto/filtro_usuarios.dart';
+import 'package:my_app_teste/modules/usuario/dto/rotulos_usuario.dart';
 import 'package:my_app_teste/modules/usuario/dto/usuario_response.dart';
 import 'package:my_app_teste/modules/usuario/page/usuario_form_page.dart';
 import 'package:my_app_teste/modules/usuario/service/usuario_service.dart';
+import 'package:my_app_teste/modules/usuario/widgets/cartao_usuario.dart';
 
+/// Cadastro de usuários com login.
+///
+/// Cuida de estado, carga e navegação: o recorte vive em [FiltroUsuarios],
+/// as traduções em [RotulosUsuario] e cada linha em [CartaoUsuario].
+///
+/// A tela é restrita a administradores — a checagem é local, pelo perfil no
+/// JWT, e o backend recusa de novo do lado dele. Sem o gate, um caixa veria
+/// a lista antes de tomar 403 na primeira ação.
 class UsuarioListaPagina extends StatefulWidget {
   const UsuarioListaPagina({super.key});
 
@@ -20,21 +31,29 @@ class UsuarioListaPagina extends StatefulWidget {
 
 class _UsuarioListaPaginaState extends State<UsuarioListaPagina> {
   final _servico = UsuarioServico();
-  final _controleBusca = TextEditingController();
+  final _busca = TextEditingController();
 
-  List<UsuarioResposta> _todos = [];
+  List<UsuarioResposta> _usuarios = [];
+  FiltroUsuarios _filtro = const FiltroUsuarios();
   bool _carregando = true;
   bool _autorizado = false;
-  String _filtroPerfil = 'TODOS';
-  String _busca = '';
-
-  static const _perfis = <String>['TODOS', 'ADMINISTRADOR', 'CAIXA', 'GARCOM'];
+  String? _erro;
 
   @override
   void initState() {
     super.initState();
     _inicializar();
   }
+
+  @override
+  void dispose() {
+    _busca.dispose();
+    super.dispose();
+  }
+
+  // ---------------------------------------------------------------------
+  // Dados
+  // ---------------------------------------------------------------------
 
   Future<void> _inicializar() async {
     final ehAdmin = await SessaoAutenticacao.ehAdministrador();
@@ -47,330 +66,240 @@ class _UsuarioListaPaginaState extends State<UsuarioListaPagina> {
     }
   }
 
-  Future<void> _carregar() async {
-    setState(() => _carregando = true);
+  Future<void> _carregar({bool mostrarCarregando = true}) async {
+    if (mostrarCarregando) {
+      setState(() {
+        _carregando = true;
+        _erro = null;
+      });
+    }
     try {
       final lista = await _servico.listar();
-      if (!mounted) return;
-      setState(() => _todos = lista);
+      if (mounted) {
+        setState(() {
+          _usuarios = lista;
+          _erro = null;
+        });
+      }
     } on ApiError catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('Erro ao listar: ${e.message}'),
-            backgroundColor: Colors.red),
-      );
+      if (mounted) setState(() => _erro = e.message);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _erro = 'Não foi possível carregar os usuários.');
+      }
     } finally {
       if (mounted) setState(() => _carregando = false);
     }
   }
 
-  List<UsuarioResposta> get _filtrados {
-    final termo = _busca.trim().toLowerCase();
-    return _todos.where((u) {
-      final casaPerfil = _filtroPerfil == 'TODOS' || u.perfil == _filtroPerfil;
-      final casaBusca = termo.isEmpty ||
-          (u.nome ?? '').toLowerCase().contains(termo) ||
-          (u.login ?? '').toLowerCase().contains(termo);
-      return casaPerfil && casaBusca;
-    }).toList();
+  void _limparFiltros() {
+    _busca.clear();
+    setState(() => _filtro = const FiltroUsuarios());
   }
 
-  Future<bool> _confirmarExclusao(UsuarioResposta u) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: const Row(
-          children: [
-            FaIcon(FontAwesomeIcons.triangleExclamation,
-                color: AppTema.primaria, size: 20),
-            SizedBox(width: 10),
-            Text('Excluir usuário',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppTema.textoEscuro)),
-          ],
-        ),
-        content: Text(
-          'Deseja realmente excluir "${u.nome ?? u.login}"? Esta ação não pode ser desfeita.',
-          style: const TextStyle(color: AppTema.textoEscuro),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            style: TextButton.styleFrom(
-                foregroundColor: AppTema.textoSecundario),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const Text('Excluir'),
-          ),
-        ],
-      ),
-    );
-    return ok ?? false;
-  }
-
-  Future<bool> _excluir(UsuarioResposta u) async {
-    if (u.id == null) return false;
-    try {
-      await _servico.deletar(u.id!);
-      if (!mounted) return false;
-      setState(() => _todos.removeWhere((x) => x.id == u.id));
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Usuário "${u.nome ?? u.login}" excluído.'),
-          backgroundColor: const Color(0xFF2E8B57),
-        ),
-      );
-      return true;
-    } on ApiError catch (e) {
-      if (!mounted) return false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao excluir: ${e.message}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return false;
-    }
-  }
+  // ---------------------------------------------------------------------
+  // Ações
+  // ---------------------------------------------------------------------
 
   Future<void> _abrirFormulario({UsuarioResposta? usuario}) async {
-    final criado = await Navigator.push<bool>(
+    final salvou = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => UsuarioFormularioPagina(usuario: usuario),
       ),
     );
-    if (criado == true) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Usuário cadastrado com sucesso!'),
-            backgroundColor: Color(0xFF2E8B57)),
-      );
-      _carregar();
+    if (salvou != true || !mounted) return;
+    _avisar(
+      usuario == null ? 'Usuário cadastrado.' : 'Usuário atualizado.',
+      sucesso: true,
+    );
+    await _carregar();
+  }
+
+  Future<bool> _confirmarExclusao(UsuarioResposta u) async =>
+      await AppDialogoConfirmacao.exclusao(
+        context,
+        titulo: 'Excluir usuário',
+        mensagem: 'Deseja realmente excluir "${u.nome ?? u.login}"?',
+      ) ??
+      false;
+
+  /// Exclui e devolve se deu certo — o `Dismissible` usa o retorno para
+  /// decidir se o card some ou volta ao lugar.
+  Future<bool> _excluir(UsuarioResposta u) async {
+    if (u.id == null) return false;
+    try {
+      await _servico.deletar(u.id!);
+      if (!mounted) return false;
+      setState(() => _usuarios.removeWhere((x) => x.id == u.id));
+      _avisar('Usuário "${u.nome ?? u.login}" excluído.', sucesso: true);
+      return true;
+    } on ApiError catch (e) {
+      _avisar('Erro ao excluir: ${e.message}');
+      return false;
     }
   }
 
-  @override
-  void dispose() {
-    _controleBusca.dispose();
-    super.dispose();
+  Future<void> _excluirPeloMenu(UsuarioResposta u) async {
+    if (await _confirmarExclusao(u)) await _excluir(u);
   }
+
+  void _avisar(String mensagem, {bool sucesso = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensagem),
+        backgroundColor: sucesso ? AppTema.sucesso : AppTema.erro,
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
-    if (!_autorizado && !_carregando) {
-      return const Scaffold(
-        backgroundColor: AppTema.fundo,
-        body: Padding(
-          padding: EdgeInsets.all(24),
-          child: AppEstadoVazio(
-            icone: Icons.lock,
-            mensagem:
-                'Acesso restrito.\nApenas usuários ADMINISTRADOR podem gerenciar usuários.',
-          ),
-        ),
-      );
-    }
+    if (!_autorizado && !_carregando) return _acessoNegado();
 
     return Scaffold(
       backgroundColor: AppTema.fundo,
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppTema.primaria,
         foregroundColor: Colors.white,
-        onPressed: () => _abrirFormulario(),
-        child: const Icon(Icons.add),
+        shape: const CircleBorder(),
+        onPressed: _abrirFormulario,
+        child: const Icon(Icons.add_rounded),
       ),
-      body: Column(
-        children: [
-          _construirBuscaEFiltro(),
-          Expanded(
-            child: _carregando
-                ? const Center(
-                    child:
-                        CircularProgressIndicator(color: AppTema.primaria))
-                : _filtrados.isEmpty
-                    ? AppEstadoVazio(
-                        icone: Icons.people_outline,
-                        mensagem: _busca.isEmpty && _filtroPerfil == 'TODOS'
-                            ? 'Nenhum usuário cadastrado'
-                            : 'Nenhum resultado para a busca',
-                      )
-                    : RefreshIndicator(
-                        color: AppTema.primaria,
-                        onRefresh: _carregar,
-                        child: ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
-                          itemCount: _filtrados.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 8),
-                          itemBuilder: (_, i) => _construirCartao(_filtrados[i]),
-                        ),
-                      ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _construirBuscaEFiltro() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-      child: Column(
-        children: [
-          AppCampoBusca(
-            controle: _controleBusca,
-            dica: 'Buscar por nome ou login...',
-            aoMudar: (v) => setState(() => _busca = v),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 36,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: _perfis.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (_, i) {
-                final p = _perfis[i];
-                final selecionado = _filtroPerfil == p;
-                return ChoiceChip(
-                  label: Text(p),
-                  selected: selecionado,
-                  onSelected: (_) => setState(() => _filtroPerfil = p),
-                  selectedColor: AppTema.primaria,
-                  backgroundColor: Colors.white,
-                  labelStyle: TextStyle(
-                    color: selecionado ? Colors.white : AppTema.textoEscuro,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  side: const BorderSide(color: AppTema.bordaCampo),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _construirCartao(UsuarioResposta u) {
-    return Dismissible(
-      key: ValueKey('usuario_${u.id ?? u.login}'),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: BoxDecoration(
-          color: Colors.red.shade600,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.end,
+      body: SafeArea(
+        child: Column(
           children: [
-            Text('Excluir',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15)),
-            SizedBox(width: 8),
-            FaIcon(FontAwesomeIcons.trashCan, color: Colors.white, size: 20),
+            _filtros(),
+            Expanded(
+              child: RefreshIndicator(
+                color: AppTema.primaria,
+                onRefresh: () => _carregar(mostrarCarregando: false),
+                child: _corpo(),
+              ),
+            ),
           ],
         ),
       ),
-      confirmDismiss: (_) async {
-        final confirmou = await _confirmarExclusao(u);
-        if (!confirmou) return false;
-        return await _excluir(u);
-      },
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => _abrirFormulario(usuario: u),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppTema.bordaCampo),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 22,
-                  backgroundColor: AppTema.fundoDica,
-                  child: Text(
-                    ((u.nome?.trim().isNotEmpty ?? false)
-                            ? u.nome!.trim().characters.first
-                            : '?')
-                        .toUpperCase(),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: AppTema.primaria,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        u.nome ?? '-',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppTema.textoEscuro,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text('@${u.login ?? '-'}',
-                          style: const TextStyle(
-                              color: AppTema.textoSecundario, fontSize: 13)),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          AppTag(u.perfil ?? '-'),
-                          if (u.ativo == false) ...[
-                            const SizedBox(width: 6),
-                            AppTag(
-                              'Inativo',
-                              fundo: Colors.red.shade100,
-                              cor: Colors.red.shade800,
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                AppMenuAcoes(
-                  onEditar: () => _abrirFormulario(usuario: u),
-                  // Fallback ao swipe: mesma confirmação + delete.
-                  onExcluir: () async {
-                    if (await _confirmarExclusao(u)) {
-                      await _excluir(u);
-                    }
-                  },
-                  rotuloEditar: 'Editar usuário',
-                  rotuloExcluir: 'Excluir usuário',
-                  tooltip: 'Ações do usuário',
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
+
+  Widget _acessoNegado() => const Scaffold(
+    backgroundColor: AppTema.fundo,
+    body: Padding(
+      padding: EdgeInsets.all(24),
+      child: Center(
+        child: AppEstadoVazio(
+          icone: Icons.lock_outline_rounded,
+          titulo: 'Acesso restrito',
+          mensagem: 'Apenas administradores podem gerenciar usuários.',
+        ),
+      ),
+    ),
+  );
+
+  Widget _filtros() => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+    child: Column(
+      children: [
+        AppCampoBusca(
+          controle: _busca,
+          dica: 'Buscar por nome ou login…',
+          aoMudar: (v) => setState(() => _filtro = _filtro.copiarCom(texto: v)),
+        ),
+        const SizedBox(height: 10),
+        AppFileiraChips(
+          recuoLateral: 0,
+          chips: [
+            AppChipFiltro(
+              rotulo: 'Todos',
+              selecionado: _filtro.perfil == null,
+              aoTocar: () => setState(
+                () => _filtro = _filtro.copiarCom(limparPerfil: true),
+              ),
+            ),
+            for (final perfil in RotulosUsuario.perfis)
+              AppChipFiltro(
+                rotulo: RotulosUsuario.perfil(perfil),
+                selecionado: _filtro.perfil == perfil,
+                aoTocar: () =>
+                    setState(() => _filtro = _filtro.alternarPerfil(perfil)),
+              ),
+          ],
+        ),
+      ],
+    ),
+  );
+
+  Widget _corpo() {
+    if (_carregando) return const AppCarregando();
+    if (_erro != null) {
+      return _rolavel(
+        AppEstadoVazio(
+          icone: Icons.cloud_off_rounded,
+          titulo: 'Não foi possível carregar',
+          mensagem: _erro!,
+          rotuloBotao: 'Tentar novamente',
+          iconeBotao: Icons.refresh_rounded,
+          aoTocarBotao: _carregar,
+        ),
+      );
+    }
+
+    final filtrados = _filtro.aplicar(_usuarios);
+    if (filtrados.isEmpty) {
+      return _rolavel(
+        _filtro.vazio
+            ? AppEstadoVazio(
+                icone: Icons.people_outline_rounded,
+                titulo: 'Nenhum usuário cadastrado',
+                mensagem:
+                    'Cadastre os administradores, caixas e garçons que vão '
+                    'usar o sistema.',
+                rotuloBotao: 'Novo usuário',
+                aoTocarBotao: _abrirFormulario,
+              )
+            : AppEstadoVazio(
+                icone: Icons.search_off_rounded,
+                titulo: 'Nada encontrado',
+                mensagem: 'Nenhum usuário corresponde aos filtros aplicados.',
+                rotuloBotao: 'Limpar filtros',
+                iconeBotao: Icons.filter_alt_off_rounded,
+                secundario: true,
+                aoTocarBotao: _limparFiltros,
+              ),
+      );
+    }
+
+    return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
+      itemCount: filtrados.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      itemBuilder: (_, i) {
+        final usuario = filtrados[i];
+        return CartaoUsuario(
+          usuario: usuario,
+          aoEditar: () => _abrirFormulario(usuario: usuario),
+          aoExcluir: () => _excluirPeloMenu(usuario),
+          aoConfirmarArrastar: () async {
+            if (!await _confirmarExclusao(usuario)) return false;
+            return _excluir(usuario);
+          },
+        );
+      },
+    );
+  }
+
+  /// Mantém o conteúdo rolável mesmo quando cabe na tela — sem isso o
+  /// "puxar para atualizar" não funciona nos estados de erro e de vazio.
+  Widget _rolavel(Widget filho) => ListView(
+    physics: const AlwaysScrollableScrollPhysics(),
+    padding: const EdgeInsets.fromLTRB(16, 40, 16, 90),
+    children: [filho],
+  );
 }

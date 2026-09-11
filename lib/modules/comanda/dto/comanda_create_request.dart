@@ -20,13 +20,13 @@ class ComandaCreateRequest {
   final String? observacao;
 
   Map<String, dynamic> toJson() => {
-        'tipoOrigem': tipoOrigem,
-        if (escopo != null) 'escopo': escopo,
-        if (clienteId != null) 'clienteId': clienteId,
-        if (mesaId != null) 'mesaId': mesaId,
-        if (garcomId != null) 'garcomId': garcomId,
-        if (enderecoEntregaId != null) 'enderecoEntregaId': enderecoEntregaId,
-        if (comandaPaiId != null) 'comandaPaiId': comandaPaiId,
-        if (observacao?.trim().isNotEmpty == true) 'observacao': observacao!.trim(),
-      };
+    'tipoOrigem': tipoOrigem,
+    if (escopo != null) 'escopo': escopo,
+    if (clienteId != null) 'clienteId': clienteId,
+    if (mesaId != null) 'mesaId': mesaId,
+    if (garcomId != null) 'garcomId': garcomId,
+    if (enderecoEntregaId != null) 'enderecoEntregaId': enderecoEntregaId,
+    if (comandaPaiId != null) 'comandaPaiId': comandaPaiId,
+    if (observacao?.trim().isNotEmpty == true) 'observacao': observacao!.trim(),
+  };
 }

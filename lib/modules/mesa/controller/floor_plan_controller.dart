@@ -2,7 +2,7 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
-import 'package:my_app_teste/modules/mesa/model/restaurant_models.dart';
+import 'package:my_app_teste/modules/mesa/dto/restaurant_models.dart';
 import 'package:my_app_teste/modules/mesa/repository/local_floor_plan_repository.dart';
 
 class TableDraft {
@@ -588,11 +588,7 @@ class FloorPlanController extends ChangeNotifier {
     );
 
     final snappedTables = mergedTables.length == 2
-        ? _snapJoinedTables(
-            updatedTables,
-            sourceTableId,
-            targetTableId,
-          )
+        ? _snapJoinedTables(updatedTables, sourceTableId, targetTableId)
         : updatedTables;
 
     _replaceArea(
@@ -895,8 +891,14 @@ class FloorPlanController extends ChangeNotifier {
     final bounds = _groupBounds(groupTables);
     final minX = _canvasEdgePadding;
     final minY = _canvasEdgePadding;
-    final maxX = max(minX, canvasSize.width - bounds.width - _canvasEdgePadding);
-    final maxY = max(minY, canvasSize.height - bounds.height - _canvasEdgePadding);
+    final maxX = max(
+      minX,
+      canvasSize.width - bounds.width - _canvasEdgePadding,
+    );
+    final maxY = max(
+      minY,
+      canvasSize.height - bounds.height - _canvasEdgePadding,
+    );
 
     final nextLeft = (bounds.left + delta.dx).clamp(minX, maxX).toDouble();
     final nextTop = (bounds.top + delta.dy).clamp(minY, maxY).toDouble();
@@ -981,8 +983,8 @@ class FloorPlanController extends ChangeNotifier {
       final candidateTables = candidate.joinGroupId == null
           ? <RestaurantTable>[candidate]
           : area.tables
-              .where((table) => table.joinGroupId == candidate.joinGroupId)
-              .toList();
+                .where((table) => table.joinGroupId == candidate.joinGroupId)
+                .toList();
 
       final distance = _edgeDistanceRects(
         movingRect,
@@ -1048,13 +1050,6 @@ class FloorPlanController extends ChangeNotifier {
       }
     }
     return tables.first;
-  }
-
-  double _edgeDistance(RestaurantTable a, RestaurantTable b) {
-    return _edgeDistanceRects(
-      Rect.fromLTWH(a.x, a.y, a.width, a.height),
-      Rect.fromLTWH(b.x, b.y, b.width, b.height),
-    );
   }
 
   double _edgeDistanceRects(Rect aRect, Rect bRect) {

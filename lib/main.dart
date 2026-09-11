@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/modules/login/page/login_page.dart';
 
 void main() {
@@ -14,9 +15,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Gulapay',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
-      ),
+      // Tema único da aplicação — ver AppTema.claro().
+      theme: AppTema.claro(),
       // Traduz o Material (calendário, diálogos) e fixa o formato de data.
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,

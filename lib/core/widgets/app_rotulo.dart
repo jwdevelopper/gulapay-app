@@ -6,7 +6,12 @@ class AppRotulo extends StatelessWidget {
   final bool opcional;
   final String? contador;
 
-  const AppRotulo(this.texto, {super.key, this.opcional = false, this.contador});
+  const AppRotulo(
+    this.texto, {
+    super.key,
+    this.opcional = false,
+    this.contador,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -16,19 +21,24 @@ class AppRotulo extends StatelessWidget {
           texto,
           style: const TextStyle(
             fontWeight: FontWeight.w600,
-            color: AppTema.textoEscuro,
+            color: AppTema.texto,
           ),
         ),
         if (opcional) ...[
           const SizedBox(width: 6),
-          const Text('opcional',
-              style: TextStyle(color: AppTema.primaria, fontSize: 12)),
+          const Text(
+            'opcional',
+            style: TextStyle(color: AppTema.primaria, fontSize: 12),
+          ),
         ],
         const Spacer(),
         if (contador != null)
           Text(
             contador!,
-            style: const TextStyle(color: AppTema.textoSecundario, fontSize: 12),
+            style: const TextStyle(
+              color: AppTema.textoSecundario,
+              fontSize: 12,
+            ),
           ),
       ],
     );
