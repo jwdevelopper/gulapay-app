@@ -27,13 +27,18 @@ class EtapaTipo extends StatelessWidget {
       children: [
         const AppRotuloCampo('Tipo de movimentação', obrigatorio: true),
         const SizedBox(height: 8),
-        GridView.count(
-          crossAxisCount: 2,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
+        // Largura máxima por cartão em vez de duas colunas fixas: em
+        // telas largas (tablet, web) duas colunas esticavam cada cartão
+        // até o texto boiar no meio de um retângulo vazio.
+        GridView(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: 1.25,
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 280,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 1.25,
+          ),
           children: [
             for (final opcao in tiposMovimentacao)
               _CartaoTipo(

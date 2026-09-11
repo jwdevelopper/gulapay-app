@@ -53,12 +53,14 @@ class AppCampoFormulario extends StatelessWidget {
         decoration: InputDecoration(
           hintText: dica,
           hintStyle: const TextStyle(color: AppTema.textoSecundario),
-          prefixText: preco ? 'R\$ ' : null,
-          prefixStyle: const TextStyle(
-            color: AppTema.textoSecundario,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-          ),
+          // O símbolo vai como `prefixIcon`, não como `prefixText`: o
+          // Flutter só desenha o prefixText quando o campo tem foco ou
+          // conteúdo, então o `R$` sumia justamente no estado vazio, que é
+          // quando ele mais ajuda a entender o que se espera ali.
+          prefixIcon: preco ? const _SimboloReal() : null,
+          prefixIconConstraints: preco
+              ? const BoxConstraints(minWidth: 0, minHeight: 0)
+              : null,
           suffixText: sufixo,
           suffixStyle: const TextStyle(
             color: AppTema.textoSecundario,
@@ -74,4 +76,27 @@ class AppCampoFormulario extends StatelessWidget {
       ),
     );
   }
+}
+
+/// O `R$` que precede um campo de valor.
+///
+/// Fica sempre visível, inclusive com o campo vazio e sem foco.
+class _SimboloReal extends StatelessWidget {
+  const _SimboloReal();
+
+  @override
+  Widget build(BuildContext context) => const Padding(
+    padding: EdgeInsets.only(left: 16, right: 4),
+    child: Align(
+      widthFactor: 1,
+      child: Text(
+        r'R$',
+        style: TextStyle(
+          color: AppTema.textoSecundario,
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    ),
+  );
 }
