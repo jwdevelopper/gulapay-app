@@ -136,6 +136,71 @@ void main() {
     });
   });
 
+  group('validade no passado', () {
+    final hoje = DateTime(2026, 3, 10);
+
+    DadosMovimentacao entradaCom(DateTime validade) => DadosMovimentacao(
+      tipo: 'ENTRADA_COMPRA',
+      insumo: insumo,
+      unidade: unidade,
+      quantidade: '5',
+      custoUnitario: '7,40',
+      validade: validade,
+    );
+
+    test('ontem conta como passado', () {
+      final ontem = DateTime(2026, 3, 9);
+      expect(
+        ValidadorMovimentacao.validadeNoPassado(ontem, agora: hoje),
+        isTrue,
+      );
+    });
+
+    test('vencer hoje ainda vale', () {
+      expect(
+        ValidadorMovimentacao.validadeNoPassado(hoje, agora: hoje),
+        isFalse,
+      );
+    });
+
+    test('a hora do dia não altera a comparação', () {
+      expect(
+        ValidadorMovimentacao.validadeNoPassado(
+          DateTime(2026, 3, 10, 23, 59),
+          agora: DateTime(2026, 3, 10, 1),
+        ),
+        isFalse,
+      );
+    });
+
+    test('sem validade não acusa passado', () {
+      expect(ValidadorMovimentacao.validadeNoPassado(null), isFalse);
+    });
+
+    test('entrada de lote já vencido é reprovada', () {
+      final r = validar(2, entradaCom(DateTime(2020)));
+      expect(r.valido, isFalse);
+      expect(r.erroEm(CampoMovimentacao.validade), isTrue);
+      expect(r.mensagem, contains('não pode ser no passado'));
+    });
+
+    test('entrada com validade futura passa', () {
+      final r = validar(2, entradaCom(DateTime(2099)));
+      expect(r.valido, isTrue);
+    });
+
+    test('a falta de validade ainda vem antes da regra de passado', () {
+      const semData = DadosMovimentacao(
+        tipo: 'ENTRADA_COMPRA',
+        quantidade: '5',
+        custoUnitario: '7,40',
+      );
+      final r = validar(2, semData);
+      expect(r.erroEm(CampoMovimentacao.validade), isTrue);
+      expect(r.mensagem, contains('obrigatório'));
+    });
+  });
+
   group('ResultadoValidacao.sem', () {
     test('remove apenas o campo corrigido', () {
       const r = ResultadoValidacao(

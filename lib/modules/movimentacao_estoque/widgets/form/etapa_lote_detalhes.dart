@@ -69,10 +69,15 @@ class EtapaLoteDetalhes extends StatelessWidget {
         valor: dados.validade,
         erro: erroValidade,
         textoAjuda: 'Validade do lote',
+        // O calendário não abre no passado: um lote que já venceu seria o
+        // primeiro a sair pelo FEFO, o oposto do que a entrada pretende.
+        dataMinima: DateTime.now(),
         aoSelecionar: aoSelecionarValidade,
       ),
       AppMensagemErroCampo(
-        'Informe a validade do lote.',
+        dados.validade == null
+            ? 'Informe a validade do lote.'
+            : 'A validade não pode ser no passado.',
         visivel: erroValidade,
       ),
       const SizedBox(height: 16),

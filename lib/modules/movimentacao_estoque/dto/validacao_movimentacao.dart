@@ -148,6 +148,14 @@ class ValidadorMovimentacao {
       // Entrada cria lote novo: validade e custo são obrigatórios.
       if (dados.validade == null) erros.add(CampoMovimentacao.validade);
       if (dados.custoNumerico <= 0) erros.add(CampoMovimentacao.custoUnitario);
+      if (erros.isEmpty && validadeNoPassado(dados.validade)) {
+        return const ResultadoValidacao(
+          camposComErro: {CampoMovimentacao.validade},
+          mensagem:
+              'A validade não pode ser no passado. Um lote que já venceu '
+              'seria o primeiro a sair pelo FEFO.',
+        );
+      }
       return _resultado(erros);
     }
 
@@ -162,6 +170,18 @@ class ValidadorMovimentacao {
     }
     if (dados.lote == null) erros.add(CampoMovimentacao.lote);
     return _resultado(erros);
+  }
+
+  /// A validade informada já passou?
+  ///
+  /// Compara só a data, sem hora: um lote que vence hoje ainda é válido
+  /// hoje. [agora] existe para o teste poder fixar o dia.
+  static bool validadeNoPassado(DateTime? validade, {DateTime? agora}) {
+    if (validade == null) return false;
+    final hoje = agora ?? DateTime.now();
+    final limite = DateTime(hoje.year, hoje.month, hoje.day);
+    final dia = DateTime(validade.year, validade.month, validade.day);
+    return dia.isBefore(limite);
   }
 
   static ResultadoValidacao _resultado(Set<CampoMovimentacao> erros) {
