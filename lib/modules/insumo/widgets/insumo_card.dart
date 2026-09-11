@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:my_app_teste/modules/insumo/dto/insumo_response.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
+import 'package:my_app_teste/core/widgets/app_cartao_deslizavel.dart';
+import 'package:my_app_teste/modules/insumo/dto/insumo_response.dart';
 
 class InsumoCard extends StatelessWidget {
   final InsumoResponse insumo;
@@ -57,34 +58,34 @@ class InsumoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Dismissible(
-      key: ValueKey('insumo-${insumo.id}'),
-      direction: DismissDirection.endToStart,
-      background: _buildDismissBackground(),
-      confirmDismiss: (_) => onConfirmDelete(),
+    // AppCartaoDeslizavel no lugar de um Dismissible cru: é o mesmo swipe
+    // dos demais cards do app, com o fundo que cresce junto com o arraste
+    // em vez de aparecer inteiro de uma vez.
+    return AppCartaoDeslizavel(
+      chave: 'insumo-${insumo.id}',
+      raioBorda: 14,
+      rotuloExclusao: 'Excluir insumo',
+      aoConfirmarExclusao: onConfirmDelete,
       child: Material(
-        color: theme.colorScheme.surface,
+        color: AppTema.superficie,
         borderRadius: BorderRadius.circular(14),
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
           onTap: onTap,
           child: Container(
             decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
+              color: AppTema.superficie,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppTema.borda, width: 1),
+              border: Border.all(color: AppTema.borda),
             ),
             padding: const EdgeInsets.all(12),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                _buildIconBox(theme),
+                _buildIconBox(),
                 const SizedBox(width: 12),
-                Expanded(child: _buildInfo(theme)),
+                Expanded(child: _buildInfo()),
                 const SizedBox(width: 8),
-                _buildStockArea(theme),
+                _buildStockArea(),
               ],
             ),
           ),
@@ -93,7 +94,7 @@ class InsumoCard extends StatelessWidget {
     );
   }
 
-  Widget _buildIconBox(ThemeData theme) {
+  Widget _buildIconBox() {
     return Container(
       width: 52,
       height: 52,
@@ -101,11 +102,11 @@ class InsumoCard extends StatelessWidget {
         color: accentColor.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Icon(icon, size: 26, color: theme.textTheme.bodyLarge?.color),
+      child: Icon(icon, size: 26, color: AppTema.texto),
     );
   }
 
-  Widget _buildInfo(ThemeData theme) {
+  Widget _buildInfo() {
     final unidadeNome =
         insumo.unidadePadraoNome ??
         insumo.unidadePadrao ??
@@ -124,7 +125,7 @@ class InsumoCard extends StatelessWidget {
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w700,
-            color: theme.textTheme.bodyLarge?.color,
+            color: AppTema.texto,
           ),
         ),
         if (subtitle.isNotEmpty) ...[
@@ -133,10 +134,7 @@ class InsumoCard extends StatelessWidget {
             subtitle,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 12,
-              color: theme.textTheme.bodySmall?.color,
-            ),
+            style: TextStyle(fontSize: 12, color: AppTema.textoSecundario),
           ),
         ],
         if (badge != null) ...[
@@ -151,22 +149,22 @@ class InsumoCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: const Color(0xFFFDE2E2),
+        color: AppTema.erroFundo,
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         text,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w800,
           letterSpacing: 0.5,
-          color: Colors.red.shade700,
+          color: AppTema.erro,
         ),
       ),
     );
   }
 
-  Widget _buildStockArea(ThemeData theme) {
+  Widget _buildStockArea() {
     final atual = (insumo.estoqueAtual ?? 0)
         .toStringAsFixed(_atualHasFraction() ? 1 : 0)
         .replaceAll('.', ',');
@@ -188,7 +186,7 @@ class InsumoCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
-                  color: theme.textTheme.bodyLarge?.color,
+                  color: AppTema.texto,
                 ),
               ),
               const SizedBox(width: 4),
@@ -197,53 +195,27 @@ class InsumoCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: theme.textTheme.bodySmall?.color,
+                  color: AppTema.textoSecundario,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 6),
-          _buildStockBar(theme),
+          _buildStockBar(),
         ],
       ),
     );
   }
 
-  Widget _buildStockBar(ThemeData theme) {
+  Widget _buildStockBar() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(3),
       child: Stack(
         children: [
-          Container(
-            height: 5,
-            width: double.infinity,
-            color: theme.dividerColor,
-          ),
+          Container(height: 5, width: double.infinity, color: AppTema.borda),
           FractionallySizedBox(
             widthFactor: _barFraction,
             child: Container(height: 5, color: stockBarColor),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDismissBackground() {
-    return Container(
-      alignment: Alignment.centerRight,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      decoration: BoxDecoration(
-        color: Colors.red.shade500,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: const Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          Icon(Icons.delete_outline_rounded, color: Colors.white),
-          SizedBox(width: 6),
-          Text(
-            'Excluir',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
           ),
         ],
       ),
