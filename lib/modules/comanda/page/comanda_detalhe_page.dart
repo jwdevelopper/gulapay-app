@@ -8,6 +8,9 @@ import 'package:my_app_teste/core/widgets/app_carregando.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/auth_session.dart';
+import 'package:my_app_teste/core/utils/numero_br.dart';
+import 'package:my_app_teste/modules/pagamento/service/pagamento_service.dart';
+import 'package:my_app_teste/modules/pagamento/widgets/folha_pagamento.dart';
 import '../dto/comanda_response.dart';
 import '../dto/item_comanda_create_request.dart';
 import '../dto/item_comanda_update_request.dart';
@@ -26,6 +29,7 @@ class ComandaDetalhePage extends StatefulWidget {
 
 class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
   final _service = ComandaService();
+  final _pagamentos = PagamentoService();
   final _itemService = ItemComandaService();
   ComandaResponse? _comanda;
   String? _perfil;
@@ -91,6 +95,61 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
       _usuarioId == _comanda!.garcomId;
   bool get _podeMutarItens => _caixa || _garcomDono;
   bool get _podeEditarComanda => _caixa || _garcomDono;
+
+  /// Registra um pagamento da comanda.
+  ///
+  /// Consulta primeiro o saldo restante: numa conta dividida o segundo
+  /// pagamento parte do que sobrou, e o backend recusa valor acima disso
+  /// (não há troco no MVP). Quitada a comanda, ela passa sozinha de
+  /// `AGUARDANDO_PAGAMENTO` para `FECHADA` — por isso recarregamos ao fim.
+  Future<void> _registrarPagamento() async {
+    final comanda = _comanda;
+    if (comanda?.id == null) return;
+
+    setState(() => _actionLoading = true);
+    try {
+      final situacao = await _pagamentos.consultar(comanda!.id!);
+      if (!mounted) return;
+      if (situacao.quitada) {
+        _avisar('Esta comanda já está quitada.');
+        return;
+      }
+
+      final escolha = await abrirFolhaPagamento(
+        context,
+        saldoRestante: situacao.saldoRestante,
+        totalDevido: situacao.totalDevido,
+        totalPago: situacao.totalPago,
+      );
+      if (escolha == null || !mounted) return;
+
+      await _pagamentos.registrar(
+        comanda.id!,
+        formaPagamento: escolha.formaPagamento,
+        valor: escolha.valor,
+      );
+      if (!mounted) return;
+      _avisar(
+        'Pagamento de ${formatarMoedaBr(escolha.valor)} registrado.',
+        sucesso: true,
+      );
+      await _load();
+    } on ApiError catch (e) {
+      _avisar(e.message);
+    } finally {
+      if (mounted) setState(() => _actionLoading = false);
+    }
+  }
+
+  void _avisar(String mensagem, {bool sucesso = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensagem),
+        backgroundColor: sucesso ? AppTema.sucesso : AppTema.erro,
+      ),
+    );
+  }
 
   Future<void> _action(String action) async {
     setState(() => _actionLoading = true);
@@ -413,6 +472,27 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Só cabe pagar depois de fechar a conta: o total só é
+            // congelado quando a comanda entra em AGUARDANDO_PAGAMENTO.
+            if (_caixa && c.status == 'AGUARDANDO_PAGAMENTO') ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _actionLoading ? null : _registrarPagamento,
+                  icon: const Icon(Icons.payments_outlined, size: 18),
+                  label: const Text('Registrar pagamento'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTema.sucesso,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
             if (_caixa && active)
               Row(
                 children: [

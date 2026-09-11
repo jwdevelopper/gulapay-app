@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/core/theme/decoracoes_app.dart';
 
@@ -22,6 +23,9 @@ class AppCampoFormulario extends StatelessWidget {
 
   final String? sufixo;
 
+  /// Restrições de digitação (aceitar só dígitos, aplicar máscara).
+  final List<TextInputFormatter>? formatadores;
+
   const AppCampoFormulario({
     super.key,
     required this.controlador,
@@ -33,6 +37,7 @@ class AppCampoFormulario extends StatelessWidget {
     this.preco = false,
     this.textoGrande = false,
     this.sufixo,
+    this.formatadores,
   });
 
   @override
@@ -45,6 +50,7 @@ class AppCampoFormulario extends StatelessWidget {
         onChanged: aoAlterar,
         maxLines: maxLinhas,
         keyboardType: tipoTeclado,
+        inputFormatters: formatadores,
         style: TextStyle(
           color: AppTema.texto,
           fontSize: destaque ? 28 : 15,

@@ -46,6 +46,10 @@ final class ConstantsApi {
   static const urlProdutos = "/produtos";
   static const urlMesas = "/mesas";
   static const urlComandas = "/comandas";
+
+  /// Pagamentos existem sob a comanda (`/comandas/{id}/pagamentos`); esta
+  /// raiz serve só ao cancelamento, que age sobre o pagamento em si.
+  static const urlPagamentos = "/pagamentos";
   static const urlItensComanda = "/itens-comanda";
   static const urlEntregadores = "/entregadores";
 }
