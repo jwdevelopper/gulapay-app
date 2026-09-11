@@ -8,8 +8,10 @@ import 'package:my_app_teste/core/widgets/app_campo_texto.dart';
 import 'package:my_app_teste/core/widgets/app_cartao_aviso.dart';
 import 'package:my_app_teste/core/widgets/app_dica.dart';
 import 'package:my_app_teste/core/widgets/app_rotulo.dart';
+import 'package:my_app_teste/modules/unidade_medida/dto/unidade_base.dart';
 import 'package:my_app_teste/modules/unidade_medida/dto/unidade_medida_response.dart';
 import 'package:my_app_teste/modules/unidade_medida/dto/validacao_unidade.dart';
+import 'package:my_app_teste/modules/unidade_medida/widgets/atalhos_unidade_base.dart';
 import 'package:my_app_teste/modules/unidade_medida/service/unidade_medida_service.dart';
 import 'package:my_app_teste/modules/unidade_medida/widgets/seletor_tipo_medida.dart';
 
@@ -66,6 +68,22 @@ class _UnidadeMedidaFormPageState extends State<UnidadeMedidaFormPage> {
     _simbolo.dispose();
     _fator.dispose();
     super.dispose();
+  }
+
+  /// Preenche o formulário inteiro a partir de uma unidade conhecida.
+  ///
+  /// Escrever os quatro campos de uma vez é o ponto do atalho: evita que
+  /// alguém cadastre "Quilograma" com fator 1, o que faria o sistema tratar
+  /// quilo como grama em toda conversão.
+  void _aplicarAtalho(UnidadeBase base) {
+    final dados = base.aplicarEm(_dados);
+    _nome.text = dados.nome;
+    _simbolo.text = dados.simbolo;
+    _fator.text = dados.fatorParaBase;
+    setState(() {
+      _dados = _dados.copiarCom(tipoMedida: dados.tipoMedida);
+      _erro = null;
+    });
   }
 
   // ---------------------------------------------------------------------
@@ -135,6 +153,17 @@ class _UnidadeMedidaFormPageState extends State<UnidadeMedidaFormPage> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
         children: [
+          // Só na criação: em edição o tipo e o fator são imutáveis, então
+          // um atalho que os preenchesse não teria efeito.
+          if (!widget.ehEdicao) ...[
+            AtalhosUnidadeBase(
+              simboloAtual: _simbolo.text,
+              aoEscolher: _aplicarAtalho,
+            ),
+            const SizedBox(height: 20),
+            const Divider(color: AppTema.borda),
+            const SizedBox(height: 12),
+          ],
           const AppRotulo('Nome'),
           const SizedBox(height: 6),
           AppCampoTexto(
@@ -149,6 +178,9 @@ class _UnidadeMedidaFormPageState extends State<UnidadeMedidaFormPage> {
             controle: _simbolo,
             dica: 'Ex.: kg, mL, csp',
             tamanhoMax: ValidadorUnidade.simboloTamanhoMaximo,
+            // Redesenha para o atalho correspondente acender (ou apagar)
+            // conforme o símbolo digitado.
+            aoMudar: (_) => setState(() {}),
           ),
           const SizedBox(height: 20),
           const Divider(color: AppTema.borda),
