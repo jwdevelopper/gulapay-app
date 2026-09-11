@@ -103,6 +103,40 @@ void main() {
       expect(d.endereco?.uf, 'PR');
     });
 
+    test('CEP é opcional, mas precisa estar completo quando informado', () {
+      expect(ValidadorCliente.validarCep(''), isNull);
+      expect(ValidadorCliente.validarCep('01310-100'), isNull);
+      expect(ValidadorCliente.validarCep('01310-1'), isNotNull);
+    });
+
+    test('CEP vai para a API só com dígitos', () {
+      const d = DadosCliente(
+        nome: 'Ana',
+        telefone: '44999990000',
+        logradouro: 'Rua A',
+        numero: '10',
+        bairro: 'Centro',
+        cidade: 'Umuarama',
+        uf: 'PR',
+        cep: '01310-100',
+      );
+      expect(d.endereco?.cep, '01310100');
+    });
+
+    test('CEP incompleto reprova o endereço', () {
+      const d = DadosCliente(
+        nome: 'Ana',
+        telefone: '(44) 99999-0000',
+        logradouro: 'Rua A',
+        numero: '10',
+        bairro: 'Centro',
+        cidade: 'Umuarama',
+        uf: 'PR',
+        cep: '01310',
+      );
+      expect(ValidadorCliente.validar(d), contains('CEP incompleto'));
+    });
+
     test('só o complemento já conta como endereço iniciado', () {
       const d = DadosCliente(
         nome: 'Ana',

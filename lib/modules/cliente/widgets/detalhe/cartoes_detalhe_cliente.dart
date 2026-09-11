@@ -8,6 +8,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
+import 'package:my_app_teste/core/utils/cep_formatter.dart';
 import 'package:my_app_teste/core/utils/telefone_formatter.dart';
 import 'package:my_app_teste/core/widgets/app_tag.dart';
 import 'package:my_app_teste/modules/cliente/dto/cliente_endereco.dart';
@@ -157,7 +158,8 @@ class EnderecoDoCliente extends StatelessWidget {
       if ((endereco.complemento ?? '').isNotEmpty) endereco.complemento!,
       if ((endereco.bairro ?? '').isNotEmpty) endereco.bairro!,
       if ((endereco.cidade ?? '').isNotEmpty) '${endereco.cidade}$uf',
-      if ((endereco.cep ?? '').isNotEmpty) 'CEP ${endereco.cep}',
+      if ((endereco.cep ?? '').isNotEmpty)
+        'CEP ${CepFormatter.formatar(endereco.cep)}',
     ];
   }
 

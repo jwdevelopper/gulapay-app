@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
+import 'package:my_app_teste/core/utils/cep_formatter.dart';
 import 'package:my_app_teste/core/utils/telefone_formatter.dart';
 import 'package:my_app_teste/core/widgets/app_barra_acoes.dart';
 import 'package:my_app_teste/core/widgets/app_campo_texto.dart';
@@ -60,7 +61,7 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
     _email.text = cliente.email ?? '';
     final endereco = cliente.endereco;
     if (endereco != null) {
-      _cep.text = endereco.cep ?? '';
+      _cep.text = CepFormatter.formatar(endereco.cep);
       _logradouro.text = endereco.logradouro ?? '';
       _numero.text = endereco.numero ?? '';
       _complemento.text = endereco.complemento ?? '';
@@ -166,6 +167,9 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
             _nome,
             dica: 'Ex.: João da Silva',
             tamanhoMax: 120,
+            formatadores: [
+              FilteringTextInputFormatter.allow(ValidadorCliente.nomePermitido),
+            ],
           ),
           const SizedBox(height: 14),
           _campo(
@@ -195,7 +199,8 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
             _cep,
             dica: 'Ex.: 01310-100',
             tipoTeclado: TextInputType.number,
-            tamanhoMax: 9,
+            tamanhoMax: CepFormatter.maxCaracteresFormatados,
+            formatadores: const [CepFormatter()],
             opcional: true,
           ),
           const SizedBox(height: 14),

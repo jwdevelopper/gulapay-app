@@ -1,3 +1,4 @@
+import 'package:my_app_teste/core/utils/cep_formatter.dart';
 import 'package:my_app_teste/core/utils/telefone_formatter.dart';
 import 'package:my_app_teste/modules/cliente/dto/cliente_create_request.dart';
 import 'package:my_app_teste/modules/cliente/dto/cliente_endereco.dart';
@@ -85,9 +86,12 @@ class DadosCliente {
   ].any((campo) => campo.trim().isNotEmpty);
 
   /// O endereço para envio, ou `null` quando o bloco ficou em branco.
+  ///
+  /// O CEP vai só com os dígitos, pelo mesmo motivo do telefone: o hífen é
+  /// máscara de tela, não parte do dado.
   ClienteEndereco? get endereco => temEndereco
       ? ClienteEndereco(
-          cep: cep.trim(),
+          cep: CepFormatter.somenteDigitos(cep),
           logradouro: logradouro.trim(),
           numero: numero.trim(),
           complemento: complemento.trim(),
@@ -128,6 +132,11 @@ class ValidadorCliente {
 
   static const nomeTamanhoMinimo = 3;
 
+  /// Caracteres aceitos num nome de pessoa: letras (com acento), espaço,
+  /// apóstrofo e hífen — o que aparece em "D'Ávila" e "Ana-Clara".
+  /// Dígito em nome é quase sempre engano de digitação.
+  static final nomePermitido = RegExp(r"[a-zA-ZÀ-ÿ\s'\-]");
+
   /// Menor quantidade de dígitos de um telefone brasileiro válido: DDD com
   /// dois dígitos mais oito do assinante (fixo).
   static const telefoneDigitosMinimo = 10;
@@ -158,6 +167,18 @@ class ValidadorCliente {
     return valido ? null : 'E-mail inválido.';
   }
 
+  /// CEP é opcional; quando informado, precisa estar completo.
+  ///
+  /// Meio CEP não localiza endereço nenhum — é pior que campo vazio,
+  /// porque parece preenchido.
+  static String? validarCep(String? valor) {
+    final digitos = CepFormatter.somenteDigitos(valor);
+    if (digitos.isEmpty) return null;
+    return digitos.length == CepFormatter.digitos
+        ? null
+        : 'CEP incompleto. Informe os ${CepFormatter.digitos} dígitos.';
+  }
+
   /// UF é opcional; quando informada, precisa ser a sigla de duas letras.
   static String? validarUf(String? valor) {
     final uf = valor?.trim() ?? '';
@@ -178,7 +199,7 @@ class ValidadorCliente {
     if (d.bairro.trim().isEmpty) return 'Informe o bairro.';
     if (d.cidade.trim().isEmpty) return 'Informe a cidade.';
     if (d.uf.trim().isEmpty) return 'Informe a UF.';
-    return validarUf(d.uf);
+    return validarUf(d.uf) ?? validarCep(d.cep);
   }
 
   /// Primeiro problema encontrado, ou `null` quando dá para salvar.
