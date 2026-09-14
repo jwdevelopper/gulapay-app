@@ -6,6 +6,7 @@ import 'package:my_app_teste/core/widgets/app_tag.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/widgets/estoque_palette.dart';
 import 'package:my_app_teste/modules/produto/dto/produto.dart';
 import 'package:my_app_teste/modules/produto/service/produto_service.dart';
+import 'package:my_app_teste/modules/rateio/page/rateio_page.dart';
 import '../dto/comanda_response.dart';
 import '../dto/evento_item_comanda_response.dart';
 import '../dto/item_comanda_create_request.dart';
@@ -482,7 +483,12 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
 
   Widget _actions(ComandaResponse c) {
     final active = c.status == 'ABERTA' || c.status == 'AGUARDANDO_PAGAMENTO';
-    if (!(_caixa && active) && !(_admin && c.status == 'FECHADA')) {
+    // O botão de Rateio só faz sentido em COMPARTILHADA + AGUARDANDO_PAGAMENTO
+    // (backend recusa fora disso). Papel: CAIXA/ADMIN (Sprint 3).
+    final podeRatear = _caixa &&
+        c.status == 'AGUARDANDO_PAGAMENTO' &&
+        c.escopo == 'COMPARTILHADA';
+    if (!(_caixa && active) && !(_admin && c.status == 'FECHADA') && !podeRatear) {
       return const SizedBox(height: 12);
     }
 
@@ -492,6 +498,23 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
         decoration: const BoxDecoration(color: EstoquePalette.surface, border: Border(top: BorderSide(color: EstoquePalette.borderSoft))),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
+          if (podeRatear) ...[
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _actionLoading ? null : () => _abrirRateio(c),
+                icon: const Icon(Icons.pie_chart_outline_rounded, size: 18),
+                label: const Text('Rateio da comanda'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: EstoquePalette.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
           if (_caixa && active)
             Row(children: [
               Expanded(child: OutlinedButton.icon(onPressed: _actionLoading ? null : () => _action('cancelar'), icon: const Icon(Icons.cancel_outlined, size: 18), label: const Text('Cancelar'), style: OutlinedButton.styleFrom(foregroundColor: EstoquePalette.error, side: const BorderSide(color: EstoquePalette.error), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), padding: const EdgeInsets.symmetric(vertical: 15)))),
@@ -503,6 +526,18 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
         ]),
       ),
     );
+  }
+
+  Future<void> _abrirRateio(ComandaResponse c) async {
+    final id = c.id;
+    if (id == null) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => RateioPage(comandaId: id)),
+    );
+    // Após voltar do rateio, recarrega a comanda pra atualizar totais/estado.
+    if (!mounted) return;
+    _load();
   }
 
   Future<void> _abrirAdicionarItem() async {
