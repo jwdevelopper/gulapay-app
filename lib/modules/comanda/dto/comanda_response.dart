@@ -15,6 +15,7 @@ class ComandaResponse {
         linkWhatsApp = json['linkWhatsApp']?.toString(),
         mesaId = _int(json['mesaId']),
         mesaNumero = json['mesaNumero']?.toString(),
+        comandaPaiId = _int(json['comandaPaiId']),
         garcomId = _int(json['garcomId']),
         garcomNome = json['garcomNome']?.toString(),
         enderecoEntregaId = _int(json['enderecoEntregaId']),
@@ -41,6 +42,9 @@ class ComandaResponse {
   final String? linkWhatsApp;
   final int? mesaId;
   final String? mesaNumero;
+
+  /// Preenchido quando esta comanda é INDIVIDUAL filha de uma COMPARTILHADA.
+  final int? comandaPaiId;
   final int? garcomId;
   final String? garcomNome;
   final int? enderecoEntregaId;

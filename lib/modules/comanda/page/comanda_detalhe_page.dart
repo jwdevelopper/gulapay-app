@@ -7,6 +7,7 @@ import 'package:my_app_teste/modules/movimentacao_estoque/widgets/estoque_palett
 import 'package:my_app_teste/modules/produto/dto/produto.dart';
 import 'package:my_app_teste/modules/produto/service/produto_service.dart';
 import 'package:my_app_teste/modules/rateio/page/rateio_page.dart';
+import '../dto/comanda_create_request.dart';
 import '../dto/comanda_response.dart';
 import '../dto/evento_item_comanda_response.dart';
 import '../dto/item_comanda_create_request.dart';
@@ -483,12 +484,20 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
 
   Widget _actions(ComandaResponse c) {
     final active = c.status == 'ABERTA' || c.status == 'AGUARDANDO_PAGAMENTO';
-    // O botão de Rateio só faz sentido em COMPARTILHADA + AGUARDANDO_PAGAMENTO
-    // (backend recusa fora disso). Papel: CAIXA/ADMIN (Sprint 3).
-    final podeRatear = _caixa &&
-        c.status == 'AGUARDANDO_PAGAMENTO' &&
-        c.escopo == 'COMPARTILHADA';
-    if (!(_caixa && active) && !(_admin && c.status == 'FECHADA') && !podeRatear) {
+    // Rateio só existe em COMPARTILHADA (backend recusa fora disso). Se ainda
+    // estiver ABERTA, o "Dividir conta" fecha antes. Papel: CAIXA/ADMIN.
+    final podeDividir = _caixa && active && c.escopo == 'COMPARTILHADA';
+    // INDIVIDUAL de mesa, avulsa (sem pai), pode virar COMPARTILHADA quando
+    // chega mais gente — ver [_transformarEmCompartilhada].
+    final podeTransformar = _caixa &&
+        c.status == 'ABERTA' &&
+        c.escopo != 'COMPARTILHADA' &&
+        c.tipoOrigem == 'MESA' &&
+        c.comandaPaiId == null &&
+        c.mesaId != null &&
+        c.garcomId != null &&
+        c.clienteId != null;
+    if (!(_caixa && active) && !(_admin && c.status == 'FECHADA')) {
       return const SizedBox(height: 12);
     }
 
@@ -498,16 +507,33 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
         decoration: const BoxDecoration(color: EstoquePalette.surface, border: Border(top: BorderSide(color: EstoquePalette.borderSoft))),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          if (podeRatear) ...[
+          if (podeDividir) ...[
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: _actionLoading ? null : () => _abrirRateio(c),
+                onPressed: _actionLoading ? null : () => _dividirConta(c),
                 icon: const Icon(Icons.pie_chart_outline_rounded, size: 18),
-                label: const Text('Rateio da comanda'),
+                label: Text(c.status == 'ABERTA' ? 'Fechar e dividir conta' : 'Dividir conta'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: EstoquePalette.primary,
                   foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+          if (podeTransformar) ...[
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _actionLoading ? null : () => _transformarEmCompartilhada(c),
+                icon: const Icon(Icons.group_add_outlined, size: 18),
+                label: const Text('Transformar em compartilhada'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: EstoquePalette.primary,
+                  side: const BorderSide(color: EstoquePalette.primary),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   padding: const EdgeInsets.symmetric(vertical: 15),
                 ),
@@ -528,9 +554,27 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
     );
   }
 
-  Future<void> _abrirRateio(ComandaResponse c) async {
+  /// Abre a divisão da conta. Se a comanda ainda estiver ABERTA, fecha
+  /// antes (o rateio exige AGUARDANDO_PAGAMENTO) — um passo a menos pro caixa.
+  Future<void> _dividirConta(ComandaResponse c) async {
     final id = c.id;
     if (id == null) return;
+    if (c.status == 'ABERTA') {
+      setState(() => _actionLoading = true);
+      try {
+        final fechada = await _service.fechar(id);
+        if (!mounted) return;
+        setState(() => _comanda = fechada);
+      } on ApiError catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+        }
+        return;
+      } finally {
+        if (mounted) setState(() => _actionLoading = false);
+      }
+    }
+    if (!mounted) return;
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => RateioPage(comandaId: id)),
@@ -538,6 +582,81 @@ class _ComandaDetalhePageState extends State<ComandaDetalhePage> {
     // Após voltar do rateio, recarrega a comanda pra atualizar totais/estado.
     if (!mounted) return;
     _load();
+  }
+
+  /// O backend não permite trocar o escopo de uma comanda. Pra atender o
+  /// "chegou um amigo", usamos só endpoints existentes:
+  /// 1. reaproveita a COMPARTILHADA aberta da mesa (só pode haver uma) ou
+  ///    cria uma nova com mesa/garçom/cliente desta;
+  /// 2. transfere os itens ativos pra ela (sem impacto em estoque, auditado);
+  /// 3. cancela esta individual, que ficou vazia;
+  /// 4. abre a compartilhada, que já mostra o "Dividir conta".
+  /// Se algo falhar no meio, os itens restantes ficam aqui e dá pra repetir.
+  Future<void> _transformarEmCompartilhada(ComandaResponse c) async {
+    final id = c.id;
+    if (id == null) return;
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: EstoquePalette.surface,
+        title: const Text('Transformar em compartilhada', style: TextStyle(color: EstoquePalette.text, fontWeight: FontWeight.w700)),
+        content: const Text(
+          'Os itens desta comanda vão para a comanda compartilhada da mesa '
+          '(criada agora, se ainda não existir) e esta comanda será cancelada. '
+          'Depois é só usar "Dividir conta".',
+          style: TextStyle(color: EstoquePalette.textMuted),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Voltar')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: EstoquePalette.primary),
+            child: const Text('Transformar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmou != true || !mounted) return;
+
+    setState(() => _actionLoading = true);
+    try {
+      final abertasDaMesa = await _service.listar(mesaId: c.mesaId, status: 'ABERTA');
+      final existente = abertasDaMesa
+          .where((m) => m.escopo == 'COMPARTILHADA' && m.id != null)
+          .firstOrNull;
+      final compartilhada = existente ??
+          await _service.criar(ComandaCreateRequest(
+            tipoOrigem: 'MESA',
+            escopo: 'COMPARTILHADA',
+            mesaId: c.mesaId,
+            garcomId: c.garcomId,
+            clienteId: c.clienteId,
+            observacao: c.observacao,
+          ));
+
+      // Recarrega pra transferir exatamente o que está na comanda agora.
+      final atual = await _service.buscarPorId(id);
+      for (final item in atual.itens.where((i) => (i.emPreparo || i.entregue) && i.id != null)) {
+        await _itemService.transferir(item.id!, compartilhada.id!);
+      }
+      await _service.cancelar(id);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Itens movidos para ${compartilhada.codigo}.'),
+        backgroundColor: EstoquePalette.success,
+      ));
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => ComandaDetalhePage(id: compartilhada.id!)),
+      );
+    } on ApiError catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      await _load();
+    } finally {
+      if (mounted) setState(() => _actionLoading = false);
+    }
   }
 
   Future<void> _abrirAdicionarItem() async {

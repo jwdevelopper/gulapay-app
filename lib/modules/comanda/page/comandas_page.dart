@@ -14,6 +14,8 @@ class ComandasPage extends StatefulWidget {
 class _ComandasPageState extends State<ComandasPage> {
   final _service = ComandaService();
   List<ComandaResponse> _comandas = [];
+  /// Quantidade de INDIVIDUAIS filhas (pessoas dividindo) por comanda pai.
+  Map<int, int> _filhasPorPai = {};
   String? _status;
   String? _tipo;
   bool _loading = true;
@@ -22,7 +24,20 @@ class _ComandasPageState extends State<ComandasPage> {
   @override void initState() { super.initState(); _load(); }
   Future<void> _load() async {
     setState(() { _loading = true; _erro = null; });
-    try { _comandas = await _service.listar(status: _status, tipoOrigem: _tipo); }
+    try {
+      final lista = await _service.listar(status: _status, tipoOrigem: _tipo);
+      // As filhas podem ter status diferente da pai, então com filtro de
+      // status a contagem usa a lista completa da mesa.
+      // Filhas só existem em MESA: filtro BALCAO/DELIVERY dispensa a 2ª chamada.
+      final precisaListaCompleta = _status != null && (_tipo == null || _tipo == 'MESA');
+      final paraContar = precisaListaCompleta ? await _service.listar(tipoOrigem: 'MESA') : lista;
+      _filhasPorPai = {};
+      for (final filha in paraContar.where((c) => c.comandaPaiId != null && c.status != 'CANCELADA')) {
+        _filhasPorPai.update(filha.comandaPaiId!, (n) => n + 1, ifAbsent: () => 1);
+      }
+      // Filhas não aparecem soltas — só como contador no card da pai.
+      _comandas = lista.where((c) => c.comandaPaiId == null).toList();
+    }
     on ApiError catch (e) { _erro = e.message; }
     catch (_) { _erro = 'Não foi possível carregar as comandas.'; }
     if (mounted) setState(() => _loading = false);
@@ -86,7 +101,28 @@ class _ComandasPageState extends State<ComandasPage> {
     if (_comandas.isEmpty) return ListView(children: const [SizedBox(height: 80), Center(child: Icon(Icons.receipt_long_outlined, size: 48, color: EstoquePalette.primary)), SizedBox(height: 14), Center(child: Text('Nenhuma comanda encontrada.', style: TextStyle(color: EstoquePalette.text, fontWeight: FontWeight.w600)))]);
     return ListView.separated(padding: const EdgeInsets.fromLTRB(16, 8, 16, 96), itemCount: _comandas.length, separatorBuilder: (_, __) => const SizedBox(height: 10), itemBuilder: (_, i) {
       final c = _comandas[i];
-      return Card(color: EstoquePalette.surface, elevation: 0, shadowColor: EstoquePalette.shadow, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: EstoquePalette.border)), child: ListTile(onTap: () async { await Navigator.push(context, MaterialPageRoute(builder: (_) => ComandaDetalhePage(id: c.id!))); _load(); }, contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4), leading: Container(width: 44, height: 44, decoration: BoxDecoration(color: EstoquePalette.inputFill, borderRadius: BorderRadius.circular(14)), child: Icon(c.tipoOrigem == 'MESA' ? Icons.table_restaurant : c.tipoOrigem == 'DELIVERY' ? Icons.delivery_dining : Icons.point_of_sale, color: EstoquePalette.primary)), title: Text(c.codigo.isEmpty ? 'Comanda #${c.id}' : c.codigo, style: const TextStyle(fontWeight: FontWeight.w700, color: EstoquePalette.text)), subtitle: Text([c.tipoOrigem, if (c.clienteNome != null) c.clienteNome!, if (c.mesaNumero != null) 'Mesa ${c.mesaNumero}'].join(' • '), style: const TextStyle(color: EstoquePalette.textMuted, fontSize: 12)), trailing: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [Text(_money(c.totalLiquido), style: const TextStyle(fontWeight: FontWeight.w700, color: EstoquePalette.text)), Text(c.status.replaceAll('_', ' '), style: TextStyle(fontSize: 11, color: _statusColor(c.status), fontWeight: FontWeight.w700))])));
+      return Card(color: EstoquePalette.surface, elevation: 0, shadowColor: EstoquePalette.shadow, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: EstoquePalette.border)), child: ListTile(onTap: () async { await Navigator.push(context, MaterialPageRoute(builder: (_) => ComandaDetalhePage(id: c.id!))); _load(); }, contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4), leading: Container(width: 44, height: 44, decoration: BoxDecoration(color: EstoquePalette.inputFill, borderRadius: BorderRadius.circular(14)), child: Icon(c.tipoOrigem == 'MESA' ? Icons.table_restaurant : c.tipoOrigem == 'DELIVERY' ? Icons.delivery_dining : Icons.point_of_sale, color: EstoquePalette.primary)), title: Row(children: [
+        Flexible(child: Text(c.codigo.isEmpty ? 'Comanda #${c.id}' : c.codigo, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, color: EstoquePalette.text))),
+        if ((_filhasPorPai[c.id] ?? 0) > 0) ...[const SizedBox(width: 8), _badgePessoas(_filhasPorPai[c.id]!)],
+      ]), subtitle: Text([c.tipoOrigem, if (c.clienteNome != null) c.clienteNome!, if (c.mesaNumero != null) 'Mesa ${c.mesaNumero}'].join(' • '), style: const TextStyle(color: EstoquePalette.textMuted, fontSize: 12)), trailing: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [Text(_money(c.totalLiquido), style: const TextStyle(fontWeight: FontWeight.w700, color: EstoquePalette.text)), Text(c.status.replaceAll('_', ' '), style: TextStyle(fontSize: 11, color: _statusColor(c.status), fontWeight: FontWeight.w700))])));
     });
   }
+
+  /// Ícone de cartas empilhadas + quantidade de pessoas dividindo a conta.
+  Widget _badgePessoas(int quantidade) => Tooltip(
+        message: quantidade == 1 ? '1 pessoa na divisão' : '$quantidade pessoas dividindo',
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+          decoration: BoxDecoration(
+            color: EstoquePalette.inputFill,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: EstoquePalette.primarySoft),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.style_outlined, size: 14, color: EstoquePalette.primary),
+            const SizedBox(width: 3),
+            Text('$quantidade', style: const TextStyle(color: EstoquePalette.primary, fontSize: 12, fontWeight: FontWeight.w800)),
+          ]),
+        ),
+      );
 }
