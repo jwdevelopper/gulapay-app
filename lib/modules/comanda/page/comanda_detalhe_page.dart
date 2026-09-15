@@ -20,6 +20,31 @@ const _motivosCancelamento = <String, String>{
   'ERRO_PRODUCAO': 'Erro de produção',
 };
 
+
+class FormatadorEntradaMonetaria extends TextInputFormatter {
+  static const int _maxDigits = 6;
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    var digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isEmpty) {
+      return const TextEditingValue(text: '');
+    }
+    if (digits.length > _maxDigits) {
+      digits = digits.substring(0, _maxDigits);
+    }
+    final value = int.parse(digits) / 100;
+    final formatted = value.toStringAsFixed(2).replaceAll('.', ',');
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+  }
+
 class ComandaDetalhePage extends StatefulWidget {
   const ComandaDetalhePage({super.key, required this.id});
 
@@ -993,7 +1018,7 @@ class _ItemFormSheetState extends State<_ItemFormSheet> {
                       child: TextField(
                         controller: _descCtrl,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9,]'))],
+                        inputFormatters: [FormatadorEntradaMonetaria()],
                         style: const TextStyle(color: EstoquePalette.text, fontSize: 15),
                         decoration: _decoration('Desconto', prefix: 'R\$ ', hint: '0,00', helper: 'Valor a menos'),
                       ),
@@ -1003,7 +1028,7 @@ class _ItemFormSheetState extends State<_ItemFormSheet> {
                       child: TextField(
                         controller: _acresCtrl,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9,]'))],
+                        inputFormatters: [FormatadorEntradaMonetaria()],
                         style: const TextStyle(color: EstoquePalette.text, fontSize: 15),
                         decoration: _decoration('Acréscimo', prefix: 'R\$ ', hint: '0,00', helper: 'Valor a mais'),
                       ),
@@ -1142,4 +1167,4 @@ class _EventosSheetState extends State<_EventosSheet> {
       ),
     );
   }
-}
+} 

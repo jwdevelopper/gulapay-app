@@ -407,9 +407,11 @@ class _LoteFormPageState extends State<LoteFormPage> {
         AppCampoTexto(
           controle: _quantidade,
           dica: 'Ex.: 5,0',
+          tamanhoMax: 11,
           tipoTeclado: const TextInputType.numberWithOptions(decimal: true),
           formatadores: [
             FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+            
           ],
         ),
       ],
