@@ -1,53 +1,65 @@
-import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
+import 'package:my_app_teste/core/widgets/barra_navegacao_curvada.dart';
 import 'package:my_app_teste/modules/home/dto/aba_principal.dart';
 
 /// Barra inferior curvada da [Home].
 ///
-/// Mostra as abas fixas mais um botão "Mais", que abre o menu lateral com o
-/// resto. A bolha da curva acompanha [indiceVisual], que **não** é o índice
-/// da página: quando a aba aberta não está na barra, a bolha fica sobre o
-/// "Mais" — a última posição.
+/// Usa o [BarraNavegacaoCurvada] — a versão própria, escrita porque o
+/// pacote original congela a quantidade de itens na primeira montagem e
+/// não aceita um segundo entalhe. Aqui os dois são necessários: a barra
+/// muda de itens conforme a aba aberta, e o `+` precisa do seu próprio
+/// entalhe no canto.
+///
+/// ## O `+`
+///
+/// Só aparece quando a aba aberta tem cadastro. A ação vem do registro
+/// global `AcoesCriacao`, preenchido por cada listagem no `initState` — é
+/// o que permite o botão da barra abrir o formulário da tela certa sem que
+/// a [Home] conheça nenhuma delas.
 class BarraInferiorHome extends StatelessWidget {
-  /// Apenas as abas fixas na barra.
-  final List<AbaPrincipal> abas;
+  /// Os itens exibidos, já na ordem final. Quando a aba aberta tem
+  /// cadastro, ela vem no centro.
+  final List<AbaPrincipal> itens;
 
-  /// Posição da bolha: de `0` a `abas.length` (o último é o "Mais").
-  final int indiceVisual;
+  /// A aba aberta — recebe a bolha da curva.
+  final AbaPrincipal abaAtual;
 
-  /// Chamado com o índice da aba tocada.
+  /// Chamado com o índice tocado, dentro de [itens].
   final ValueChanged<int> aoTocarAba;
 
-  /// Chamado ao tocar no "Mais".
-  final VoidCallback aoTocarMais;
+  /// Ação do `+`. Nulo esconde o botão.
+  final VoidCallback? aoTocarAdicionar;
 
   const BarraInferiorHome({
     super.key,
-    required this.abas,
-    required this.indiceVisual,
+    required this.itens,
+    required this.abaAtual,
     required this.aoTocarAba,
-    required this.aoTocarMais,
+    required this.aoTocarAdicionar,
   });
 
-  Color _cor(int indice) =>
-      indice == indiceVisual ? Colors.white : AppTema.textoSecundario;
-
   @override
-  Widget build(BuildContext context) => CurvedNavigationBar(
-    height: 65,
-    index: indiceVisual,
-    backgroundColor: AppTema.fundo,
-    color: Color.lerp(AppTema.fundo, Colors.black, 0.08)!,
-    buttonBackgroundColor: AppTema.primaria,
-    animationDuration: const Duration(milliseconds: 300),
-    animationCurve: Curves.easeInOut,
-    items: [
-      for (var i = 0; i < abas.length; i++)
-        Icon(abas[i].icone, size: 30, color: _cor(i)),
-      Icon(Icons.more_horiz, size: 30, color: _cor(abas.length)),
+  Widget build(BuildContext context) => BarraNavegacaoCurvada(
+    altura: 65,
+    indice: itens.indexOf(abaAtual),
+    corFundo: AppTema.fundo,
+    cor: Color.lerp(AppTema.fundo, Colors.black, 0.08)!,
+    corBotao: AppTema.primaria,
+    duracaoAnimacao: const Duration(milliseconds: 300),
+    curvaAnimacao: Curves.easeInOut,
+    itens: [
+      for (final aba in itens)
+        Icon(
+          aba.icone,
+          size: 30,
+          color: aba == abaAtual ? Colors.white : AppTema.textoSecundario,
+        ),
     ],
-    onTap: (indice) =>
-        indice < abas.length ? aoTocarAba(indice) : aoTocarMais(),
+    aoTocar: aoTocarAba,
+    acaoFinal: aoTocarAdicionar == null
+        ? null
+        : const Icon(Icons.add_rounded, size: 30, color: Colors.white),
+    aoTocarAcaoFinal: aoTocarAdicionar,
   );
 }

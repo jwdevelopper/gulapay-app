@@ -30,6 +30,11 @@ class TitulosAba {
   static const estoque = 'Estoque';
   static const categorias = 'Categorias';
   static const clientes = 'Clientes';
+  static const insumos = 'Insumos';
+  static const lotes = 'Lotes';
+  static const unidades = 'Unidades de Medida';
+  static const entregadores = 'Entregadores';
+  static const usuarios = 'Usuários';
 }
 
 /// Índice da aba com este título, ou `-1` quando ela não está visível ao
@@ -104,31 +109,31 @@ List<AbaPrincipal> construirAbas({required ValueChanged<String> aoAbrirAba}) =>
         pagina: ClientePage(),
       ),
       const AbaPrincipal(
-        tituloAppBar: 'Insumos',
+        tituloAppBar: TitulosAba.insumos,
         rotuloInferior: 'Insumos',
         icone: Icons.local_grocery_store_outlined,
         pagina: InsumosListPage(),
       ),
       const AbaPrincipal(
-        tituloAppBar: 'Lotes',
+        tituloAppBar: TitulosAba.lotes,
         rotuloInferior: 'Lotes',
         icone: Icons.layers_outlined,
         pagina: LotesPage(),
       ),
       const AbaPrincipal(
-        tituloAppBar: 'Unidades de Medida',
+        tituloAppBar: TitulosAba.unidades,
         rotuloInferior: 'Unidades',
         icone: Icons.straighten_outlined,
         pagina: UnidadeMedidaPage(),
       ),
       const AbaPrincipal(
-        tituloAppBar: 'Entregadores',
+        tituloAppBar: TitulosAba.entregadores,
         rotuloInferior: 'Entregas',
         icone: Icons.delivery_dining_outlined,
         pagina: EntregadorPage(),
       ),
       const AbaPrincipal(
-        tituloAppBar: 'Usuários',
+        tituloAppBar: TitulosAba.usuarios,
         rotuloInferior: 'Equipe',
         icone: Icons.people_outline,
         apenasAdmin: true,

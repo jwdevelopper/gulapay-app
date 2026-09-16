@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/acoes_criacao.dart';
+import 'package:my_app_teste/modules/home/dto/abas_home.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/auth_session.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
@@ -42,6 +44,8 @@ class _UsuarioListaPaginaState extends State<UsuarioListaPagina> {
   @override
   void initState() {
     super.initState();
+    // Registra a acao do "+" da barra inferior para esta aba.
+    AcoesCriacao.registrar(TitulosAba.usuarios, _abrirFormulario);
     _inicializar();
   }
 

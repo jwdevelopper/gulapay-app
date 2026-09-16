@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/acoes_criacao.dart';
+import 'package:my_app_teste/modules/home/dto/abas_home.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/core/widgets/app_campo_busca.dart';
@@ -41,9 +43,32 @@ class _LotesPageState extends State<LotesPage> {
   String? _erro;
 
   @override
+  void initState() {
+    super.initState();
+    AcoesCriacao.registrar(TitulosAba.lotes, _criarPeloMenu);
+  }
+
+  @override
   void dispose() {
     _busca.dispose();
     super.dispose();
+  }
+
+  /// Ação do "+" da barra inferior.
+  ///
+  /// Criar lote depende de um insumo escolhido — `GET /lotes` é sempre por
+  /// insumo. Sem ele, orienta em vez de abrir um formulário que não teria
+  /// a quem vincular.
+  void _criarPeloMenu() {
+    if (_insumo == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Selecione um insumo antes de criar um lote.'),
+        ),
+      );
+      return;
+    }
+    _abrirCriacao();
   }
 
   // ---------------------------------------------------------------------

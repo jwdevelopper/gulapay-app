@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:my_app_teste/core/acoes_criacao.dart';
+import 'package:my_app_teste/modules/home/dto/abas_home.dart';
 import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/theme/app_tema.dart';
 import 'package:my_app_teste/core/widgets/app_campo_busca.dart';
@@ -42,6 +44,8 @@ class _ProdutosPageState extends State<ProdutosPage> {
   @override
   void initState() {
     super.initState();
+    // Registra a acao do "+" da barra inferior para esta aba.
+    AcoesCriacao.registrar(TitulosAba.produtos, _abrirFormulario);
     _carregarCategorias();
     _carregar();
   }
