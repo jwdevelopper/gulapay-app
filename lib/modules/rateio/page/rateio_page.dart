@@ -4,12 +4,17 @@ import 'package:my_app_teste/core/api_error.dart';
 import 'package:my_app_teste/core/widgets/app_campo_texto.dart';
 import 'package:my_app_teste/core/widgets/app_dica.dart';
 import 'package:my_app_teste/modules/comanda/dto/comanda_create_request.dart';
+import 'package:my_app_teste/modules/comanda/dto/item_comanda_response.dart';
 import 'package:my_app_teste/modules/comanda/service/comanda_service.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/widgets/estoque_palette.dart';
 import '../dto/rateio_comanda_request.dart';
 import '../dto/rateio_comanda_response.dart';
 import '../dto/rateio_participantes_request.dart';
 import '../service/rateio_service.dart';
+import '../util/rateio_calculo.dart';
+import '../widget/rateio_estrategia_card.dart';
+import '../widget/rateio_item_consumidores_tile.dart';
+import '../widget/rateio_status_box.dart';
 
 /// Tela de rateio de uma comanda COMPARTILHADA (Sprint 3).
 ///
@@ -25,8 +30,10 @@ import '../service/rateio_service.dart';
 /// Fase 1: estratégias **IGUALITARIO** e **SEM_RATEIO**.
 /// Fase 2: estratégia **MANUAL** — um campo de valor por participante,
 /// com a soma validada no cliente contra o `totalLiquido`.
-/// **PROPORCIONAL** e **POR_ITEM** aparecem desabilitadas com badge
-/// "Em breve" — próximas entregas.
+/// Fase 3: **PROPORCIONAL** (sem formulário — o backend pondera pelos
+/// itens próprios) e **POR_ITEM** (um chip de consumidor por item da
+/// comanda). As duas só ficam clicáveis quando a comanda comporta a
+/// estratégia — ver [_indisponibilidade].
 class RateioPage extends StatefulWidget {
   const RateioPage({super.key, required this.comandaId});
 
@@ -66,6 +73,14 @@ class _RateioPageState extends State<RateioPage> {
   /// Criados sob demanda e liberados no [dispose].
   final Map<int, TextEditingController> _controladoresValor = {};
 
+  /// Itens ativos da comanda COMPARTILHADA, usados pelo POR_ITEM. Vêm do
+  /// `GET /comandas/{id}` junto com o carregamento do rateio.
+  List<ItemComandaResponse> _itensAtivos = [];
+
+  /// Quem consumiu cada item — `itemComandaId -> ids de INDIVIDUAL`.
+  /// Só é enviado quando a estratégia é POR_ITEM.
+  final Map<int, Set<int>> _consumidoresPorItem = {};
+
   /// Filtro de dígitos + vírgula (mesmo padrão dos campos de valor da
   /// comanda), limitado a uma vírgula e 2 casas decimais.
   static final List<TextInputFormatter> _formatadoresValor = [
@@ -80,10 +95,19 @@ class _RateioPageState extends State<RateioPage> {
       [..._rateio!.participantes]..sort(
           (a, b) => a.comandaIndividualId.compareTo(b.comandaIndividualId));
 
-  /// Participantes marcados — só eles entram em `valoresManuais`.
-  List<RateioParticipanteResponse> get _participantesManuais => _participantes
-      .where((p) => _participantesMarcados.contains(p.comandaIndividualId))
-      .toList();
+  /// Participantes marcados — só eles entram em `valoresManuais` /
+  /// `itensConsumidores`.
+  List<RateioParticipanteResponse> get _participantesSelecionados =>
+      _participantes
+          .where((p) => _participantesMarcados.contains(p.comandaIndividualId))
+          .toList();
+
+  /// Os mesmos participantes no formato enxuto que os chips do POR_ITEM
+  /// consomem.
+  List<RateioParticipanteChip> get _chipsParticipantes =>
+      _participantesSelecionados
+          .map((p) => (id: p.comandaIndividualId, nome: _nomeParticipante(p)))
+          .toList();
 
   /// Filhas criadas pela divisão rápida herdam o cliente da compartilhada,
   /// então o nome se repete — nesse caso mostramos "Pessoa N".
@@ -106,13 +130,30 @@ class _RateioPageState extends State<RateioPage> {
   /// total — somar doubles pode dar 99.99999 em vez de 100.
   int get _totalCentavos => (_rateio!.totalLiquido * 100).round();
 
-  int get _somaManualCentavos => _participantesManuais.fold(
+  int get _somaManualCentavos => _participantesSelecionados.fold(
       0, (soma, p) => soma + (_centavosDe(p.comandaIndividualId) ?? 0));
 
-  bool get _algumValorManualVazio => _participantesManuais
+  bool get _algumValorManualVazio => _participantesSelecionados
       .any((p) => _centavosDe(p.comandaIndividualId) == null);
 
   bool get _somaManualFecha => _somaManualCentavos == _totalCentavos;
+
+  /// Itens que ainda não têm nenhum consumidor marcado. O backend recusa
+  /// o POR_ITEM (422) se sobrar qualquer um, então a tela barra antes.
+  List<ItemComandaResponse> get _itensSemConsumidor => _itensAtivos
+      .where((i) => (_consumidoresPorItem[i.id] ?? const <int>{}).isEmpty)
+      .toList();
+
+  /// Prévia do POR_ITEM: quanto cada participante paga com as marcações
+  /// atuais. Só serve de conferência — o valor oficial vem do POST.
+  Map<int, int> get _previaPorItem => calcularRateioPorItem(
+        subtotalCentavosPorItem: {
+          for (final i in _itensAtivos) i.id!: (i.subtotal * 100).round(),
+        },
+        consumidoresPorItem: _consumidoresPorItem,
+        participantes:
+            _participantesSelecionados.map((p) => p.comandaIndividualId).toList(),
+      );
 
   @override
   void initState() {
@@ -159,8 +200,12 @@ class _RateioPageState extends State<RateioPage> {
     });
     try {
       final resposta = await _service.buscarRateio(widget.comandaId);
+      // Os itens só interessam ao POR_ITEM, mas vêm junto pra tela já
+      // saber se pode oferecer a estratégia sem um segundo loading.
+      final comanda = await _comandaService.buscarPorId(widget.comandaId);
       if (!mounted) return;
       setState(() {
+        _sincronizarItens(comanda.itens);
         _rateio = resposta;
         _participantesOriginais = resposta.participantes
             .where((p) => p.participante)
@@ -178,6 +223,36 @@ class _RateioPageState extends State<RateioPage> {
         _carregando = false;
       });
     }
+  }
+
+  /// Guarda os itens ativos e descarta marcações de itens que sumiram
+  /// (cancelados ou transferidos entre uma abertura e outra da tela).
+  void _sincronizarItens(List<ItemComandaResponse> itens) {
+    _itensAtivos = itens
+        .where((i) => i.id != null && !i.cancelado && !i.transferido)
+        .toList();
+    final idsValidos = _itensAtivos.map((i) => i.id).toSet();
+    _consumidoresPorItem.removeWhere((itemId, _) => !idsValidos.contains(itemId));
+  }
+
+  /// Marca/desmarca um participante como consumidor de um item.
+  void _alternarConsumidor(int itemId, int comandaIndividualId) {
+    setState(() {
+      final consumidores =
+          _consumidoresPorItem.putIfAbsent(itemId, () => <int>{});
+      if (!consumidores.remove(comandaIndividualId)) {
+        consumidores.add(comandaIndividualId);
+      }
+    });
+  }
+
+  /// Botão "Todos"/"Limpar" do item: se já estão todos marcados, limpa.
+  void _alternarTodosConsumidores(int itemId) {
+    final todos =
+        _participantesSelecionados.map((p) => p.comandaIndividualId).toSet();
+    final atuais = _consumidoresPorItem[itemId] ?? const <int>{};
+    setState(() => _consumidoresPorItem[itemId] =
+        atuais.length == todos.length ? <int>{} : todos);
   }
 
   /// Cria [quantidade] comandas INDIVIDUAIS filhas com mesa/garçom/cliente
@@ -230,18 +305,32 @@ class _RateioPageState extends State<RateioPage> {
   Future<void> _aplicarRateio() async {
     await _executar(() async {
       final valoresManuais = _estrategiaSelecionada == EstrategiaRateio.manual
-          ? _participantesManuais
+          ? _participantesSelecionados
               .map((p) => RateioValorManualItem(
                     comandaIndividualId: p.comandaIndividualId,
                     valor: _centavosDe(p.comandaIndividualId)! / 100,
                   ))
               .toList()
           : null;
+      // POR_ITEM: o backend exige TODO item ativo na lista, por isso a
+      // origem aqui é _itensAtivos e não o mapa de marcações.
+      final itensConsumidores =
+          _estrategiaSelecionada == EstrategiaRateio.porItem
+              ? _itensAtivos
+                  .map((i) => RateioConsumidoresItem(
+                        itemComandaId: i.id!,
+                        comandaIndividualIds:
+                            (_consumidoresPorItem[i.id] ?? const <int>{})
+                                .toList(),
+                      ))
+                  .toList()
+              : null;
       final resposta = await _service.aplicarRateio(
         widget.comandaId,
         RateioComandaRequest(
           estrategia: _estrategiaSelecionada,
           valoresManuais: valoresManuais,
+          itensConsumidores: itensConsumidores,
         ),
       );
       if (!mounted) return;
@@ -314,6 +403,11 @@ class _RateioPageState extends State<RateioPage> {
       _participantesMarcados
         ..clear()
         ..addAll(_participantesOriginais);
+      // Quem deixou de participar não pode continuar marcado como
+      // consumidor de item — o backend recusa id fora dos participantes.
+      for (final consumidores in _consumidoresPorItem.values) {
+        consumidores.retainWhere(_participantesMarcados.contains);
+      }
     });
   }
 
@@ -498,9 +592,129 @@ class _RateioPageState extends State<RateioPage> {
         const SizedBox(height: 8),
         _construirFormularioManual(),
       ],
+      if (_estrategiaSelecionada == EstrategiaRateio.proporcional) ...[
+        const SizedBox(height: 16),
+        _construirPreviaProporcional(),
+      ],
+      if (_estrategiaSelecionada == EstrategiaRateio.porItem) ...[
+        const SizedBox(height: 16),
+        _tituloSecao('3. Quem consumiu cada item'),
+        const SizedBox(height: 8),
+        ..._construirFormularioPorItem(),
+      ],
       const SizedBox(height: 20),
       _construirBotaoAplicar(),
     ];
+  }
+
+  /// PROPORCIONAL não tem formulário: o backend pondera pelo total de
+  /// itens **próprios** de cada participante. A tela só mostra os pesos
+  /// que ele vai usar, pra ninguém aplicar às cegas.
+  Widget _construirPreviaProporcional() {
+    final participantes = _participantesSelecionados;
+    final pesoTotal =
+        participantes.fold<double>(0, (soma, p) => soma + p.valorProprio);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const AppDica(
+          'Quem consumiu mais por fora da comanda compartilhada paga uma '
+          'fatia maior. O cálculo é feito pelo servidor — aqui embaixo é '
+          'só a prévia dos pesos.',
+        ),
+        const SizedBox(height: 12),
+        ...participantes.map((p) {
+          final fatia = pesoTotal == 0 ? 0.0 : p.valorProprio / pesoTotal;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(_nomeParticipante(p),
+                      style: const TextStyle(
+                          color: EstoquePalette.text, fontSize: 13)),
+                ),
+                Text(
+                  '${_money(p.valorProprio)} · ${(fatia * 100).toStringAsFixed(0)}% '
+                  '≈ ${_money(_rateio!.totalLiquido * fatia)}',
+                  style: const TextStyle(
+                      color: EstoquePalette.textMuted, fontSize: 12),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  /// POR_ITEM: uma linha por item ativo com os chips de consumidores, e
+  /// no fim o status de cobertura + a prévia do que cada um vai pagar.
+  List<Widget> _construirFormularioPorItem() {
+    final chips = _chipsParticipantes;
+    if (chips.isEmpty) {
+      return const [
+        Text('Marque ao menos 1 participante acima para atribuir os itens.',
+            style: TextStyle(color: EstoquePalette.textMuted, fontSize: 12)),
+      ];
+    }
+
+    final faltando = _itensSemConsumidor.length;
+    return [
+      const AppDica(
+        'Marque quem consumiu cada item. Um item dividido entre várias '
+        'pessoas tem o valor partido igualmente entre elas.',
+      ),
+      const SizedBox(height: 12),
+      ..._itensAtivos.map((item) => RateioItemConsumidoresTile(
+            item: item,
+            participantes: chips,
+            consumidores: _consumidoresPorItem[item.id] ?? const <int>{},
+            habilitado: !_executando,
+            aoAlternar: (idPessoa) => _alternarConsumidor(item.id!, idPessoa),
+            aoMarcarTodos: () => _alternarTodosConsumidores(item.id!),
+          )),
+      const SizedBox(height: 4),
+      RateioStatusBox(
+        ok: faltando == 0,
+        titulo: '${_itensAtivos.length - faltando} de ${_itensAtivos.length} '
+            'itens atribuídos',
+        detalhe: faltando == 0
+            ? 'Todo item tem pelo menos um consumidor.'
+            : faltando == 1
+                ? 'Falta marcar quem consumiu 1 item.'
+                : 'Faltam marcar quem consumiu $faltando itens.',
+        rodape: faltando == 0 ? _construirPreviaPorItem() : null,
+      ),
+    ];
+  }
+
+  Widget _construirPreviaPorItem() {
+    final previa = _previaPorItem;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: _participantesSelecionados.map((p) {
+        final centavos = previa[p.comandaIndividualId] ?? 0;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(_nomeParticipante(p),
+                    style: const TextStyle(
+                        color: EstoquePalette.text, fontSize: 13)),
+              ),
+              Text(_money(centavos / 100),
+                  style: const TextStyle(
+                      color: EstoquePalette.text,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700)),
+            ],
+          ),
+        );
+      }).toList(),
+    );
   }
 
   /// Comanda sem filhas: em vez de exigir cadastro manual de cada
@@ -628,72 +842,27 @@ class _RateioPageState extends State<RateioPage> {
     );
   }
 
-  Widget _construirCardEstrategia(EstrategiaRateio e) {
-    // PROPORCIONAL e POR_ITEM ficam pra Fase 3.
-    final habilitada = e == EstrategiaRateio.igualitario ||
-        e == EstrategiaRateio.semRateio ||
-        e == EstrategiaRateio.manual;
-    final selecionada = _estrategiaSelecionada == e;
+  /// Motivo pelo qual a estratégia não pode ser usada nesta comanda, ou
+  /// `null` quando ela está liberada. Evita mandar um POST que o backend
+  /// já rejeitaria com 422.
+  String? _indisponibilidade(EstrategiaRateio e) => switch (e) {
+        EstrategiaRateio.porItem when _itensAtivos.isEmpty =>
+          'Sem itens ativos',
+        EstrategiaRateio.proporcional
+            when _participantesSelecionados.every((p) => p.valorProprio <= 0) =>
+          'Ninguém consumiu por fora',
+        _ => null,
+      };
 
-    return Opacity(
-      opacity: habilitada ? 1.0 : 0.55,
-      child: Card(
-        margin: const EdgeInsets.only(bottom: 8),
-        color: selecionada
-            ? EstoquePalette.primarySoft.withValues(alpha: 0.35)
-            : EstoquePalette.surface,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
-              color: selecionada
-                  ? EstoquePalette.primary
-                  : EstoquePalette.borderSoft,
-              width: selecionada ? 1.5 : 1),
-        ),
-        child: ListTile(
-          onTap: (habilitada && !_executando)
-              ? () => setState(() => _estrategiaSelecionada = e)
-              : null,
-          leading: Icon(
-            selecionada
-                ? Icons.radio_button_checked
-                : Icons.radio_button_unchecked,
-            color: selecionada
-                ? EstoquePalette.primary
-                : EstoquePalette.textMuted,
-          ),
-          title: Row(
-            children: [
-              Text(e.rotulo,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: EstoquePalette.text)),
-              if (!habilitada) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: EstoquePalette.warningBg,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                        color: EstoquePalette.warningBorder),
-                  ),
-                  child: const Text('Em breve',
-                      style: TextStyle(
-                          fontSize: 10,
-                          color: EstoquePalette.text,
-                          fontWeight: FontWeight.w600)),
-                ),
-              ],
-            ],
-          ),
-          subtitle: Text(e.descricao,
-              style: const TextStyle(
-                  color: EstoquePalette.textMuted, fontSize: 12)),
-        ),
-      ),
+  Widget _construirCardEstrategia(EstrategiaRateio e) {
+    final indisponivel = _indisponibilidade(e);
+    return RateioEstrategiaCard(
+      estrategia: e,
+      selecionada: _estrategiaSelecionada == e,
+      indisponivelPor: indisponivel,
+      aoSelecionar: _executando
+          ? null
+          : () => setState(() => _estrategiaSelecionada = e),
     );
   }
 
@@ -701,7 +870,7 @@ class _RateioPageState extends State<RateioPage> {
   // Formulário da estratégia MANUAL
   // ---------------------------------------------------------------
   Widget _construirFormularioManual() {
-    final participantes = _participantesManuais;
+    final participantes = _participantesSelecionados;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -799,47 +968,16 @@ class _RateioPageState extends State<RateioPage> {
   Widget _construirResumoSoma() {
     final soma = _somaManualCentavos;
     final diferenca = _totalCentavos - soma;
-    final fecha = diferenca == 0;
-    final cor = fecha ? EstoquePalette.success : EstoquePalette.error;
-    final detalhe = fecha
-        ? 'A soma fecha com o total da comanda.'
-        : diferenca > 0
-            ? 'Faltam ${_money(diferenca / 100)}'
-            : 'Sobram ${_money(-diferenca / 100)}';
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: cor.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cor.withValues(alpha: 0.4)),
-      ),
-      child: Row(
-        children: [
-          Icon(fecha ? Icons.check_circle_outline : Icons.error_outline,
-              color: cor),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Total: ${_money(soma / 100)} / ${_money(_totalCentavos / 100)}',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: EstoquePalette.text),
-                ),
-                const SizedBox(height: 2),
-                Text(detalhe,
-                    style: TextStyle(
-                        color: cor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600)),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return RateioStatusBox(
+      ok: diferenca == 0,
+      titulo:
+          'Total: ${_money(soma / 100)} / ${_money(_totalCentavos / 100)}',
+      detalhe: switch (diferenca) {
+        0 => 'A soma fecha com o total da comanda.',
+        > 0 => 'Faltam ${_money(diferenca / 100)}',
+        _ => 'Sobram ${_money(-diferenca / 100)}',
+      },
     );
   }
 
@@ -860,6 +998,13 @@ class _RateioPageState extends State<RateioPage> {
     } else if (_estrategiaSelecionada == EstrategiaRateio.manual &&
         !_somaManualFecha) {
       bloqueio = 'A soma dos valores precisa fechar com o total da comanda.';
+    } else if (_indisponibilidade(_estrategiaSelecionada) != null) {
+      // Ex.: marcou PROPORCIONAL e depois desmarcou quem tinha itens próprios.
+      bloqueio = 'Esta estratégia não se aplica a esta comanda.';
+    } else if (_estrategiaSelecionada == EstrategiaRateio.porItem &&
+        _itensSemConsumidor.isNotEmpty) {
+      bloqueio = 'Todo item precisa de pelo menos um consumidor '
+          '(faltam ${_itensSemConsumidor.length}).';
     }
     final habilitado = bloqueio == null && !_executando;
 
