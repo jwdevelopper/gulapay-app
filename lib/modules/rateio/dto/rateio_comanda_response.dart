@@ -1,5 +1,3 @@
-/// Uma linha de [RateioComandaResponse.participantes]. Representa uma
-/// comanda INDIVIDUAL que participa (ou não) do rateio da COMPARTILHADA.
 class RateioParticipanteResponse {
   final int comandaIndividualId;
   final String codigo;
@@ -35,8 +33,6 @@ class RateioParticipanteResponse {
   }
 }
 
-/// Payload de resposta compartilhado pelos 4 endpoints de rateio.
-/// `estrategia` vem `null` enquanto o rateio não foi aplicado.
 class RateioComandaResponse {
   final int comandaId;
   final String codigo;

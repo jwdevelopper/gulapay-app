@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/widgets/estoque_palette.dart';
 
-/// Caixa verde/vermelha que resume se a estratégia escolhida já pode ser
-/// aplicada. Usada pelo MANUAL (soma dos valores) e pelo POR_ITEM
-/// (cobertura dos itens).
 class RateioStatusBox extends StatelessWidget {
   const RateioStatusBox({
     super.key,
@@ -13,12 +10,10 @@ class RateioStatusBox extends StatelessWidget {
     this.rodape,
   });
 
-  /// Verde quando true, vermelho quando false.
   final bool ok;
   final String titulo;
   final String detalhe;
 
-  /// Conteúdo opcional abaixo do texto — ex.: a prévia por pessoa.
   final Widget? rodape;
 
   @override

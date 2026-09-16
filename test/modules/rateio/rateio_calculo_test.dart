@@ -7,8 +7,7 @@ void main() {
       expect(dividirCentavos(1000, 4), [250, 250, 250, 250]);
     });
 
-    test('joga o resto de centavos nas primeiras partes', () {
-      // R$ 10,00 entre 3 = 3,34 + 3,33 + 3,33 (mesma regra do backend).
+    test('joga o resto de centavos nas primeiras partes: 10,00 entre 3 = 3,34 + 3,33 + 3,33', () {
       expect(dividirCentavos(1000, 3), [334, 333, 333]);
     });
 
@@ -27,7 +26,6 @@ void main() {
 
   group('calcularRateioPorItem', () {
     test('soma as frações dos itens de cada consumidor', () {
-      // Pizza (30,00) dividida entre 1 e 2; refrigerante (5,00) só do 1.
       final totais = calcularRateioPorItem(
         subtotalCentavosPorItem: {900: 3000, 901: 500},
         consumidoresPorItem: {

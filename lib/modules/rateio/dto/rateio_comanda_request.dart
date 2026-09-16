@@ -1,5 +1,3 @@
-/// Estratégias de rateio (enum espelho do backend). O valor string em
-/// [valorApi] é o que a API espera receber/devolver.
 enum EstrategiaRateio {
   semRateio,
   igualitario,
@@ -47,7 +45,6 @@ enum EstrategiaRateio {
       };
 }
 
-/// Item de [RateioComandaRequest.valoresManuais] — estratégia MANUAL.
 class RateioValorManualItem {
   final int comandaIndividualId;
   final double valor;
@@ -63,8 +60,6 @@ class RateioValorManualItem {
       };
 }
 
-/// Item de [RateioComandaRequest.itensConsumidores] — estratégia POR_ITEM.
-/// Um item pode ter mais de um consumidor (pizza dividida entre 3).
 class RateioConsumidoresItem {
   final int itemComandaId;
   final List<int> comandaIndividualIds;
@@ -80,9 +75,6 @@ class RateioConsumidoresItem {
       };
 }
 
-/// Payload de `POST /comandas/{id}/rateio`. [valoresManuais] só é lido
-/// quando `estrategia == MANUAL`; [itensConsumidores] só é lido quando
-/// `estrategia == POR_ITEM`. Para as demais os dois campos são ignorados.
 class RateioComandaRequest {
   final EstrategiaRateio estrategia;
   final List<RateioValorManualItem>? valoresManuais;

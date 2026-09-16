@@ -2,12 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:my_app_teste/modules/movimentacao_estoque/widgets/estoque_palette.dart';
 import '../dto/rateio_comanda_request.dart';
 
-/// Card de escolha de uma [EstrategiaRateio].
-///
-/// Quando [indisponivelPor] vem preenchido o card fica apagado, não
-/// responde ao toque e mostra o motivo num selo — é como a tela avisa que
-/// PROPORCIONAL/POR_ITEM não fazem sentido naquela comanda (sem itens
-/// ativos, ninguém consumiu por fora) em vez de deixar o caixa tomar 422.
 class RateioEstrategiaCard extends StatelessWidget {
   const RateioEstrategiaCard({
     super.key,
